@@ -60,6 +60,18 @@ SEASON_SUM_COLS = [
     "receiving_fumbles_lost",
     "rushing_epa",            # additive; powers EPA-per-play efficiency features (1999+)
     "receiving_epa",
+    # --- passing (QB) box-score totals; additive, present 1999+ ---
+    "completions",
+    "attempts",
+    "passing_yards",
+    "passing_tds",
+    "interceptions",
+    "sacks",
+    "sack_fumbles_lost",
+    "passing_air_yards",
+    "passing_first_downs",
+    "passing_epa",
+    "passing_2pt_conversions",
 ]
 
 # Identity columns carried from the weekly frame (last non-null per player-season).

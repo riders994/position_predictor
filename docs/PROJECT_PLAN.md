@@ -340,8 +340,19 @@ metrics / report were already config-driven by `experiment.position`; the **only
 parameterizing was the `offseason` block (now takes `position` + `features.offseason_workload_col`,
 position-agnostic column names). A new `config/football_wr.yaml` (workload = targets, WR snap grid)
 + a re-derived eligibility cutoff was all else required. **TE is skipped** (too few
-fantasy-relevant TEs/season for a stable per-season ranking). QB is next (needs passing features +
-likely an `ngs_passing` pull).
+fantasy-relevant TEs/season for a stable per-season ranking).
+
+**QB added (2026-06-17).** Bigger than WR because the feature pipeline was rushing/receiving-only.
+The **target** needed nothing — nflverse `fantasy_points_ppr` already scores passing (4-pt pass
+TDs). Added a **passing feature family** (`add_passing_production/volume/efficiency`,
+`add_qb_rushing`, `add_ngs_passing`) dispatched on `position=="QB"`, a `ngs_passing` fetch dataset,
+passing columns in `SEASON_SUM_COLS`, and the `passing` branch of `ngs_season()`; shared blocks
+(player_attrs, availability, snap_usage, trajectory, regression_mean, offseason) reused unchanged.
+`config/football_qb.yaml` uses tiers `[6,12,24]` (QB1-elite/QB1/QB2) and competition currency
+`attempts`; eligibility re-derived to **g\*=7** (QB PPG reliability peaks 0.614 @ k=7 — noisier than
+RB/WR). QB also forced report/progress **tier labels to be position-derived** (was hardcoded RB1/2).
+**Recipe to add a scoring-family-new position:** new config + position feature module (+ any new
+NGS pull) + re-derive eligibility.
 
 ---
 

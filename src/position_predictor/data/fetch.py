@@ -107,6 +107,8 @@ def _registry() -> dict[str, Dataset]:
                 note="Next Gen Stats rushing, efficiency-over-expected (2016+)."),
         Dataset("ngs_receiving", L("import_ngs_data", stat_type="receiving"), min_season=2016,
                 note="Next Gen Stats receiving (2016+)."),
+        Dataset("ngs_passing", L("import_ngs_data", stat_type="passing"), min_season=2016,
+                note="Next Gen Stats passing — CPOE, time-to-throw, aggressiveness (2016+)."),
         Dataset("draft_picks", L("import_draft_picks"), min_season=1980,
                 note="Draft capital (pick number)."),
         Dataset("combine", L("import_combine_data"), min_season=2000,

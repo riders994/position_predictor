@@ -104,6 +104,86 @@ def add_efficiency(df):
     return out, [c for c in cols if c in out.columns]
 
 
+# --------------------------------------------------------- passing blocks (QB)
+
+def add_passing_production(df):
+    """Prior-season passing production levels + within-season positional finish (QB).
+
+    QB fantasy production is already captured by ``ppr_points`` / ``ppg`` (nflverse
+    ``fantasy_points_ppr`` uses the standard 4-pt passing-TD scoring); this block adds the
+    passing volume/scoring levels and the same leakage-free positional finish ranks the
+    skill-position :func:`add_production` produces.
+    """
+    out = df.copy()
+    out["total_tds"] = out.get("passing_tds", 0) + out.get("rushing_tds", 0)
+    out["finish_ppr_rank"] = out.groupby("season")["ppr_points"].rank(
+        ascending=False, method="min")
+    out["finish_ppg_rank"] = out.groupby("season")["ppg"].rank(ascending=False, method="min")
+    cols = ["ppg", "ppr_points", "passing_yards", "passing_tds", "interceptions",
+            "completions", "rushing_yards", "rushing_tds", "total_tds",
+            "finish_ppr_rank", "finish_ppg_rank"]
+    return out, [c for c in cols if c in out.columns]
+
+
+def add_passing_volume(df):
+    """Per-game passing volume + dropbacks (season-N volume for QBs)."""
+    out = df.copy()
+    out["dropbacks"] = out.get("attempts", 0) + out.get("sacks", 0)
+    for base in ["attempts", "completions", "passing_air_yards", "dropbacks"]:
+        out[f"{base}_pg"] = _div(out, base, "games")
+    cols = ["attempts", "completions", "dropbacks", "passing_air_yards",
+            "attempts_pg", "completions_pg", "passing_air_yards_pg", "dropbacks_pg"]
+    return out, [c for c in cols if c in out.columns]
+
+
+def add_passing_efficiency(df):
+    """Per-attempt passing efficiency incl. EPA (all available 1999+)."""
+    out = df.copy()
+    out["completion_pct"] = _div(out, "completions", "attempts")
+    out["yards_per_attempt"] = _div(out, "passing_yards", "attempts")
+    out["yards_per_completion"] = _div(out, "passing_yards", "completions")
+    out["pass_td_rate"] = _div(out, "passing_tds", "attempts")
+    out["int_rate"] = _div(out, "interceptions", "attempts")
+    out["sack_rate"] = _div(out, "sacks", "dropbacks")
+    out["air_yards_per_att"] = _div(out, "passing_air_yards", "attempts")
+    out["pass_fd_rate"] = _div(out, "passing_first_downs", "attempts")
+    out["pass_epa_per_db"] = _div(out, "passing_epa", "dropbacks")
+    cols = ["completion_pct", "yards_per_attempt", "yards_per_completion", "pass_td_rate",
+            "int_rate", "sack_rate", "air_yards_per_att", "pass_fd_rate", "pass_epa_per_db"]
+    # pacr / dakota are season-summable efficiency proxies if the build carried them through.
+    cols += [c for c in ["pacr", "dakota"] if c in out.columns]
+    return out, [c for c in cols if c in out.columns]
+
+
+def add_qb_rushing(df):
+    """Rushing volume/efficiency for mobile QBs — a real, persistent fantasy edge."""
+    out = df.copy()
+    out["rush_yards_pg"] = _div(out, "rushing_yards", "games")
+    out["carries_pg"] = _div(out, "carries", "games")
+    out["yards_per_carry"] = _div(out, "rushing_yards", "carries")
+    out["rush_epa_per_att"] = _div(out, "rushing_epa", "carries")
+    cols = ["carries", "rushing_yards", "rushing_tds", "carries_pg", "rush_yards_pg",
+            "yards_per_carry", "rush_epa_per_att"]
+    return out, [c for c in cols if c in out.columns]
+
+
+def add_ngs_passing(df, ngs_pass):
+    """Next Gen Stats passing — CPOE, time-to-throw, aggressiveness (2016+; NaN before).
+
+    Same coverage logic as :func:`add_ngs_efficiency`: NGS is sparse and its missingness is
+    informative (sub-qualifying QBs), so ``has_ngs_pass`` exposes the coverage flag explicitly.
+    """
+    out = df
+    if ngs_pass is not None and len(ngs_pass):
+        out = out.merge(ngs_pass, on=["player_id", "season"], how="left")
+    out["has_ngs_pass"] = (out["cpoe"].notna().astype(int)
+                           if "cpoe" in out.columns else 0)
+    cols = [c for c in ["cpoe", "expected_completion_pct", "avg_time_to_throw",
+                        "aggressiveness", "avg_air_yards_to_sticks", "avg_intended_air_yards",
+                        "ngs_passer_rating", "has_ngs_pass"] if c in out.columns]
+    return out, cols
+
+
 def add_player_attrs(df):
     """Age-curve terms, body composition, draft capital (all numeric)."""
     out = df.copy()
@@ -255,6 +335,14 @@ def ngs_season(ngs, kind: str, *, regular_season_only: bool = True):
                "efficiency": "ngs_efficiency",
                "avg_time_to_los": "avg_time_to_los",
                "percent_attempts_gte_eight_defenders": "pct_attempts_8plus_box"}
+    elif kind == "passing":
+        ren = {"completion_percentage_above_expectation": "cpoe",
+               "expected_completion_percentage": "expected_completion_pct",
+               "avg_time_to_throw": "avg_time_to_throw",
+               "aggressiveness": "aggressiveness",
+               "avg_air_yards_to_sticks": "avg_air_yards_to_sticks",
+               "avg_intended_air_yards": "avg_intended_air_yards",
+               "passer_rating": "ngs_passer_rating"}
     else:
         ren = {"avg_yac_above_expectation": "yac_above_expected",
                "avg_separation": "avg_separation"}
@@ -377,24 +465,39 @@ def build_features(config, *, write: bool = True):
     team = team_season_context(weekly) if weekly is not None else None
     ngs_rush = ngs_season(_raw("ngs_rushing.parquet"), "rushing")
     ngs_rec = ngs_season(_raw("ngs_receiving.parquet"), "receiving")
+    ngs_pass = ngs_season(_raw("ngs_passing.parquet"), "passing")
     rosters = _raw("rosters.parquet")
     draft_picks = _raw("draft_picks.parquet")
     horizon = int(config.get("target.predict_horizon", 1))
     workload_col = config.get("features.offseason_workload_col", "touches")
+    is_qb = str(position).upper() == "QB"
 
     block_columns: dict[str, list[str]] = {}
 
-    df, block_columns["production"] = add_production(df)
-    df, block_columns["volume"] = add_volume(df)
-    if team is not None:
-        df, block_columns["team_context"] = add_team_context(df, team)
-    df, block_columns["efficiency"] = add_efficiency(df)
+    # Position-specific production / usage / efficiency blocks. QBs score off passing (+ rushing
+    # for mobile QBs); skill positions score off rushing/receiving. Shared blocks below are
+    # column-defensive and apply to both.
+    if is_qb:
+        df, block_columns["production"] = add_passing_production(df)
+        df, block_columns["volume"] = add_passing_volume(df)
+        df, block_columns["rushing"] = add_qb_rushing(df)
+        df, block_columns["efficiency"] = add_passing_efficiency(df)
+    else:
+        df, block_columns["production"] = add_production(df)
+        df, block_columns["volume"] = add_volume(df)
+        if team is not None:
+            df, block_columns["team_context"] = add_team_context(df, team)
+        df, block_columns["efficiency"] = add_efficiency(df)
+
     df, block_columns["player_attrs"] = add_player_attrs(df)
     df, block_columns["availability"] = add_availability(df)
     df, block_columns["snap_usage"] = add_snap_usage(df)
     df, block_columns["trajectory"] = add_trajectory(df)
     df, block_columns["regression_mean"] = add_regression_mean(df)
-    df, block_columns["ngs_efficiency"] = add_ngs_efficiency(df, ngs_rush, ngs_rec)
+    if is_qb:
+        df, block_columns["ngs_passing"] = add_ngs_passing(df, ngs_pass)
+    else:
+        df, block_columns["ngs_efficiency"] = add_ngs_efficiency(df, ngs_rush, ngs_rec)
     df, offseason_cols = add_offseason(df, rosters, draft_picks, position=position,
                                        workload_col=workload_col, horizon=horizon)
     if offseason_cols:
