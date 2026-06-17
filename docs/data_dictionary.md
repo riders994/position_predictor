@@ -152,7 +152,7 @@ columns are added to the dataset; tidy tables are written to
 | `ngs_ablation` | the `ngs` era model **with vs without** the `ngs_efficiency` block on the g* board (P@12/24/36 + Spearman/NDCG) and the `keep_ngs_block` decision (§7.3). |
 | `availability` | the §7.4 count model vs the prior-games baseline per fold: games MAE/RMSE + clears-cutoff AUC/PR-AUC. |
 | `benchmark` | preseason market (−ECR) scored per (test_season, cutoff) on the eligible∩ranked universe, with `n_eligible`/`n_market_ranked`/`coverage`. |
-| `benchmark_comparison` | **head-to-head** on the identical market-ranked rows (longest window, default combiner, g*): each era-ensemble model vs `market_ecr` — Spearman + **`weighted_tau`** (top-weighted) + Precision@12. The "do we beat the market?" test. |
+| `benchmark_comparison` | **head-to-head** on the identical market-ranked rows (longest window, default combiner, g*): each era-ensemble model vs `market_ecr` — Spearman + **`weighted_tau`** (top-weighted) + Precision@12 (tier-1) + Precision@24 (tier-2). The "do we beat the market?" test, per tier. |
 | `summary.json` | headline best model/combine/window at g*, its Spearman/P@12/MAE, and the best baseline it beats. |
 
 ## Market benchmark (Stage 9 — `data/benchmark.py`, `data/external/market_<sport>_<position>.parquet`)

@@ -58,7 +58,7 @@ def _test_label_seasons(df, k):
 
 
 def run_experiment(config, *, write: bool = True, models=None, windows=None,
-                   combiners=None, fast: bool = False):
+                   combiners=None, fast: bool = False, top_weighted=None):
     """Run the full Stage-8 experiment; return a dict of tidy result DataFrames."""
     import json
 
@@ -77,6 +77,8 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
     g_star = int(config.get("eligibility.chosen_games_played", 4))
     cutoff_grid = sorted({int(c) for c in cutoff_grid} | {g_star})  # always score the chosen rule
     k_tiers = tuple(config.get("metrics.precision_at_k_tiers", [12, 24, 36]))
+    top_weighted = (bool(config.get("models.top_weighted_training", False))
+                    if top_weighted is None else bool(top_weighted))
     candidates = models or config.get("models.candidates",
                                       ["ridge", "lasso", "elasticnet", "random_forest",
                                        "lightgbm", "xgboost"])
@@ -111,7 +113,8 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
         for combine in combiners:
             for model in candidates:
                 ens = EraEnsemble(model, eras, block_columns, combine=combine,
-                                  target_col=TARGET, seed=seed).fit(train)
+                                  target_col=TARGET, seed=seed,
+                                  top_weighted=top_weighted).fit(train)
                 rank_rows += _score_over_folds(
                     ens.predict, df, test_labels, horizon, cutoff_grid, k_tiers,
                     {**base_key, "model_type": "era_ensemble", "model": model,
@@ -141,7 +144,7 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
     bench_rows = _score_benchmark(df, test_labels, horizon, cutoff_grid, k_tiers, base_key)
     bench_cmp = _benchmark_comparison(
         df, eras, block_columns, test_labels, horizon, max(windows),
-        combiners[0], candidates, g_star, k_tiers, earliest, seed, base_key)
+        combiners[0], candidates, g_star, k_tiers, earliest, seed, base_key, top_weighted)
 
     results = {
         "ranking": pd.DataFrame(rank_rows),
@@ -225,12 +228,14 @@ def _score_benchmark(df, test_labels, horizon, cutoff_grid, k_tiers, base_key):
 
 
 def _benchmark_comparison(df, eras, block_columns, test_labels, horizon, window, combine,
-                          candidates, g_star, k_tiers, earliest, seed, base_key):
+                          candidates, g_star, k_tiers, earliest, seed, base_key,
+                          top_weighted=False):
     """Head-to-head: each era model vs the market on the IDENTICAL eligible∩ranked rows (§7.4).
 
     Fixed headline config (longest window, default combiner, chosen cutoff g*). Each fold is
     restricted to the rows the market ranked; both the model and −ECR are scored on exactly those
-    rows so the 'do we beat the market?' comparison is apples-to-apples.
+    rows so the 'do we beat the market?' comparison is apples-to-apples. Reports Spearman,
+    top-weighted τ, and Precision@k for the top two tiers (RB1 + RB2 boards).
     """
     if "market_ecr" not in df or df["market_ecr"].notna().sum() == 0:
         return []
@@ -239,10 +244,11 @@ def _benchmark_comparison(df, eras, block_columns, test_labels, horizon, window,
     train = df[(df["season"] >= n_min) & (df["season"] <= n_max) & df[TARGET].notna()]
     if train.empty:
         return []
-    p_key = f"precision_at_{k_tiers[0]}"
+    p_keys = [f"precision_at_{k}" for k in k_tiers[:2]]  # top two tiers (e.g. 12 & 24)
     flag = f"eligible_next__g{g_star}"
     fitted = {m: EraEnsemble(m, eras, block_columns, combine=combine, target_col=TARGET,
-                             seed=seed).fit(train) for m in candidates}
+                             seed=seed, top_weighted=top_weighted).fit(train)
+              for m in candidates}
     rows = []
     for label in test_labels:
         test_all = df[(df["season"] == label - horizon) & df[TARGET].notna()]
@@ -252,14 +258,17 @@ def _benchmark_comparison(df, eras, block_columns, test_labels, horizon, window,
             continue
         common = {**base_key, "test_season": int(label), "window_years": window,
                   "combine": combine, "cutoff_games": g_star, "n": int(len(covered))}
-        b = ranking_metrics(covered[TARGET], -covered["market_ecr"].to_numpy(dtype=float),
-                            k_tiers=k_tiers)
-        rows.append({**common, "model": "market_ecr", "spearman": b["spearman"],
-                     "weighted_tau": b["weighted_tau"], p_key: b[p_key]})
+
+        def _row(model, scores):
+            return {**common, "model": model, "spearman": scores["spearman"],
+                    "weighted_tau": scores["weighted_tau"],
+                    **{pk: scores[pk] for pk in p_keys}}
+
+        rows.append(_row("market_ecr", ranking_metrics(
+            covered[TARGET], -covered["market_ecr"].to_numpy(dtype=float), k_tiers=k_tiers)))
         for model, ens in fitted.items():
-            m = ranking_metrics(covered[TARGET], ens.predict(covered), k_tiers=k_tiers)
-            rows.append({**common, "model": model, "spearman": m["spearman"],
-                         "weighted_tau": m["weighted_tau"], p_key: m[p_key]})
+            rows.append(_row(model, ranking_metrics(
+                covered[TARGET], ens.predict(covered), k_tiers=k_tiers)))
     return rows
 
 

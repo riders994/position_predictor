@@ -28,12 +28,14 @@ def main() -> int:
                         help="Quick smoke config (fewer models/combiners/windows).")
     parser.add_argument("--models", nargs="*", help="Override candidate models.")
     parser.add_argument("--windows", nargs="*", type=int, help="Override history windows.")
+    parser.add_argument("--top-weighted", dest="top_weighted", action="store_const", const=True,
+                        default=None, help="Weight regression training toward each season's top.")
     args = parser.parse_args()
 
     cfg = Config.load(args.config)
     print(f"[experiment] {cfg}{' [fast]' if args.fast else ''}")
 
-    res = run_experiment(cfg, write=True, fast=args.fast,
+    res = run_experiment(cfg, write=True, fast=args.fast, top_weighted=args.top_weighted,
                          models=args.models, windows=args.windows)
 
     agg = res["ranking_aggregate"]

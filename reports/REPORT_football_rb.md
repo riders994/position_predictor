@@ -7,7 +7,8 @@ _Generated 2026-06-17._ Test seasons **[2020, 2021, 2022, 2023, 2024]**, eligibi
 - **Best model:** `xgboost` (mean, 30-yr window) — Spearman **0.756 ± 0.032**, Precision@12 0.57, MAE 2.62 PPG (full eligible universe).
 - **Best baseline:** `linear` — Spearman 0.720 (the must-beat floor).
 - **Market head-to-head** (FantasyPros preseason ECR, scored on the identical rows the market ranks): market Spearman 0.732 vs our best `xgboost` 0.711 — the model does **not** beat the market on overall rank.
-  On **Precision@12** (the draftable top tier): market 0.60 vs `xgboost` 0.58.
+  On **Precision@12 (tier-1 / RB1)**: market 0.60 vs best `ridge` 0.65 — model beats market.
+  On **Precision@24 (tier-2 / RB2)**: market 0.75 vs best `elasticnet` 0.72 — model trails market.
   On the **top-weighted** rank score (Weighted τ — errors near #1 count most): market 0.689 vs `ridge` 0.663 — the model does **not** beat the market where it matters most.
 
 ## Recency: how much history helps (§6.2)
@@ -51,15 +52,15 @@ Preseason ECR coverage of the eligible universe and the market's own ranking qua
 
 **Head-to-head on the identical ranked rows** (mean across folds). `weighted_tau` is the **top-weighted** rank score — errors near #1 count most:
 
-| model | Spearman | Weighted τ (top) | Precision@12 |
-|---|---|---|---|
-| market_ecr _(market)_ | 0.732 | 0.689 | 0.60 |
-| ridge | 0.705 | 0.663 | 0.65 |
-| xgboost | 0.711 | 0.658 | 0.58 |
-| lasso | 0.702 | 0.657 | 0.63 |
-| elasticnet | 0.703 | 0.657 | 0.62 |
-| lightgbm | 0.695 | 0.652 | 0.53 |
-| random_forest | 0.691 | 0.652 | 0.57 |
+| model | Spearman | Weighted τ (top) | Precision@12 (tier-1) | Precision@24 (tier-2) |
+|---|---|---|---|---|
+| market_ecr _(market)_ | 0.732 | 0.689 | 0.60 | 0.75 |
+| ridge | 0.705 | 0.663 | 0.65 | 0.72 |
+| xgboost | 0.711 | 0.658 | 0.58 | 0.72 |
+| lasso | 0.702 | 0.657 | 0.63 | 0.72 |
+| elasticnet | 0.703 | 0.657 | 0.62 | 0.72 |
+| lightgbm | 0.695 | 0.652 | 0.53 | 0.72 |
+| random_forest | 0.691 | 0.652 | 0.57 | 0.71 |
 
 ## NGS-block ablation (§7.3)
 

@@ -453,7 +453,18 @@ Resolved (2026-06-17, RB v3 — back-applying WR learnings):
   (opportunity dominates). So the NGS split is *not* productionized for RB (no gain) — a clean
   example of the back-apply process keeping only what measurably helps.
 
+- **Top-weighted-training probe → REJECTED** (the cheap test of the learning-to-rank idea).
+  Weighting regression rows by their season's NDCG-style finish discount (`models.
+  top_weighted_training`, config-gated, off by default) nudged `weighted_tau` +0.006–0.011 for
+  linear models but **hurt Precision@12 −0.03 to −0.05** — chasing the smooth top-weighted score
+  trades away actual top-12 hits. De-risks (lowers expectations for) full LambdaMART.
+- **Precision@24 added to the head-to-head** (RB2 tier matters as much as RB1). It revealed a
+  blind spot: we **beat** the market on the RB1 tier (P@12 0.65 vs 0.60) but **trail** it on the
+  RB2 tier (**P@24 ~0.72 vs 0.75**) — the market's broad consensus is stronger at ranking the
+  middle of the board than our model.
+
 Still open:
 - **QB** next (passing features + `ngs_passing`); **TE skipped** (thin position).
-- Bigger bet to attack the top-of-board gap vs market: **learning-to-rank** (LambdaMART, already
-  in the `stretch` config) to directly optimize top-k, where the model already competes with ECR.
+- The remaining gaps vs market are now sharper: **RB2-tier (P@24)** ranking, and overall rank.
+  LambdaMART is still the principled lever but the probe lowered its expected payoff; richer
+  RB2-relevant signal may matter more.

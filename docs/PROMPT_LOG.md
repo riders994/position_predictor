@@ -600,6 +600,35 @@ provenance** — anyone should be able to trace *why* the project looks the way 
 
 ---
 
+## Entry 020 — Top-weighted-training probe + Precision@24
+
+**Date:** 2026-06-17
+
+**Prompt (full text):**
+
+> I was going to suggest weight training, so let's start there. Also, I think there might be value
+> in looking at Precision@24 as a metric as well, since drafting an rb2 can be just as important as
+> an rb1.
+
+**Response notes:**
+- **Cheap learning-to-rank probe (weight training toward the top).** Added
+  `top_weighted_sample_weights` + an `EraEnsemble(top_weighted=...)` path (config
+  `models.top_weighted_training`, `--top-weighted` CLI flag; routes a per-row weight to each
+  estimator incl. sklearn pipelines). Weight = within-season NDCG-style finish discount, rescaled
+  to mean 1. **Result: REJECTED.** vs the v3 baseline it nudged `weighted_tau` +0.006–0.011 for
+  linear models (its design target) but **hurt Precision@12 by −0.03 to −0.05** and was flat
+  elsewhere — chasing the smooth top-weighted score trades away real top-12 hits. Machinery kept
+  but **off by default**. This de-risks (lowers expected payoff of) full LambdaMART.
+- **Precision@24 surfaced** in `benchmark_comparison` (already computed; now reported per the top
+  two tiers) + the report headline/table. **Finding:** we **beat** the market on the RB1 tier
+  (P@12 0.65 vs 0.60) but **trail** on the RB2 tier (**P@24 ~0.72 vs 0.75**) — the market's broad
+  consensus ranks the middle of the board better than us. A genuine blind spot the metric exposed.
+- Tests `test_top_weighted_sample_weights` + `test_top_weighted_ensemble_fits_and_predicts` —
+  full suite **76/76 pass**, ruff clean. Restored canonical (top-weighted-off) RB+WR results +
+  reports. Updated PROJECT_PLAN §12, `data_dictionary.md`.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

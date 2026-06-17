@@ -32,10 +32,37 @@ def _era_columns(era, block_columns, available):
     return cols
 
 
-def _fit_one(estimator_name, rows, cols, target_col, seed):
+def _fit_one(estimator_name, rows, cols, target_col, seed, sample_weight=None):
     est = make_estimator(estimator_name, seed=seed)
-    est.fit(rows[cols], rows[target_col])
+    if sample_weight is None:
+        est.fit(rows[cols], rows[target_col])
+    elif hasattr(est, "steps"):  # sklearn Pipeline -> route weight to the final step
+        est.fit(rows[cols], rows[target_col],
+                **{f"{est.steps[-1][0]}__sample_weight": sample_weight})
+    else:                        # bare estimator (lightgbm / xgboost)
+        est.fit(rows[cols], rows[target_col], sample_weight=sample_weight)
     return est
+
+
+def top_weighted_sample_weights(rows, target_col, season_col):
+    """Per-row training weights that emphasise the **top** of each season's board.
+
+    Within each season cohort, weight a row by the NDCG-style discount of its *actual* finish
+    (``1/log2(rank+1)``, rank 1 = best), then rescale to mean 1 so effective sample size is
+    preserved. A regression model fit with these weights spends its capacity getting the top
+    finishers' order right — the cheap probe of the learning-to-rank hypothesis (PROJECT_PLAN §7).
+    """
+    import numpy as np
+
+    w = np.ones(len(rows), dtype=float)
+    idx = {ix: i for i, ix in enumerate(rows.index)}
+    for _, g in rows.groupby(season_col):
+        ranks = g[target_col].rank(ascending=False, method="first").to_numpy()
+        disc = 1.0 / np.log2(ranks + 1.0)
+        for ix, d in zip(g.index, disc):
+            w[idx[ix]] = d
+    m = w.mean()
+    return w / m if m > 0 else w
 
 
 class EraEnsemble:
@@ -43,7 +70,7 @@ class EraEnsemble:
 
     def __init__(self, estimator_name, eras, block_columns, *, combine="val_weighted",
                  val_seasons=3, target_col="target", season_col="season", seed=1729,
-                 weight_metric="spearman"):
+                 weight_metric="spearman", top_weighted=False):
         self.estimator_name = estimator_name
         self.eras = eras
         self.block_columns = block_columns
@@ -53,6 +80,7 @@ class EraEnsemble:
         self.season_col = season_col
         self.seed = seed
         self.weight_metric = weight_metric
+        self.top_weighted = top_weighted  # weight training toward each season's top (§7 probe)
         # populated by fit()
         self.models_ = {}      # era name -> fitted estimator
         self.columns_ = {}     # era name -> feature columns used
@@ -63,6 +91,11 @@ class EraEnsemble:
     def _present_eras(self, df):
         names = {assign_era(int(s), self.eras) for s in df[self.season_col].unique()}
         return [e for e in self.eras if e.name in names]
+
+    def _sw(self, rows):
+        if not self.top_weighted or len(rows) == 0:
+            return None
+        return top_weighted_sample_weights(rows, self.target_col, self.season_col)
 
     def _val_weights(self, df, present):
         """Weight ∝ each era model's mean within-season Spearman on a held-out val tail."""
@@ -84,7 +117,8 @@ class EraEnsemble:
             cols = [c for c in cols if len(era_fit) and era_fit[c].notna().any()]
             if not cols or len(era_fit) < 10:
                 continue
-            est = _fit_one(self.estimator_name, era_fit, cols, self.target_col, self.seed)
+            est = _fit_one(self.estimator_name, era_fit, cols, self.target_col, self.seed,
+                           sample_weight=self._sw(era_fit))
             per_season = []
             for _, g in val_df.groupby(self.season_col):
                 pred = est.predict(g[cols])
@@ -135,7 +169,8 @@ class EraEnsemble:
             if not cols or era_rows.empty:
                 continue
             self.models_[era.name] = _fit_one(
-                self.estimator_name, era_rows, cols, self.target_col, self.seed)
+                self.estimator_name, era_rows, cols, self.target_col, self.seed,
+                sample_weight=self._sw(era_rows))
             self.columns_[era.name] = cols
 
         # Restrict weights to eras that actually produced a model and renormalise.

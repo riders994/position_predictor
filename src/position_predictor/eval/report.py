@@ -92,7 +92,6 @@ def _headline_section(agg, cmp, g_star, sport, position):
                    "(the must-beat floor).")
     if not cmp.empty:
         m = cmp.groupby("model")["spearman"].mean()
-        p = cmp.groupby("model")["precision_at_12"].mean() if "precision_at_12" in cmp else None
         mk = m.get("market_ecr", float("nan"))
         best_model = m.drop(labels=["market_ecr"], errors="ignore").sort_values(
             ascending=False)
@@ -103,9 +102,17 @@ def _headline_section(agg, cmp, g_star, sport, position):
                        f"identical rows the market ranks): market Spearman {_fmt(mk)} vs our best "
                        f"`{mn}` {_fmt(best_model.iloc[0])} — the model {verdict} the market on "
                        "overall rank.")
-            if p is not None:
-                out.append(f"  On **Precision@12** (the draftable top tier): market "
-                           f"{_fmt(p.get('market_ecr'),2)} vs `{mn}` {_fmt(p.get(mn),2)}.")
+            for tier, label in [("precision_at_12", "Precision@12 (tier-1 / RB1)"),
+                                ("precision_at_24", "Precision@24 (tier-2 / RB2)")]:
+                if tier not in cmp.columns:
+                    continue
+                pt = cmp.groupby("model")[tier].mean()
+                pt_best = pt.drop(labels=["market_ecr"], errors="ignore").sort_values(
+                    ascending=False)
+                if len(pt_best):
+                    v = "beats" if pt_best.iloc[0] > pt.get("market_ecr") else "trails"
+                    out.append(f"  On **{label}**: market {_fmt(pt.get('market_ecr'),2)} vs best "
+                               f"`{pt_best.index[0]}` {_fmt(pt_best.iloc[0],2)} — model {v} market.")
             if "weighted_tau" in cmp.columns:
                 wt = cmp.groupby("model")["weighted_tau"].mean()
                 wt_best = wt.drop(labels=["market_ecr"], errors="ignore").sort_values(
@@ -162,18 +169,19 @@ def _benchmark_section(bench, cmp, g_star):
         out.append("**Head-to-head on the identical ranked rows** (mean across folds). "
                    "`weighted_tau` is the **top-weighted** rank score — errors near #1 count most:")
         out.append("")
-        metric_cols = [c for c in ["spearman", "weighted_tau", "precision_at_12"]
-                       if c in cmp.columns]
+        metric_cols = [c for c in ["spearman", "weighted_tau", "precision_at_12",
+                       "precision_at_24"] if c in cmp.columns]
         m = cmp.groupby("model")[metric_cols].mean().sort_values(
             "weighted_tau" if "weighted_tau" in metric_cols else "spearman", ascending=False)
         head = {"spearman": "Spearman", "weighted_tau": "Weighted τ (top)",
-                "precision_at_12": "Precision@12"}
+                "precision_at_12": "Precision@12 (tier-1)",
+                "precision_at_24": "Precision@24 (tier-2)"}
         out.append("| model | " + " | ".join(head[c] for c in metric_cols) + " |")
         out.append("|---|" + "|".join("---" for _ in metric_cols) + "|")
         for model, r in m.iterrows():
             tag = " _(market)_" if model == "market_ecr" else ""
             out.append(f"| {model}{tag} | "
-                       + " | ".join(_fmt(r[c], 2 if c == "precision_at_12" else 3)
+                       + " | ".join(_fmt(r[c], 2 if c.startswith("precision_at_") else 3)
                                     for c in metric_cols) + " |")
         out.append("")
     return out
