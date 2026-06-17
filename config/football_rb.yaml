@@ -1,0 +1,113 @@
+# Experiment config — NFL Running Back (v1)
+# Config-driven so every number is explicit and reproducible (no magic numbers in code).
+
+experiment:
+  sport: football
+  position: RB
+  name: football_rb_v1
+
+data:
+  source: nflverse                 # via nfl_data_py
+  # nflverse coverage caps we accommodate (see PROJECT_PLAN §2.1):
+  #   box scores 1999+, snap counts 2012+, NGS 2016+
+  earliest_season: 1999
+  latest_completed_season: 2025
+  raw_dir: data/raw
+  cache_format: parquet
+
+target:
+  scoring: PPR                     # 1 pt / reception
+  metric: ppg                      # next-season points-per-game (primary ranking target)
+  predict_horizon: 1               # season N -> N+1
+
+features:
+  # Quantitative-only: numbers from box scores / pbp / snaps / rosters / combine.
+  # No qualitative or hand-labeled inputs (e.g. "coaching change"); use stat proxies.
+  quantitative_only: true
+
+# Required for every football model: predict N+1 availability (injury/reinjury proxy).
+availability_model:
+  enabled: true
+  label: games_played_next         # N+1 games played (0-17), count target
+  model: gbm_count                 # Poisson/neg-binomial or quantile GBM
+  derive_clears_cutoff: true       # binary "projected to clear the games cutoff"
+  baseline: prior_games_played
+  wear_proxy_windows: [1, 3]       # recent-season touch/snap load windows for wear features
+
+eligibility:
+  # The cutoff is DERIVED analytically (notebook 02) — these are the candidate grid
+  # over which results are reported for robustness. The chosen rule is recorded with results.
+  candidate_games_played: [4, 6, 8, 10, 12]
+  candidate_snap_share: [0.30, 0.40, 0.50]   # 2012+ only
+  selection_method: reliability_stabilization # see PROJECT_PLAN §4.2
+  reliability_target: 0.70    # min split-half reliability of PPG to call it "stable"
+  reliability_k_max: 8        # split-half needs 2k games -> testable up to ~8 (16-game floor)
+  report_full_grid: true
+  chosen_games_played: 4      # Stage 5 result: min games where split-half PPG reliability ≥ 0.70
+                              #   (0.738 at G=4; retains 98.5% of fantasy production)
+  chosen_snap_share: null     # snaps reported as secondary; primary rule is games-based for v1
+
+scope:
+  players: returning_only          # >= 1 prior NFL season; rookies excluded in v1
+
+validation:
+  scheme: walk_forward             # train <= N, predict N+1 ; no random K-fold
+  test_block_seasons: 5            # fixed most-recent test seasons for the recency study
+  # recency-bias comparison: train windows in YEARS of history (PROJECT_PLAN §6.2)
+  history_windows_years: [10, 20, 30]
+
+models:
+  baselines: [persistence, smoothed_history, mean_reversion, linear]
+  candidates: [ridge, lasso, elasticnet, random_forest, lightgbm, xgboost]
+  stretch: [lambdamart, quantile_gbm]
+
+# Era-separate modeling (PROJECT_PLAN §6.3). Eras are contiguous season spans that share the
+# same available feature blocks (driven by nflverse coverage §2.1). We train ONE model per era
+# on that era's schema; an X-year window model composes the era models whose seasons fall in
+# the window, routing each row by its FEATURE season N. Schemas are NESTED (each later era adds
+# blocks) so an older-era model can score a modern player using its feature subset — no
+# cross-era imputation of structurally-absent features.
+eras:
+  # 'offseason' (draft/roster context for season N+1, known by Sept 1) is available all eras (§5).
+  - name: boxscore        # box scores / weekly EPA only
+    start_season: 1999
+    end_season: 2011
+    feature_blocks: [volume, efficiency, production, player_attrs, trajectory,
+                     regression_mean, availability, team_context, offseason]
+  - name: snaps           # + snap-share usage (snaps 2012+)
+    start_season: 2012
+    end_season: 2015
+    feature_blocks: [volume, efficiency, production, player_attrs, trajectory,
+                     regression_mean, availability, team_context, offseason, snap_usage]
+  - name: ngs             # + Next Gen Stats efficiency-over-expected (NGS 2016+)
+    start_season: 2016
+    end_season: null      # open-ended (current)
+    feature_blocks: [volume, efficiency, production, player_attrs, trajectory, regression_mean,
+                     availability, team_context, offseason, snap_usage, ngs_efficiency]
+
+era_modeling:
+  strategy: separate        # one model per era, composed per window (vs. single pooled model)
+  route_by: feature_season  # a row's era = era of its feature season N
+  # How the constituent era models' predictions combine into one window prediction:
+  #   val_weighted   — weight each era model by its walk-forward validation score (default;
+  #                    lets the data decide how much older eras help — the recency-bias read)
+  #   mean           — simple average across era models
+  #   recency_weighted — weight newer eras more by a fixed schedule
+  #   stack          — meta-learner over era-model predictions
+  combine: val_weighted
+  combine_alternatives: [mean, recency_weighted]   # also reported in the recency study
+
+benchmark:
+  use_market_data: true
+  as_feature: false                # benchmark only, NOT a feature
+  sources: [adp, ecr]              # data/external/
+
+metrics:
+  regression: [mae, rmse, r2]
+  ranking: [spearman, kendall, ndcg_at_k, precision_at_k]
+  precision_at_k_tiers: [12, 24, 36]   # RB1 / RB2 / RB3 boards
+
+reproducibility:
+  random_seed: 1729
+  results_dir: reports/results
+  figures_dir: reports/figures

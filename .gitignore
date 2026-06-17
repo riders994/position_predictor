@@ -1,0 +1,34 @@
+# --- Data (large / regenerated) ---
+data/raw/*
+data/interim/*
+data/processed/*
+# keep manifests, external reference data, and folder structure
+!data/raw/_manifests/
+!data/external/
+!data/**/.gitkeep
+
+# --- Reports (regenerated artifacts) ---
+reports/figures/*
+reports/results/*
+!reports/**/.gitkeep
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.python-version-local
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# --- Notebooks ---
+.ipynb_checkpoints/
+
+# --- uv ---
+# uv.lock IS committed (reproducibility); the env dir is not.
+
+# --- OS / editor ---
+.DS_Store
+.idea/
+.vscode/

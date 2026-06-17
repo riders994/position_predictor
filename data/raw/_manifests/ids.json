@@ -1,0 +1,12 @@
+{
+  "name": "ids",
+  "source": "nflverse/nfl_data_py",
+  "note": "Cross-source player ID crosswalk.",
+  "seasons": [],
+  "min_season": null,
+  "pulled_at": "2026-06-16T14:21:24.229138+00:00",
+  "n_rows": 12462,
+  "n_cols": 35,
+  "cache_path": "/home/weezy/activity/position_predictor/data/raw/ids.parquet",
+  "sha256": "d64e0c7d4d718a22c974b595ba5e8871f89eb0dfc8fb533bee4333981d93ca3c"
+}

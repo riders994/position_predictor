@@ -1,0 +1,23 @@
+{
+  "name": "ngs_rushing",
+  "source": "nflverse/nfl_data_py",
+  "note": "Next Gen Stats rushing, efficiency-over-expected (2016+).",
+  "seasons": [
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "min_season": 2016,
+  "pulled_at": "2026-06-16T14:21:23.374983+00:00",
+  "n_rows": 6059,
+  "n_cols": 22,
+  "cache_path": "/home/weezy/activity/position_predictor/data/raw/ngs_rushing.parquet",
+  "sha256": "5e721843b11cecf2a9af5df620ee2f4dac3a8acb92bdda55a3103525b4fc9048"
+}
