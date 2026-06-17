@@ -629,6 +629,46 @@ provenance** — anyone should be able to trace *why* the project looks the way 
 
 ---
 
+## Entry 021 — Versioned, comprehensive reports (per-version snapshots + cross-version progress)
+
+**Date:** 2026-06-17
+
+**Prompt (full text):**
+
+> Where are we at now? [...] What happened to RB v2? [...] Is it at least identifiable in reports?
+> I want to make sure reports are comprehensive [...] can you make sure there are individual reports
+> for each version so we can analyze progress between versions and relative gains of models vs
+> compute/efficiency/data volume
+
+**Response notes:**
+- **Reports were not version-identifiable** (only a generation date) and **overwrote in place** — no
+  history. Added `experiment.version` to each config (RB `v3`, WR `v1`); the report header now stamps
+  `**RB v3** · <branch> @ <shortsha>[-dirty]` (`_git_provenance()` in `report.py`).
+- **Instrumented the experiment for cost.** `run_experiment` now records a `cost` table (per
+  model×window×combine: `fit_seconds`, `n_train_rows`, `n_features`) and a `data_volume` +
+  `compute` block in the summary (feature/labeled rows, per-era counts, season span, total fit +
+  wall-clock). Report gained **Data volume** and **Compute & efficiency** sections — the latter
+  joins per-model fit-seconds to ranking quality (Spearman/fit-s). Surfaced the key efficiency
+  finding: **ridge gets ~0.747 Spearman & P@12 0.63 at ~0.1s fit vs xgboost 0.756 / P@12 0.57 at
+  ~11s — ~100× cheaper for ~1% less Spearman and better top-12.**
+- **Per-version snapshots.** `make report` now archives a committed snapshot to
+  `reports/versions/<stem>/<version>/` (report .md + summary.json + cost/benchmark_comparison/recency
+  CSVs). `reports/versions/` is git-tracked (only `reports/{figures,results}/*` are ignored).
+- **Cross-version progress report** (`eval/progress.py`, `scripts/make_progress.py`, `make
+  progress`) → `reports/versions/<stem>/PROGRESS_<stem>.md`: best-model-vs-market metrics and
+  compute/data-volume per version with deltas.
+- **Backfilled v1 & v2 from git.** Worktrees at c2cd394 (v1) / a42466e (v2), regenerated each
+  version's *features* with its own code, then ran the current instrumented harness against them
+  (isolates the version's feature-set effect under consistent instrumentation). **Finding:** RB
+  v1 ≡ v2 (the offseason block shipped inside the v1 commit; v1→v2 was the WR generalization +
+  harness fixes, no RB feature change); v3's single `vacated_workload` feature (80→81 cols, flat
+  compute) lifts head-to-head Spearman 0.706→0.711 / P@12 0.55→0.58 and narrows the market gap
+  −0.026→−0.021.
+- Tests `test_progress.py` (`_version_key`, `_best_market_row`) + `test_git_provenance_format` —
+  full suite **80/80 pass**, ruff clean on changed files (notebook lint errors pre-date this work).
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

@@ -12,7 +12,7 @@ from position_predictor.data.benchmark import (  # noqa: E402
     latest_preseason_by_season,
 )
 from position_predictor.eval.experiment import _attach_market, _score_benchmark  # noqa: E402
-from position_predictor.eval.report import _fmt  # noqa: E402
+from position_predictor.eval.report import _fmt, _git_provenance  # noqa: E402
 
 
 def _ecr():
@@ -68,3 +68,10 @@ def test_report_fmt():
     assert _fmt(0.12345) == "0.123"
     assert _fmt(None) == "—"
     assert _fmt(1.5, 1) == "1.5"
+
+
+def test_git_provenance_format():
+    # In this repo it should resolve; assert the 'branch @ sha' shape, tolerate non-git envs.
+    prov = _git_provenance()
+    if prov is not None:
+        assert " @ " in prov

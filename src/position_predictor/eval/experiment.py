@@ -61,8 +61,11 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
                    combiners=None, fast: bool = False, top_weighted=None):
     """Run the full Stage-8 experiment; return a dict of tidy result DataFrames."""
     import json
+    import time
 
     import pandas as pd
+
+    wall_start = time.perf_counter()
 
     from ..utils.io import DATA_PROCESSED, REPORTS_DIR, ensure_dir, read_parquet
 
@@ -100,7 +103,8 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
     test_feat_seasons = [s - horizon for s in test_labels]
     base_key = {"sport": sport, "position": position}
 
-    rank_rows, avail_rows, ablation_rows = [], [], []
+    rank_rows, avail_rows, ablation_rows, cost_rows = [], [], [], []
+    n_features = len(_all_feature_columns(block_columns, df.columns))
 
     for window in windows:
         n_min, n_max = train_window_bounds(window, test_labels, horizon=horizon,
@@ -108,13 +112,21 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
         train = df[(df["season"] >= n_min) & (df["season"] <= n_max) & df[TARGET].notna()]
         if train.empty:
             continue
+        n_train = int(len(train))
 
         # ---- era-ensemble candidates × combiners ----
         for combine in combiners:
             for model in candidates:
+                t0 = time.perf_counter()
                 ens = EraEnsemble(model, eras, block_columns, combine=combine,
                                   target_col=TARGET, seed=seed,
                                   top_weighted=top_weighted).fit(train)
+                fit_seconds = time.perf_counter() - t0
+                cost_rows.append(
+                    {**base_key, "model_type": "era_ensemble", "model": model,
+                     "window_years": window, "combine": combine,
+                     "n_train_rows": n_train, "n_features": n_features,
+                     "fit_seconds": fit_seconds})
                 rank_rows += _score_over_folds(
                     ens.predict, df, test_labels, horizon, cutoff_grid, k_tiers,
                     {**base_key, "model_type": "era_ensemble", "model": model,
@@ -152,9 +164,24 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
         "ngs_ablation": pd.DataFrame(ablation_rows),
         "benchmark": pd.DataFrame(bench_rows),
         "benchmark_comparison": pd.DataFrame(bench_cmp),
+        "cost": pd.DataFrame(cost_rows),
     }
     results["ranking_aggregate"] = _aggregate_ranking(results["ranking"])
     results["recency"] = _recency_table(results["ranking_aggregate"])
+
+    labeled = df[df[TARGET].notna()]
+    data_volume = {
+        "n_feature_rows": int(len(df)),
+        "n_labeled_rows": int(len(labeled)),
+        "n_features": n_features,
+        "season_min": int(df["season"].min()),
+        "season_max": int(df["season"].max()),
+        "n_seasons": int(df["season"].nunique()),
+        "per_era_rows": {e.name: int((labeled["season"].map(
+            lambda s: assign_era(int(s), eras)) == e.name).sum()) for e in eras},
+    }
+    version = config.get("experiment.version", None)
+    wall_seconds = time.perf_counter() - wall_start
 
     if not write:
         return results
@@ -162,7 +189,8 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
     out = ensure_dir(REPORTS_DIR / "results")
     for name, tbl in results.items():
         tbl.to_csv(out / f"experiment_{stem}_{name}.csv", index=False)
-    _write_summary(results, base_key, test_labels, windows, g_star, out, stem)
+    _write_summary(results, base_key, test_labels, windows, g_star, out, stem,
+                   version=version, data_volume=data_volume, wall_seconds=wall_seconds)
     return results
 
 
@@ -385,7 +413,8 @@ def _recency_table(agg):
     return sub[keep].sort_values(["model", "combine", "cutoff_games", "window_years"])
 
 
-def _write_summary(results, base_key, test_labels, windows, g_star, out_dir, stem):
+def _write_summary(results, base_key, test_labels, windows, g_star, out_dir, stem,
+                   version=None, data_volume=None, wall_seconds=None):
     import json
 
     agg = results["ranking_aggregate"]
@@ -405,8 +434,21 @@ def _write_summary(results, base_key, test_labels, windows, g_star, out_dir, ste
                 bb = baselines.sort_values("spearman_mean", ascending=False).iloc[0]
                 headline["best_baseline"] = bb["model"]
                 headline["best_baseline_spearman_mean"] = float(bb["spearman_mean"])
-    summary = {**base_key, "test_label_seasons": [int(s) for s in test_labels],
+    cost = results.get("cost")
+    compute = {}
+    if cost is not None and not cost.empty:
+        at_window = cost[cost["window_years"] == int(headline.get("window_years", 0))] \
+            if headline.get("window_years") else cost
+        compute = {
+            "total_fit_seconds": float(cost["fit_seconds"].sum()),
+            "wall_seconds": float(wall_seconds) if wall_seconds is not None else None,
+            "mean_fit_seconds_per_model": float(at_window["fit_seconds"].mean())
+            if not at_window.empty else None,
+        }
+    summary = {**base_key, "version": version,
+               "test_label_seasons": [int(s) for s in test_labels],
                "windows": list(windows), "chosen_cutoff_games": g_star,
-               "headline": headline}
+               "headline": headline, "data_volume": data_volume or {},
+               "compute": compute}
     with open(out_dir / f"experiment_{stem}_summary.json", "w") as fh:
         json.dump(summary, fh, indent=2, default=str)

@@ -8,6 +8,22 @@ no modeling — so the report always reflects the latest experiment run.
 from __future__ import annotations
 
 
+def _git_provenance():
+    """Return 'branch @ shortsha[-dirty]' for the working tree, or None if unavailable."""
+    import subprocess
+
+    def _git(*args):
+        return subprocess.run(["git", *args], capture_output=True, text=True,
+                              check=True).stdout.strip()
+    try:
+        branch = _git("rev-parse", "--abbrev-ref", "HEAD")
+        sha = _git("rev-parse", "--short", "HEAD")
+        dirty = "-dirty" if _git("status", "--porcelain") else ""
+        return f"{branch} @ {sha}{dirty}"
+    except Exception:
+        return None
+
+
 def _fmt(x, nd=3):
     try:
         return f"{float(x):.{nd}f}"
@@ -39,10 +55,21 @@ def build_report(config, *, write: bool = True):
     avail = _read(results_dir, stem, "availability")
     bench = _read(results_dir, stem, "benchmark")
     cmp = _read(results_dir, stem, "benchmark_comparison")
+    cost = _read(results_dir, stem, "cost")
     summary_path = results_dir / f"experiment_{stem}_summary.json"
     summary = json.load(open(summary_path)) if summary_path.exists() else {}
 
-    lines = [f"# Position Predictor — Results: {sport} {position}", ""]
+    version = config.get("experiment.version", None)
+    title_version = f" {position} {version}" if version else f" {position}"
+    lines = [f"# Position Predictor — Results: {sport}{title_version}", ""]
+
+    provenance = " · ".join(p for p in [
+        f"**{position} {version}**" if version else None,
+        _git_provenance(),
+    ] if p)
+    if provenance:
+        lines += [f"_{provenance}_", ""]
+
     test_seasons = summary.get("test_label_seasons", [])
     lines += [f"_Generated {date.today().isoformat()}._ "
               f"Test seasons **{test_seasons}**, eligibility cutoff **g\\* = {g_star} games**. "
@@ -55,6 +82,8 @@ def build_report(config, *, write: bool = True):
     lines += _ablation_section(ablation)
     lines += _availability_section(avail)
     lines += _sensitivity_section(agg)
+    lines += _data_volume_section(summary)
+    lines += _compute_section(cost, agg, g_star, summary)
     lines += ["", "## Figures", "",
               f"![Spearman by window](figures/report_{stem}_windows.png)", "",
               f"![Model vs market](figures/report_{stem}_vs_market.png)", ""]
@@ -66,7 +95,81 @@ def build_report(config, *, write: bool = True):
     (REPORTS_DIR / f"REPORT_{stem}.md").write_text(text)
     _plot_windows(agg, g_star, ensure_dir(REPORTS_DIR / "figures"), stem)
     _plot_vs_market(cmp, ensure_dir(REPORTS_DIR / "figures"), stem)
+    if version:
+        _write_version_snapshot(stem, version, text, results_dir, summary_path)
     return text
+
+
+def _data_volume_section(summary):
+    dv = summary.get("data_volume") or {}
+    if not dv:
+        return []
+    out = ["", "## Data volume", "",
+           f"- **Feature rows:** {dv.get('n_feature_rows', '—')} "
+           f"({dv.get('n_labeled_rows', '—')} labeled with a next-season target)",
+           f"- **Features:** {dv.get('n_features', '—')} columns",
+           f"- **Seasons:** {dv.get('season_min', '—')}–{dv.get('season_max', '—')} "
+           f"({dv.get('n_seasons', '—')} seasons)"]
+    per_era = dv.get("per_era_rows") or {}
+    if per_era:
+        out.append("- **Labeled rows per era:** "
+                   + ", ".join(f"{k} {v}" for k, v in per_era.items()))
+    return out
+
+
+def _compute_section(cost, agg, g_star, summary):
+    if cost is None or cost.empty:
+        return []
+    comp = summary.get("compute") or {}
+    out = ["", "## Compute & efficiency", ""]
+    wall = comp.get("wall_seconds")
+    total_fit = comp.get("total_fit_seconds")
+    if wall is not None:
+        out.append(f"- **Experiment wall-clock:** {wall:.1f}s "
+                   f"(total model fit time {total_fit:.1f}s across the grid)"
+                   if total_fit is not None else f"- **Experiment wall-clock:** {wall:.1f}s")
+    # per-model fit cost at the headline window, joined to its ranking quality
+    hl = summary.get("headline") or {}
+    window = hl.get("window_years")
+    sub = cost[cost["window_years"] == window] if window else cost
+    sub = sub[sub["model_type"] == "era_ensemble"]
+    if not sub.empty and not agg.empty:
+        agg_w = agg[(agg["cutoff_games"] == g_star) & (agg["window_years"] == window)]
+        merged = sub.merge(
+            agg_w[["model", "combine", "spearman_mean", "precision_at_12_mean"]],
+            on=["model", "combine"], how="left")
+        merged = merged.sort_values("spearman_mean", ascending=False)
+        out += ["",
+                f"Per-model cost vs ranking quality at the headline window "
+                f"({int(window)}-yr, g\\*={g_star}). **Efficiency** = Spearman per fit-second:",
+                "",
+                "| model | combine | fit (s) | train rows | features | Spearman | P@12 | "
+                "efficiency |",
+                "|---|---|---|---|---|---|---|---|"]
+        for _, r in merged.iterrows():
+            fs = r["fit_seconds"]
+            eff = (r["spearman_mean"] / fs) if fs and fs > 0 else None
+            out.append(f"| {r['model']} | {r['combine']} | {fs:.2f} | "
+                       f"{int(r['n_train_rows'])} | {int(r['n_features'])} | "
+                       f"{_fmt(r['spearman_mean'])} | {_fmt(r['precision_at_12_mean'], 2)} | "
+                       f"{_fmt(eff, 2)} |")
+    return out
+
+
+def _write_version_snapshot(stem, version, report_text, results_dir, summary_path):
+    """Archive a committed, immutable snapshot of this version under reports/versions/."""
+    import shutil
+
+    from ..utils.io import REPORTS_DIR, ensure_dir
+
+    snap = ensure_dir(REPORTS_DIR / "versions" / stem / str(version))
+    (snap / f"REPORT_{stem}_{version}.md").write_text(report_text)
+    if summary_path.exists():
+        shutil.copyfile(summary_path, snap / "summary.json")
+    for name in ("cost", "benchmark_comparison", "recency"):
+        src = results_dir / f"experiment_{stem}_{name}.csv"
+        if src.exists():
+            shutil.copyfile(src, snap / f"{name}.csv")
 
 
 def _best_at_star(agg, g_star, model_type):
