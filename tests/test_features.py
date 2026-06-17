@@ -239,29 +239,51 @@ def test_add_offseason_quantifies_n_plus_1_context():
     ])
     draft = pd.DataFrame([dict(season=2023, team="BAL", position="RB", pick=100)])
 
-    out, cols = add_offseason(df, rosters, draft, horizon=1)
+    out, cols = add_offseason(df, rosters, draft, position="RB", workload_col="touches",
+                              horizon=1)
     x = out[out.player_id == "X"].iloc[0]
     assert x["changed_team_next"] == 1.0                  # TEN -> BAL
-    assert x["rookie_rb_drafted_next"] == 1.0 and x["rookie_rb_capital_next"] == 100.0
+    assert x["rookie_drafted_next"] == 1.0 and x["rookie_draft_capital_next"] == 100.0
     # competition = OTHER RBs' prior touches in BAL's 2023 room (Y=120; rookie Z=0)
-    assert x["backfield_prior_touches_next"] == 120.0
-    assert x["backfield_rb_count_next"] == 3.0
+    assert x["room_prior_workload_next"] == 120.0
+    assert x["room_size_next"] == 3.0
     y = out[out.player_id == "Y"].iloc[0]
     assert y["changed_team_next"] == 0.0                  # stayed on BAL
-    assert y["backfield_prior_touches_next"] == 200.0     # now competes with X's 200
-    assert set(cols) == {"changed_team_next", "rookie_rb_drafted_next", "rookie_rb_capital_next",
-                         "rookie_rb_count_next", "backfield_prior_touches_next",
-                         "backfield_rb_count_next"}
+    assert y["room_prior_workload_next"] == 200.0         # now competes with X's 200
+    assert set(cols) == {"changed_team_next", "rookie_drafted_next", "rookie_draft_capital_next",
+                         "rookie_count_next", "room_prior_workload_next", "room_size_next"}
+
+
+def test_add_offseason_position_aware_workload():
+    # WR model: workload currency is targets, and only WRs count as competition.
+    df = pd.DataFrame([
+        dict(player_id="W", season=2022, recent_team="LAR", touches=10.0, targets=150.0),
+        dict(player_id="V", season=2022, recent_team="LAR", touches=5.0, targets=90.0),
+    ])
+    rosters = pd.DataFrame([
+        dict(player_id="W", season=2023, team="LAR", position="WR"),
+        dict(player_id="V", season=2023, team="LAR", position="WR"),
+        dict(player_id="R", season=2023, team="LAR", position="RB"),  # RB ignored for WR room
+    ])
+    draft = pd.DataFrame([
+        dict(season=2023, team="LAR", position="WR", pick=20),
+        dict(season=2023, team="LAR", position="RB", pick=3),   # RB pick must NOT count
+    ])
+    out, _ = add_offseason(df, rosters, draft, position="WR", workload_col="targets", horizon=1)
+    w = out[out.player_id == "W"].iloc[0]
+    assert w["rookie_draft_capital_next"] == 20.0          # the WR pick, not the RB pick=3
+    assert w["room_prior_workload_next"] == 90.0           # V's targets; RB R excluded
+    assert w["room_size_next"] == 2.0                      # W + V (RB excluded)
 
 
 def test_add_offseason_sentinel_and_none_safe():
     df = pd.DataFrame([dict(player_id="X", season=2022, recent_team="TEN", touches=100.0)])
     rosters = pd.DataFrame([dict(player_id="X", season=2023, team="TEN", position="RB")])
     draft = pd.DataFrame([dict(season=2023, team="DAL", position="RB", pick=5)])  # not TEN
-    out, _ = add_offseason(df, rosters, draft, horizon=1, udfa_pick=300)
+    out, _ = add_offseason(df, rosters, draft, position="RB", horizon=1, udfa_pick=300)
     r = out.iloc[0]
     assert r["changed_team_next"] == 0.0                  # stayed on TEN
-    assert r["rookie_rb_drafted_next"] == 0.0             # TEN drafted no RB
-    assert r["rookie_rb_capital_next"] == 300.0           # sentinel = no threat
+    assert r["rookie_drafted_next"] == 0.0                # TEN drafted no RB
+    assert r["rookie_draft_capital_next"] == 300.0        # sentinel = no threat
     out2, cols2 = add_offseason(df, None, draft)          # missing input -> skipped, no crash
     assert cols2 == [] and "changed_team_next" not in out2.columns

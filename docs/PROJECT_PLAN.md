@@ -335,6 +335,14 @@ The repo separates **shared core** from **per-(sport, position) configuration**:
   feature module; adding a new sport = new data adapter + configs. Each position is
   modeled **separately**; each sport is an independent process.
 
+**WR added (2026-06-17).** Generalising RB → WR confirmed the architecture: build / eras / CV /
+metrics / report were already config-driven by `experiment.position`; the **only** code needing
+parameterizing was the `offseason` block (now takes `position` + `features.offseason_workload_col`,
+position-agnostic column names). A new `config/football_wr.yaml` (workload = targets, WR snap grid)
++ a re-derived eligibility cutoff was all else required. **TE is skipped** (too few
+fantasy-relevant TEs/season for a stable per-season ranking). QB is next (needs passing features +
+likely an `ngs_passing` pull).
+
 ---
 
 ## 10. Reproducibility checklist
@@ -420,7 +428,20 @@ Resolved (2026-06-16, offseason features):
   and `rookie_rb_capital_next` (the continuous competition/capital signals, not the binary flags).
 - **No blending, by design:** ECR stays a benchmark to compare against, never a feature.
 
+Resolved (2026-06-17, WR v1):
+- **WR model built** (`config/football_wr.yaml`). Eligibility cutoff re-derived: **g\* = 7 games**
+  (vs RB's 4) — WR PPG split-half reliability never clears 0.70 (peaks 0.694 @ k=7), i.e. WR
+  scoring is **noisier** (boom/bust, TD/big-play dependent) so it needs more games to stabilise
+  and WR ranking is inherently harder.
+- **Headline (test 2020–2024, g\*=7):** best model `ridge` Spearman **0.752** full-universe (beats
+  linear baseline 0.732). Vs market on its ranked rows: market 0.767 vs model 0.748 (Spearman),
+  market 0.733 vs 0.713 (weighted τ) — market leads overall rank, as with RB. **But the tree
+  models beat the market on Precision@12 (0.583 vs 0.567)** — the draftable top tier.
+- **NGS earns its place for WR** (ablation `keep=True`: P@12 0.53 vs 0.50) — unlike RB, where it
+  collapsed. Receiving separation / air-yards over-expected is real WR signal.
+- **pbp is out of scope** (user decision) — not pursuing red-zone/route features.
+
 Still open:
-- Other positions order after RB (likely WR → QB → TE).
-- Closing the remaining top-weighted gap: pbp opportunity (red-zone/goal-line touches, routes,
-  target quality), more offseason signal (veteran FA competition, vacated touches), tuning.
+- **QB** next (passing features + `ngs_passing`); **TE skipped** (thin position).
+- Closing the remaining top-weighted gap vs market: more offseason signal (veteran FA
+  competition, vacated targets), tuning.

@@ -75,6 +75,7 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
     windows = windows or config.get("validation.history_windows_years", [10, 20, 30])
     cutoff_grid = config.get("eligibility.candidate_games_played", [4, 6, 8, 10, 12])
     g_star = int(config.get("eligibility.chosen_games_played", 4))
+    cutoff_grid = sorted({int(c) for c in cutoff_grid} | {g_star})  # always score the chosen rule
     k_tiers = tuple(config.get("metrics.precision_at_k_tiers", [12, 24, 36]))
     candidates = models or config.get("models.candidates",
                                       ["ridge", "lasso", "elasticnet", "random_forest",

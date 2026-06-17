@@ -534,6 +534,41 @@ provenance** — anyone should be able to trace *why* the project looks the way 
 
 ---
 
+## Entry 018 — Generalize to WR (skip TE)
+
+**Date:** 2026-06-17
+
+**Prompt (full text):**
+
+> Branch off of the fresh primary. We won't do anything with the pbp data. Let's move on to WR
+> and then QB. I think TE is worth skipping due to the small number of fantasy relevant TE's per
+> season.
+
+**Response notes:**
+- Branched `wr-model` off `primary`. Confirmed the §9 design: build / eras / CV / metrics / report
+  were already config-driven by `experiment.position`; the **only** RB-hardcoded code was the
+  `offseason` block. **Parameterized `add_offseason`** by `position` + `workload_col` with
+  position-agnostic columns (`changed_team_next`, `rookie_drafted/draft_capital/count_next`,
+  `room_prior_workload_next`, `room_size_next`); added `features.offseason_workload_col` (RB
+  `touches`, WR `targets`). Two harness fixes surfaced by WR: (1) always score the chosen `g*`
+  even if it's off the candidate grid (`cutoff_grid |= {g*}`); (2) drop all-NaN feature columns at
+  era-model fit time (kills the rushing-NGS-for-WR imputer warnings; no-op for RB).
+- Built `config/football_wr.yaml` and ran the full pipeline (build → features → eligibility → eda
+  → benchmark → experiment → report). **WR eligibility re-derived: g\* = 7 games** (vs RB 4) — WR
+  split-half reliability never clears 0.70 (peaks 0.694 @ k=7); WR scoring is noisier, ranking
+  harder.
+- **WR results (test 2020–2024):** best model `ridge` Spearman **0.752** full-universe (> linear
+  0.732). Vs market on its ranked rows: market 0.767 vs 0.748 (Spearman), 0.733 vs 0.713
+  (weighted τ) — market leads overall rank as with RB, **but the tree models beat the market on
+  Precision@12 (0.583 vs 0.567)**. **NGS-block ablation keep=True for WR** (P@12 0.53 vs 0.50) —
+  receiving separation/air-yards is real WR signal, unlike RB where NGS collapsed.
+- WR ECR benchmark fetched (982 player-seasons; ~76% coverage of eligible WRs). Tests:
+  `test_add_offseason_position_aware_workload` (WR currency = targets, RB picks excluded) — full
+  suite **73/73 pass**, ruff clean. Updated PROJECT_PLAN §9/§12, `data_dictionary.md`, README. TE
+  skipped per the prompt; QB next.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

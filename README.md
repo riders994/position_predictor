@@ -77,7 +77,12 @@ Against the **market** (FantasyPros preseason ECR) on the rows it ranks, the mod
 on overall rank (market 0.73 vs model 0.69) but **matches/edges it on top-12 precision** — with no
 market information. Full write-up in [`reports/REPORT_football_rb.md`](reports/REPORT_football_rb.md).
 
-**Next:** richer usage features to challenge the market; then generalize to WR → QB → TE.
+**WR added** (`config/football_wr.yaml`): the shared pipeline generalized with only the
+`offseason` block needing position-parameterizing. WR eligibility re-derives to **g\* = 7 games**
+(WR scoring is noisier than RB); WR best-model Spearman ≈ 0.75, and the tree models **beat the
+market on Precision@12** (0.58 vs 0.57). NGS earns its place for WR (unlike RB).
+
+**Next:** QB (passing features). TE skipped (too few fantasy-relevant TEs/season).
 See [`PROMPT_LOG.md`](docs/PROMPT_LOG.md) for the full decision trail.
 
 ## Reproducibility

@@ -1,0 +1,99 @@
+# Experiment config — NFL Wide Receiver (v1)
+# Generalized from football_rb.yaml (PROJECT_PLAN §9): same shared pipeline, WR-specific config.
+# Config-driven so every number is explicit and reproducible (no magic numbers in code).
+
+experiment:
+  sport: football
+  position: WR
+  name: football_wr_v1
+
+data:
+  source: nflverse                 # via nfl_data_py
+  #   box scores 1999+, snap counts 2012+, NGS 2016+
+  earliest_season: 1999
+  latest_completed_season: 2025
+  raw_dir: data/raw
+  cache_format: parquet
+
+target:
+  scoring: PPR                     # 1 pt / reception (PPR especially rewards WR volume)
+  metric: ppg                      # next-season points-per-game (primary ranking target)
+  predict_horizon: 1               # season N -> N+1
+
+features:
+  quantitative_only: true
+  offseason_workload_col: targets  # WR competition currency = prior-season targets (§5)
+
+# Required for every football model: predict N+1 availability (injury/reinjury proxy).
+availability_model:
+  enabled: true
+  label: games_played_next
+  model: gbm_count
+  derive_clears_cutoff: true
+  baseline: prior_games_played
+  wear_proxy_windows: [1, 3]
+
+eligibility:
+  # The cutoff is DERIVED analytically (Stage 5) — these are the candidate grid for robustness.
+  candidate_games_played: [4, 6, 8, 10, 12]
+  candidate_snap_share: [0.30, 0.50, 0.70]   # WRs run a higher route/snap share than RBs
+  selection_method: reliability_stabilization
+  reliability_target: 0.70
+  reliability_k_max: 8
+  report_full_grid: true
+  chosen_games_played: 7      # Stage 5 (WR): reliability never clears 0.70 (peaks 0.694 @ k=7);
+                              #   WR PPG is noisier than RB (g*=4) — falls back to max-reliability k.
+  chosen_snap_share: null
+
+scope:
+  players: returning_only          # >= 1 prior NFL season; rookies excluded in v1
+
+validation:
+  scheme: walk_forward
+  test_block_seasons: 5
+  history_windows_years: [10, 20, 30]
+
+models:
+  baselines: [persistence, smoothed_history, mean_reversion, linear]
+  candidates: [ridge, lasso, elasticnet, random_forest, lightgbm, xgboost]
+  stretch: [lambdamart, quantile_gbm]
+
+# Era-separate modeling (PROJECT_PLAN §6.3). Same era boundaries as RB (driven by nflverse
+# coverage, not position). The ngs_efficiency block carries receiving NGS for WRs.
+eras:
+  - name: boxscore
+    start_season: 1999
+    end_season: 2011
+    feature_blocks: [volume, efficiency, production, player_attrs, trajectory,
+                     regression_mean, availability, team_context, offseason]
+  - name: snaps
+    start_season: 2012
+    end_season: 2015
+    feature_blocks: [volume, efficiency, production, player_attrs, trajectory,
+                     regression_mean, availability, team_context, offseason, snap_usage]
+  - name: ngs
+    start_season: 2016
+    end_season: null
+    feature_blocks: [volume, efficiency, production, player_attrs, trajectory, regression_mean,
+                     availability, team_context, offseason, snap_usage, ngs_efficiency]
+
+era_modeling:
+  strategy: separate
+  route_by: feature_season
+  combine: val_weighted
+  combine_alternatives: [mean, recency_weighted]
+
+benchmark:
+  use_market_data: true
+  as_feature: false                # benchmark only, NOT a feature (compare, don't blend)
+  sources: [adp, ecr]
+
+metrics:
+  regression: [mae, rmse, r2]
+  ranking: [spearman, kendall, ndcg_at_k, precision_at_k]
+  precision_at_k_tiers: [12, 24, 36]   # WR1 / WR2 / WR3 boards
+
+reproducibility:
+  random_seed: 1729
+  results_dir: reports/results
+  figures_dir: reports/figures

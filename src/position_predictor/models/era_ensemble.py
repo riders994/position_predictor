@@ -81,6 +81,7 @@ class EraEnsemble:
             cols = _era_columns(era, self.block_columns, df.columns)
             era_fit = fit_df[fit_df[self.season_col].map(
                 lambda s: assign_era(int(s), self.eras)) == era.name]
+            cols = [c for c in cols if len(era_fit) and era_fit[c].notna().any()]
             if not cols or len(era_fit) < 10:
                 continue
             est = _fit_one(self.estimator_name, era_fit, cols, self.target_col, self.seed)
@@ -128,6 +129,9 @@ class EraEnsemble:
             cols = _era_columns(era, self.block_columns, df.columns)
             era_rows = df[df[self.season_col].map(
                 lambda s: assign_era(int(s), self.eras)) == era.name]
+            # Drop columns with no observed values in this era's training rows — they carry no
+            # signal and only trigger imputer warnings (e.g. rushing-NGS columns for WRs).
+            cols = [c for c in cols if era_rows[c].notna().any()]
             if not cols or era_rows.empty:
                 continue
             self.models_[era.name] = _fit_one(
