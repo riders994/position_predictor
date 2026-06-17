@@ -328,9 +328,26 @@ def add_offseason(df, rosters, draft_picks, *, position="RB", workload_col="touc
     ).clip(lower=0.0)
     out["room_size_next"] = out["room_size_next"].fillna(1).astype(float)
 
+    # --- vacated opportunity: season-N workload on the player's N+1 team that DEPARTED ---
+    # Workload from same-position players who were on a team in season N but are NOT back on it
+    # in N+1 (left, retired, or cut) is *opportunity that opened up*. A player joining or staying
+    # on that team sees it; their own returning workload is excluded (it didn't vacate). This is
+    # the RB-v3 complement to room competition — the lever WR analysis surfaced (PROJECT_PLAN §12).
+    trans = out[["recent_team", "season", "team_next", wcol]].copy()
+    trans["_w"] = trans[wcol].fillna(0.0)
+    trans["_stay"] = trans["_w"] * (trans["team_next"] == trans["recent_team"]).astype(float)
+    vac = trans.groupby(["recent_team", "season"]).agg(
+        _team=("_w", "sum"), _ret=("_stay", "sum")).reset_index()
+    vac["vacated_workload_next"] = (vac["_team"] - vac["_ret"]).clip(lower=0.0)
+    vac = vac.rename(columns={"recent_team": "team_next"})  # index by the team being joined
+    out = out.merge(vac[["team_next", "season", "vacated_workload_next"]],
+                    on=["team_next", "season"], how="left")
+    out["vacated_workload_next"] = out["vacated_workload_next"].fillna(0.0)
+
     out = out.drop(columns=["_label", "team_next"])
     cols = ["changed_team_next", "rookie_drafted_next", "rookie_draft_capital_next",
-            "rookie_count_next", "room_prior_workload_next", "room_size_next"]
+            "rookie_count_next", "room_prior_workload_next", "room_size_next",
+            "vacated_workload_next"]
     out[cols] = out[cols].astype(float)
     return out, cols
 

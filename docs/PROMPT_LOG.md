@@ -569,6 +569,37 @@ provenance** — anyone should be able to trace *why* the project looks the way 
 
 ---
 
+## Entry 019 — RB v3: back-apply WR learnings (new iterative process)
+
+**Date:** 2026-06-17
+
+**Prompt (full text):**
+
+> push the WR branch now and then lets start work on RB v3. I want this to be the process. After
+> finishing model N, recheck models N-1 .. 1 and apply learnings to see what can be gained.
+> [follow-up] can you branch off of the fresh primary instead
+
+**Response notes:**
+- Pushed `wr-model` (PR #2, since merged). Saved the **iterative back-apply process** to memory
+  (after model N, revisit N-1..1 with N's learnings). Re-based `rb-v3` off the fresh `primary`
+  (which now includes the merged WR generalization) per the follow-up.
+- **Applied two WR learnings to RB, measuring each against the captured v2 baseline (ridge head-to-head
+  Spearman 0.704 / wτ 0.663 / P@12 0.650; full-universe xgboost 0.752):**
+  1. **Vacated-opportunity feature** (`vacated_workload_next`) — the workload that *left* the
+     player's N+1 team (complement to room competition). **Real gain**: xgboost head-to-head
+     Precision@12 0.55 → **0.58**, full-universe P@12 0.53 → 0.57 / Spearman 0.752 → 0.756; concentrated
+     in the tree models at the top tier (where we compete with ECR). Linear models flat. Verified
+     the team-level logic (DEN vacated 465 touches after 2022, shared by its 2023 backs).
+  2. **Receiving-NGS-for-RB** — WR showed receiving NGS helps. Probed the RB ngs-era model with
+     rushing-only / receiving-only / no-NGS subsets → **identical** top-12 (0.450) & Spearman
+     (~0.712). NGS does not move RB ranking (opportunity dominates). **Rejected** — not
+     productionized. The process keeping only what measurably helps.
+- Feature is position-agnostic, so also applied + re-run for WR. Test
+  `test_add_offseason_vacated_opportunity` — full suite **74/74 pass**, ruff clean. Updated
+  PROJECT_PLAN §12, `data_dictionary.md`. Next big bet for the top-of-board gap: learning-to-rank.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

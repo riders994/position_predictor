@@ -4,11 +4,11 @@ _Generated 2026-06-17._ Test seasons **[2020, 2021, 2022, 2023, 2024]**, eligibi
 
 ## Headline
 
-- **Best model:** `ridge` (mean, 20-yr window) — Spearman **0.752 ± 0.034**, Precision@12 0.50, MAE 2.48 PPG (full eligible universe).
+- **Best model:** `ridge` (val_weighted, 20-yr window) — Spearman **0.750 ± 0.034**, Precision@12 0.50, MAE 2.49 PPG (full eligible universe).
 - **Best baseline:** `linear` — Spearman 0.732 (the must-beat floor).
-- **Market head-to-head** (FantasyPros preseason ECR, scored on the identical rows the market ranks): market Spearman 0.767 vs our best `elasticnet` 0.748 — the model does **not** beat the market on overall rank.
-  On **Precision@12** (the draftable top tier): market 0.57 vs `elasticnet` 0.52.
-  On the **top-weighted** rank score (Weighted τ — errors near #1 count most): market 0.733 vs `ridge` 0.713 — the model does **not** beat the market where it matters most.
+- **Market head-to-head** (FantasyPros preseason ECR, scored on the identical rows the market ranks): market Spearman 0.767 vs our best `ridge` 0.748 — the model does **not** beat the market on overall rank.
+  On **Precision@12** (the draftable top tier): market 0.57 vs `ridge` 0.52.
+  On the **top-weighted** rank score (Weighted τ — errors near #1 count most): market 0.733 vs `elasticnet` 0.712 — the model does **not** beat the market where it matters most.
 
 ## Recency: how much history helps (§6.2)
 
@@ -16,24 +16,24 @@ Spearman by training-window length (years), at g\*:
 
 | model | combine | 10yr | 20yr | 30yr |
 |---|---|---|---|---|
-| elasticnet | mean | 0.745 | 0.748 | 0.748 |
-| elasticnet | recency_weighted | 0.747 | 0.748 | 0.748 |
+| elasticnet | mean | 0.746 | 0.748 | 0.748 |
+| elasticnet | recency_weighted | 0.747 | 0.749 | 0.749 |
 | elasticnet | val_weighted | 0.746 | 0.748 | 0.748 |
-| lasso | mean | 0.745 | 0.749 | 0.749 |
+| lasso | mean | 0.745 | 0.748 | 0.748 |
 | lasso | recency_weighted | 0.747 | 0.746 | 0.746 |
-| lasso | val_weighted | 0.745 | 0.749 | 0.749 |
-| lightgbm | mean | 0.714 | 0.714 | 0.714 |
-| lightgbm | recency_weighted | 0.708 | 0.709 | 0.709 |
-| lightgbm | val_weighted | 0.714 | 0.714 | 0.714 |
-| random_forest | mean | 0.719 | 0.722 | 0.722 |
-| random_forest | recency_weighted | 0.716 | 0.717 | 0.717 |
-| random_forest | val_weighted | 0.719 | 0.723 | 0.723 |
-| ridge | mean | 0.745 | 0.752 | 0.752 |
+| lasso | val_weighted | 0.745 | 0.748 | 0.748 |
+| lightgbm | mean | 0.713 | 0.720 | 0.720 |
+| lightgbm | recency_weighted | 0.712 | 0.714 | 0.714 |
+| lightgbm | val_weighted | 0.714 | 0.720 | 0.720 |
+| random_forest | mean | 0.717 | 0.722 | 0.722 |
+| random_forest | recency_weighted | 0.714 | 0.717 | 0.717 |
+| random_forest | val_weighted | 0.717 | 0.722 | 0.722 |
+| ridge | mean | 0.745 | 0.750 | 0.750 |
 | ridge | recency_weighted | 0.746 | 0.749 | 0.749 |
-| ridge | val_weighted | 0.745 | 0.751 | 0.751 |
-| xgboost | mean | 0.723 | 0.727 | 0.727 |
-| xgboost | recency_weighted | 0.720 | 0.722 | 0.722 |
-| xgboost | val_weighted | 0.723 | 0.727 | 0.727 |
+| ridge | val_weighted | 0.745 | 0.750 | 0.750 |
+| xgboost | mean | 0.719 | 0.723 | 0.723 |
+| xgboost | recency_weighted | 0.719 | 0.721 | 0.721 |
+| xgboost | val_weighted | 0.719 | 0.723 | 0.723 |
 
 > 20 yr ≈ 30 yr is expected — the box-score era is data-capped at 1999.
 
@@ -54,16 +54,16 @@ Preseason ECR coverage of the eligible universe and the market's own ranking qua
 | model | Spearman | Weighted τ (top) | Precision@12 |
 |---|---|---|---|
 | market_ecr _(market)_ | 0.767 | 0.733 | 0.57 |
-| ridge | 0.748 | 0.713 | 0.52 |
-| lasso | 0.747 | 0.712 | 0.52 |
 | elasticnet | 0.748 | 0.712 | 0.52 |
-| xgboost | 0.725 | 0.707 | 0.58 |
-| lightgbm | 0.715 | 0.706 | 0.58 |
-| random_forest | 0.714 | 0.699 | 0.52 |
+| ridge | 0.748 | 0.712 | 0.52 |
+| lasso | 0.747 | 0.712 | 0.52 |
+| xgboost | 0.724 | 0.708 | 0.58 |
+| lightgbm | 0.720 | 0.707 | 0.55 |
+| random_forest | 0.716 | 0.699 | 0.53 |
 
 ## NGS-block ablation (§7.3)
 
-`ngs` era model, longest window — **with** NGS: Spearman 0.689, P@12 0.53; **without**: Spearman 0.681, P@12 0.50.
+`ngs` era model, longest window — **with** NGS: Spearman 0.689, P@12 0.53; **without**: Spearman 0.691, P@12 0.48.
 - **Decision:** keep the `ngs_efficiency` block — it improves (coverage flags retained either way).
 
 ## Availability model (§7.4)
@@ -73,7 +73,7 @@ Predicting N+1 games played (gates projected eligibility / injury risk):
 | model | games MAE | clears-cutoff AUC |
 |---|---|---|
 | baseline_prior_games | 4.26 | 0.822 |
-| gbm_poisson | 4.56 | 0.829 |
+| gbm_poisson | 4.53 | 0.834 |
 
 ## Eligibility-cutoff sensitivity (§6.4)
 
@@ -81,7 +81,7 @@ Best model (`elasticnet`) Spearman across the candidate games cutoffs (robustnes
 
 | cutoff (games) | 4 | 6 | 7 | 8 | 10 | 12 |
 |---|---|---|---|---|---|---|
-| Spearman | 0.768 | 0.767 | 0.748 | 0.775 | 0.776 | 0.777 |
+| Spearman | 0.769 | 0.768 | 0.748 | 0.776 | 0.777 | 0.778 |
 
 
 ## Figures
