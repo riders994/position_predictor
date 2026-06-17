@@ -441,7 +441,30 @@ Resolved (2026-06-17, WR v1):
   collapsed. Receiving separation / air-yards over-expected is real WR signal.
 - **pbp is out of scope** (user decision) — not pursuing red-zone/route features.
 
+Resolved (2026-06-17, RB v3 — back-applying WR learnings):
+- **Vacated-opportunity feature added** (`vacated_workload_next`, position-agnostic): season-N
+  workload on the player's N+1 team that departed. **Gain (RB):** the tree models picked up the
+  signal at the top tier — xgboost head-to-head Precision@12 **0.55 → 0.58** (vs market 0.60),
+  full-universe P@12 0.53 → 0.57 and Spearman 0.752 → 0.756. Linear models flat (can't exploit the
+  interaction). Applied to WR too (smaller effect there).
+- **Receiving-NGS-for-RB hypothesis tested and REJECTED.** WR showed receiving NGS helps; probing
+  the RB ngs-era model with rushing-only / receiving-only / no-NGS subsets gave **identical**
+  top-12 (0.450) and Spearman (~0.712) — NGS efficiency-over-expected does not move RB ranking
+  (opportunity dominates). So the NGS split is *not* productionized for RB (no gain) — a clean
+  example of the back-apply process keeping only what measurably helps.
+
+- **Top-weighted-training probe → REJECTED** (the cheap test of the learning-to-rank idea).
+  Weighting regression rows by their season's NDCG-style finish discount (`models.
+  top_weighted_training`, config-gated, off by default) nudged `weighted_tau` +0.006–0.011 for
+  linear models but **hurt Precision@12 −0.03 to −0.05** — chasing the smooth top-weighted score
+  trades away actual top-12 hits. De-risks (lowers expectations for) full LambdaMART.
+- **Precision@24 added to the head-to-head** (RB2 tier matters as much as RB1). It revealed a
+  blind spot: we **beat** the market on the RB1 tier (P@12 0.65 vs 0.60) but **trail** it on the
+  RB2 tier (**P@24 ~0.72 vs 0.75**) — the market's broad consensus is stronger at ranking the
+  middle of the board than our model.
+
 Still open:
 - **QB** next (passing features + `ngs_passing`); **TE skipped** (thin position).
-- Closing the remaining top-weighted gap vs market: more offseason signal (veteran FA
-  competition, vacated targets), tuning.
+- The remaining gaps vs market are now sharper: **RB2-tier (P@24)** ranking, and overall rank.
+  LambdaMART is still the principled lever but the probe lowered its expected payoff; richer
+  RB2-relevant signal may matter more.

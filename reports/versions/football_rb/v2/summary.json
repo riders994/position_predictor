@@ -1,0 +1,46 @@
+{
+  "sport": "football",
+  "position": "RB",
+  "version": "v2",
+  "test_label_seasons": [
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+  ],
+  "windows": [
+    10,
+    20,
+    30
+  ],
+  "chosen_cutoff_games": 4,
+  "headline": {
+    "best_model": "xgboost",
+    "best_combine": "val_weighted",
+    "window_years": 30,
+    "spearman_mean": 0.7515026639039377,
+    "precision_at_12_mean": 0.5333333333333333,
+    "mae_mean": 2.6159107666846766,
+    "best_baseline": "linear",
+    "best_baseline_spearman_mean": 0.7204777616861833
+  },
+  "data_volume": {
+    "n_feature_rows": 4200,
+    "n_labeled_rows": 2975,
+    "n_features": 80,
+    "season_min": 1999,
+    "season_max": 2024,
+    "n_seasons": 26,
+    "per_era_rows": {
+      "boxscore": 1557,
+      "snaps": 477,
+      "ngs": 941
+    }
+  },
+  "compute": {
+    "total_fit_seconds": 198.44992635299786,
+    "wall_seconds": 273.1932796359997,
+    "mean_fit_seconds_per_model": 4.105906751555545
+  }
+}

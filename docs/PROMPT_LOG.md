@@ -569,6 +569,106 @@ provenance** — anyone should be able to trace *why* the project looks the way 
 
 ---
 
+## Entry 019 — RB v3: back-apply WR learnings (new iterative process)
+
+**Date:** 2026-06-17
+
+**Prompt (full text):**
+
+> push the WR branch now and then lets start work on RB v3. I want this to be the process. After
+> finishing model N, recheck models N-1 .. 1 and apply learnings to see what can be gained.
+> [follow-up] can you branch off of the fresh primary instead
+
+**Response notes:**
+- Pushed `wr-model` (PR #2, since merged). Saved the **iterative back-apply process** to memory
+  (after model N, revisit N-1..1 with N's learnings). Re-based `rb-v3` off the fresh `primary`
+  (which now includes the merged WR generalization) per the follow-up.
+- **Applied two WR learnings to RB, measuring each against the captured v2 baseline (ridge head-to-head
+  Spearman 0.704 / wτ 0.663 / P@12 0.650; full-universe xgboost 0.752):**
+  1. **Vacated-opportunity feature** (`vacated_workload_next`) — the workload that *left* the
+     player's N+1 team (complement to room competition). **Real gain**: xgboost head-to-head
+     Precision@12 0.55 → **0.58**, full-universe P@12 0.53 → 0.57 / Spearman 0.752 → 0.756; concentrated
+     in the tree models at the top tier (where we compete with ECR). Linear models flat. Verified
+     the team-level logic (DEN vacated 465 touches after 2022, shared by its 2023 backs).
+  2. **Receiving-NGS-for-RB** — WR showed receiving NGS helps. Probed the RB ngs-era model with
+     rushing-only / receiving-only / no-NGS subsets → **identical** top-12 (0.450) & Spearman
+     (~0.712). NGS does not move RB ranking (opportunity dominates). **Rejected** — not
+     productionized. The process keeping only what measurably helps.
+- Feature is position-agnostic, so also applied + re-run for WR. Test
+  `test_add_offseason_vacated_opportunity` — full suite **74/74 pass**, ruff clean. Updated
+  PROJECT_PLAN §12, `data_dictionary.md`. Next big bet for the top-of-board gap: learning-to-rank.
+
+---
+
+## Entry 020 — Top-weighted-training probe + Precision@24
+
+**Date:** 2026-06-17
+
+**Prompt (full text):**
+
+> I was going to suggest weight training, so let's start there. Also, I think there might be value
+> in looking at Precision@24 as a metric as well, since drafting an rb2 can be just as important as
+> an rb1.
+
+**Response notes:**
+- **Cheap learning-to-rank probe (weight training toward the top).** Added
+  `top_weighted_sample_weights` + an `EraEnsemble(top_weighted=...)` path (config
+  `models.top_weighted_training`, `--top-weighted` CLI flag; routes a per-row weight to each
+  estimator incl. sklearn pipelines). Weight = within-season NDCG-style finish discount, rescaled
+  to mean 1. **Result: REJECTED.** vs the v3 baseline it nudged `weighted_tau` +0.006–0.011 for
+  linear models (its design target) but **hurt Precision@12 by −0.03 to −0.05** and was flat
+  elsewhere — chasing the smooth top-weighted score trades away real top-12 hits. Machinery kept
+  but **off by default**. This de-risks (lowers expected payoff of) full LambdaMART.
+- **Precision@24 surfaced** in `benchmark_comparison` (already computed; now reported per the top
+  two tiers) + the report headline/table. **Finding:** we **beat** the market on the RB1 tier
+  (P@12 0.65 vs 0.60) but **trail** on the RB2 tier (**P@24 ~0.72 vs 0.75**) — the market's broad
+  consensus ranks the middle of the board better than us. A genuine blind spot the metric exposed.
+- Tests `test_top_weighted_sample_weights` + `test_top_weighted_ensemble_fits_and_predicts` —
+  full suite **76/76 pass**, ruff clean. Restored canonical (top-weighted-off) RB+WR results +
+  reports. Updated PROJECT_PLAN §12, `data_dictionary.md`.
+
+---
+
+## Entry 021 — Versioned, comprehensive reports (per-version snapshots + cross-version progress)
+
+**Date:** 2026-06-17
+
+**Prompt (full text):**
+
+> Where are we at now? [...] What happened to RB v2? [...] Is it at least identifiable in reports?
+> I want to make sure reports are comprehensive [...] can you make sure there are individual reports
+> for each version so we can analyze progress between versions and relative gains of models vs
+> compute/efficiency/data volume
+
+**Response notes:**
+- **Reports were not version-identifiable** (only a generation date) and **overwrote in place** — no
+  history. Added `experiment.version` to each config (RB `v3`, WR `v1`); the report header now stamps
+  `**RB v3** · <branch> @ <shortsha>[-dirty]` (`_git_provenance()` in `report.py`).
+- **Instrumented the experiment for cost.** `run_experiment` now records a `cost` table (per
+  model×window×combine: `fit_seconds`, `n_train_rows`, `n_features`) and a `data_volume` +
+  `compute` block in the summary (feature/labeled rows, per-era counts, season span, total fit +
+  wall-clock). Report gained **Data volume** and **Compute & efficiency** sections — the latter
+  joins per-model fit-seconds to ranking quality (Spearman/fit-s). Surfaced the key efficiency
+  finding: **ridge gets ~0.747 Spearman & P@12 0.63 at ~0.1s fit vs xgboost 0.756 / P@12 0.57 at
+  ~11s — ~100× cheaper for ~1% less Spearman and better top-12.**
+- **Per-version snapshots.** `make report` now archives a committed snapshot to
+  `reports/versions/<stem>/<version>/` (report .md + summary.json + cost/benchmark_comparison/recency
+  CSVs). `reports/versions/` is git-tracked (only `reports/{figures,results}/*` are ignored).
+- **Cross-version progress report** (`eval/progress.py`, `scripts/make_progress.py`, `make
+  progress`) → `reports/versions/<stem>/PROGRESS_<stem>.md`: best-model-vs-market metrics and
+  compute/data-volume per version with deltas.
+- **Backfilled v1 & v2 from git.** Worktrees at c2cd394 (v1) / a42466e (v2), regenerated each
+  version's *features* with its own code, then ran the current instrumented harness against them
+  (isolates the version's feature-set effect under consistent instrumentation). **Finding:** RB
+  v1 ≡ v2 (the offseason block shipped inside the v1 commit; v1→v2 was the WR generalization +
+  harness fixes, no RB feature change); v3's single `vacated_workload` feature (80→81 cols, flat
+  compute) lifts head-to-head Spearman 0.706→0.711 / P@12 0.55→0.58 and narrows the market gap
+  −0.026→−0.021.
+- Tests `test_progress.py` (`_version_key`, `_best_market_row`) + `test_git_provenance_format` —
+  full suite **80/80 pass**, ruff clean on changed files (notebook lint errors pre-date this work).
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

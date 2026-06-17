@@ -10,7 +10,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from position_predictor.eras import Era  # noqa: E402
-from position_predictor.models.era_ensemble import EraEnsemble, _era_columns  # noqa: E402
+from position_predictor.models.era_ensemble import (  # noqa: E402
+    EraEnsemble,
+    _era_columns,
+    top_weighted_sample_weights,
+)
 
 ERAS = [
     Era("boxscore", 2000, 2007, ("base",)),
@@ -52,6 +56,27 @@ def test_fit_predict_beats_mean_and_weights_normalised():
     assert len(pred) == len(test)
     # learned signal -> predictions correlate strongly with the held-out target
     assert np.corrcoef(pred, test["target"])[0, 1] > 0.9
+
+
+def test_top_weighted_sample_weights():
+    # within a season, the best target finisher gets the most weight; mean weight ~ 1.
+    df = pd.DataFrame({"season": [2020] * 4, "target": [30.0, 20.0, 10.0, 5.0]})
+    w = top_weighted_sample_weights(df, "target", "season")
+    assert w[0] > w[1] > w[2] > w[3]          # rank-1 target weighted most
+    assert abs(w.mean() - 1.0) < 1e-9         # rescaled to mean 1 (preserves sample size)
+    # two seasons handled independently
+    df2 = pd.DataFrame({"season": [2020, 2020, 2021, 2021], "target": [1.0, 9.0, 1.0, 9.0]})
+    w2 = top_weighted_sample_weights(df2, "target", "season")
+    assert w2[1] > w2[0] and w2[3] > w2[2]    # the within-season top weighted more each season
+
+
+def test_top_weighted_ensemble_fits_and_predicts():
+    df = _synthetic()
+    train = df[df.season <= 2014]
+    ens = EraEnsemble("lightgbm", ERAS, BLOCKS, combine="mean", target_col="target",
+                      seed=1, top_weighted=True).fit(train)
+    pred = ens.predict(df[df.season >= 2015])
+    assert len(pred) == len(df[df.season >= 2015])   # weighting path runs end-to-end
 
 
 def test_combiners_all_run_and_normalise():

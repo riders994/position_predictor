@@ -5,6 +5,7 @@ experiment:
   sport: football
   position: RB
   name: football_rb_v1
+  version: v3                        # human-meaningful model version, stamped into the report header
 
 data:
   source: nflverse                 # via nfl_data_py

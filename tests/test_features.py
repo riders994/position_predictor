@@ -251,7 +251,8 @@ def test_add_offseason_quantifies_n_plus_1_context():
     assert y["changed_team_next"] == 0.0                  # stayed on BAL
     assert y["room_prior_workload_next"] == 200.0         # now competes with X's 200
     assert set(cols) == {"changed_team_next", "rookie_drafted_next", "rookie_draft_capital_next",
-                         "rookie_count_next", "room_prior_workload_next", "room_size_next"}
+                         "rookie_count_next", "room_prior_workload_next", "room_size_next",
+                         "vacated_workload_next"}
 
 
 def test_add_offseason_position_aware_workload():
@@ -274,6 +275,28 @@ def test_add_offseason_position_aware_workload():
     assert w["rookie_draft_capital_next"] == 20.0          # the WR pick, not the RB pick=3
     assert w["room_prior_workload_next"] == 90.0           # V's targets; RB R excluded
     assert w["room_size_next"] == 2.0                      # W + V (RB excluded)
+
+
+def test_add_offseason_vacated_opportunity():
+    # OLD team 2022: A (100 touches) leaves to NEW, B (50) stays. C joins OLD from X.
+    df = pd.DataFrame([
+        dict(player_id="A", season=2022, recent_team="OLD", touches=100.0),
+        dict(player_id="B", season=2022, recent_team="OLD", touches=50.0),
+        dict(player_id="C", season=2022, recent_team="X", touches=10.0),
+    ])
+    rosters = pd.DataFrame([
+        dict(player_id="A", season=2023, team="NEW", position="RB"),  # A left OLD
+        dict(player_id="B", season=2023, team="OLD", position="RB"),  # B stayed
+        dict(player_id="C", season=2023, team="OLD", position="RB"),  # C joined OLD
+    ])
+    draft = pd.DataFrame([dict(season=2023, team="OLD", position="RB", pick=50)])
+    out, cols = add_offseason(df, rosters, draft, position="RB", workload_col="touches")
+    assert "vacated_workload_next" in cols
+    g = out.set_index("player_id")["vacated_workload_next"]
+    # OLD vacated A's 100 touches (A left); B's 50 stays -> not vacated.
+    assert g["B"] == 100.0     # B (stays OLD) sees A's vacated workload
+    assert g["C"] == 100.0     # C (joins OLD) sees the same opportunity
+    assert g["A"] == 0.0       # A's new team NEW vacated nothing
 
 
 def test_add_offseason_sentinel_and_none_safe():
