@@ -30,7 +30,10 @@ def _best_market_row(snap_dir):
     df = pd.read_csv(path)
     if df.empty:
         return None, None
-    metrics = ["spearman", "weighted_tau", "precision_at_12", "precision_at_24"]
+    # Precision tiers are position-configured (precision_at_<k>); keep whatever is present.
+    prec = sorted(c for c in df.columns
+                  if c.startswith("precision_at_") and c.rsplit("_", 1)[1].isdigit())
+    metrics = [c for c in ["spearman", "weighted_tau"] if c in df.columns] + prec
     agg = df.groupby("model")[metrics].mean().reset_index()
     market = agg[agg["model"] == "market_ecr"]
     models = agg[agg["model"] != "market_ecr"].sort_values("spearman", ascending=False)
@@ -76,21 +79,26 @@ def build_progress(config, *, write: bool = True):
              "gains justified its added cost.", ""]
 
     # ---- ranking quality vs market ----
+    # Precision tier columns vary by position (RB1/RB2 @ 12/24, QB1/QB2 @ 6/12); read from data.
+    prec = sorted((c for c in (rows[0]["best"] or {})
+                   if c.startswith("precision_at_") and c.rsplit("_", 1)[1].isdigit()),
+                  key=lambda c: int(c.rsplit("_", 1)[1]))
+    prec_headers = "".join(f" P@{c.rsplit('_', 1)[1]} |" for c in prec)
     lines += ["## Ranking quality (best model vs market)", "",
-              "| version | best model | Spearman | Weighted τ | P@12 | P@24 | "
-              "Δ Spearman vs market |", "|---|---|---|---|---|---|---|"]
+              "| version | best model | Spearman | Weighted τ |" + prec_headers
+              + " Δ Spearman vs market |",
+              "|---|---|---|---|" + "---|" * len(prec) + "---|"]
     prev_spear = None
     for r in rows:
         b, m = r["best"], r["market"]
         if not b:
             continue
-        model = f"{b['model']}"
         d_mkt = (b["spearman"] - m["spearman"]) if m else None
         delta = f" ({b['spearman'] - prev_spear:+.3f} vs prev)" if prev_spear is not None else ""
+        prec_cells = "".join(f" {_fmt(b[c], 2)} |" for c in prec)
         lines.append(
-            f"| {r['version']} | {model} | {_fmt(b['spearman'])}{delta} | "
-            f"{_fmt(b['weighted_tau'])} | {_fmt(b['precision_at_12'], 2)} | "
-            f"{_fmt(b['precision_at_24'], 2)} | {_fmt(d_mkt)} |")
+            f"| {r['version']} | {b['model']} | {_fmt(b['spearman'])}{delta} | "
+            f"{_fmt(b['weighted_tau'])} |" + prec_cells + f" {_fmt(d_mkt)} |")
         prev_spear = b["spearman"]
 
     # ---- compute & data volume ----

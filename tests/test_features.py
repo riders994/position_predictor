@@ -17,9 +17,14 @@ from position_predictor.features.build import (  # noqa: E402
     add_availability,
     add_efficiency,
     add_ngs_efficiency,
+    add_ngs_passing,
     add_offseason,
+    add_passing_efficiency,
+    add_passing_production,
+    add_passing_volume,
     add_player_attrs,
     add_production,
+    add_qb_rushing,
     add_regression_mean,
     add_snap_usage,
     add_team_context,
@@ -310,3 +315,97 @@ def test_add_offseason_sentinel_and_none_safe():
     assert r["rookie_draft_capital_next"] == 300.0        # sentinel = no threat
     out2, cols2 = add_offseason(df, None, draft)          # missing input -> skipped, no crash
     assert cols2 == [] and "changed_team_next" not in out2.columns
+
+
+# --------------------------------------------------------------------- QB passing blocks
+
+def _qb_panel():
+    """QB A over 2015–2016 (NGS era). Counts chosen for easy hand-checks."""
+    rows = [
+        dict(player_id="A", season=2015, recent_team="AAA", games=16,
+             attempts=500, completions=325, passing_yards=4000, passing_tds=30,
+             interceptions=10, sacks=20, passing_air_yards=4200, passing_first_downs=200,
+             passing_epa=120.0, carries=40, rushing_yards=200, rushing_tds=2,
+             rushing_epa=5.0, ppr_points=320.0, ppg=20.0, touches=40),
+        dict(player_id="A", season=2016, recent_team="AAA", games=16,
+             attempts=550, completions=360, passing_yards=4500, passing_tds=35,
+             interceptions=8, sacks=25, passing_air_yards=4600, passing_first_downs=220,
+             passing_epa=140.0, carries=50, rushing_yards=300, rushing_tds=3,
+             rushing_epa=8.0, ppr_points=360.0, ppg=22.5, touches=50),
+        dict(player_id="B", season=2015, recent_team="BBB", games=16,
+             attempts=400, completions=240, passing_yards=2800, passing_tds=18,
+             interceptions=14, sacks=35, passing_air_yards=3200, passing_first_downs=150,
+             passing_epa=30.0, carries=20, rushing_yards=80, rushing_tds=1,
+             rushing_epa=1.0, ppr_points=220.0, ppg=13.75, touches=20),
+    ]
+    return pd.DataFrame(rows)
+
+
+def test_passing_production_finish_rank_and_total_tds():
+    out, cols = add_passing_production(_qb_panel())
+    a15 = _row(out, "A", 2015)
+    assert a15["total_tds"] == 32                 # 30 passing + 2 rushing
+    assert a15["finish_ppr_rank"] == 1            # A (320) > B (220) in 2015
+    assert _row(out, "B", 2015)["finish_ppr_rank"] == 2
+    assert "passing_yards" in cols and "interceptions" in cols
+
+
+def test_passing_volume_dropbacks_and_per_game():
+    out, cols = add_passing_volume(_qb_panel())
+    a15 = _row(out, "A", 2015)
+    assert a15["dropbacks"] == 520                # 500 attempts + 20 sacks
+    assert a15["attempts_pg"] == 500 / 16
+    assert "dropbacks_pg" in cols
+
+
+def test_passing_efficiency_rates_and_epa():
+    out, cols = add_passing_efficiency(add_passing_volume(_qb_panel())[0])
+    a15 = _row(out, "A", 2015)
+    assert a15["completion_pct"] == 325 / 500
+    assert a15["yards_per_attempt"] == 4000 / 500
+    assert a15["int_rate"] == 10 / 500
+    assert a15["sack_rate"] == 20 / 520            # sacks / dropbacks
+    assert a15["pass_epa_per_db"] == 120.0 / 520
+    assert "pass_td_rate" in cols
+
+
+def test_qb_rushing_block():
+    out, cols = add_qb_rushing(_qb_panel())
+    a16 = _row(out, "A", 2016)
+    assert a16["rush_yards_pg"] == 300 / 16
+    assert a16["yards_per_carry"] == 300 / 50
+    assert "rushing_tds" in cols
+
+
+def test_add_ngs_passing_merges_and_flags():
+    df = _qb_panel()
+    ngs = pd.DataFrame([
+        dict(player_id="A", season=2015, cpoe=3.5, avg_time_to_throw=2.7,
+             aggressiveness=18.0, ngs_passer_rating=98.0),
+    ])
+    out, cols = add_ngs_passing(df, ngs)
+    assert _row(out, "A", 2015)["cpoe"] == 3.5
+    assert _row(out, "A", 2015)["has_ngs_pass"] == 1   # covered
+    assert _row(out, "B", 2015)["has_ngs_pass"] == 0   # not in NGS frame
+    assert "cpoe" in cols and "has_ngs_pass" in cols
+
+
+def test_add_ngs_passing_flag_present_without_ngs_data():
+    out, cols = add_ngs_passing(_qb_panel(), None)
+    assert (out["has_ngs_pass"] == 0).all()
+    assert "has_ngs_pass" in cols
+
+
+def test_ngs_season_passing_renames():
+    raw = pd.DataFrame([
+        dict(player_gsis_id="A", season=2016, season_type="REG", week=0,
+             completion_percentage_above_expectation=2.1, avg_time_to_throw=2.6,
+             aggressiveness=15.0, passer_rating=95.0),
+        dict(player_gsis_id="A", season=2016, season_type="REG", week=5,
+             completion_percentage_above_expectation=9.9, avg_time_to_throw=9.9,
+             aggressiveness=99.0, passer_rating=99.0),  # non-summary week, dropped
+    ])
+    out = ngs_season(raw, "passing")
+    assert list(out["player_id"]) == ["A"]
+    assert out.iloc[0]["cpoe"] == 2.1                  # week==0 summary row only
+    assert out.iloc[0]["ngs_passer_rating"] == 95.0

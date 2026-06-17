@@ -669,6 +669,44 @@ provenance** — anyone should be able to trace *why* the project looks the way 
 
 ---
 
+## Entry 022 — QB v1 (third position; passing feature family)
+
+**Date:** 2026-06-17
+
+**Prompt (full text):**
+
+> commit and push so I can apply the PR [then] start the QB work from the fresh primary
+
+**Response notes:**
+- Merged RB v3 (PR #3) into primary; branched `qb-model` off fresh primary. QB was a bigger lift
+  than WR: the whole feature pipeline was rushing/receiving-only. The **target needed no work** —
+  nflverse `fantasy_points_ppr` already scores passing (4-pt pass TDs), so QB PPG flows through the
+  existing build.
+- **Data layer:** added `ngs_passing` to `fetch.py` (CPOE/time-to-throw/aggressiveness, 2016+);
+  added passing box-score columns to `SEASON_SUM_COLS` (completions, attempts, passing_yards/tds,
+  interceptions, sacks, passing_air_yards, passing_first_downs, passing_epa); generalized
+  `ngs_season()` with a `passing` branch.
+- **Passing feature family** (`features/build.py`), dispatched on `position=="QB"`:
+  `add_passing_production`, `add_passing_volume` (incl. dropbacks=att+sacks), `add_passing_efficiency`
+  (cmp%, Y/A, TD/INT/sack rate, EPA/dropback), `add_qb_rushing` (mobile-QB rushing — kept), and
+  `add_ngs_passing`. Shared blocks (player_attrs, availability, snap_usage, trajectory,
+  regression_mean, offseason) reused as-is (all column-defensive). No `team_context` for QB (a
+  starter ≈ the team's pass game). Offseason competition currency = **pass attempts**.
+- **Config / eligibility:** `config/football_qb.yaml` (tiers `[6,12,24]` = QB1-elite/QB1/QB2; eras
+  map the NGS era to `ngs_passing`). Stage-5 reliability **never clears 0.70, peaks 0.614 @ k=7**
+  (QB PPG noisier than RB g\*=4 / WR g\*=7 — TD & game-script variance) → **g\*=7**.
+- **Results (QB v1):** best model random_forest **Spearman 0.697** (full universe) > baseline 0.635;
+  MAE 4.18 PPG. vs market: trails on overall rank (0.629 vs 0.695 covered) and on the elite **QB1
+  tier (P@6 0.50 vs 0.53)**, but **edges market at the QB2/streamer tier (P@12 0.67 vs 0.65)** —
+  same shape as RB/WR (model competitive in the startable middle, market sharp at the very top).
+- **Genericization fixes** (QB exposed report hardcoding): `report.py` headline + benchmark
+  sections and `progress.py` now derive precision tiers from the configured `precision_at_<k>`
+  columns and label them by position (QB1/QB2, RB1/RB2 …) instead of hardcoded `precision_at_12/24`
+  + "RB1". Verified identical RB/WR output (no snapshot churn).
+- Tests: 7 QB feature-block tests in `test_features.py` — full suite **87/87 pass**, ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

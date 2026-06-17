@@ -78,7 +78,7 @@ def build_report(config, *, write: bool = True):
 
     lines += _headline_section(agg, cmp, g_star, sport, position)
     lines += _window_section(agg, g_star)
-    lines += _benchmark_section(bench, cmp, g_star)
+    lines += _benchmark_section(bench, cmp, g_star, position)
     lines += _ablation_section(ablation)
     lines += _availability_section(avail)
     lines += _sensitivity_section(agg)
@@ -205,10 +205,11 @@ def _headline_section(agg, cmp, g_star, sport, position):
                        f"identical rows the market ranks): market Spearman {_fmt(mk)} vs our best "
                        f"`{mn}` {_fmt(best_model.iloc[0])} — the model {verdict} the market on "
                        "overall rank.")
-            for tier, label in [("precision_at_12", "Precision@12 (tier-1 / RB1)"),
-                                ("precision_at_24", "Precision@24 (tier-2 / RB2)")]:
-                if tier not in cmp.columns:
-                    continue
+            # Tiers are position-configured (precision_at_<k> columns); the two smallest k are
+            # the headline tiers (e.g. RB1/RB2, or QB1/QB2 at k=6/12), labelled by position.
+            prec = _precision_cols(cmp)
+            for i, (k, tier) in enumerate(prec[:2], start=1):
+                label = f"Precision@{k} (tier-{i} / {position}{i})"
                 pt = cmp.groupby("model")[tier].mean()
                 pt_best = pt.drop(labels=["market_ecr"], errors="ignore").sort_values(
                     ascending=False)
@@ -253,32 +254,40 @@ def _window_section(agg, g_star):
     return out
 
 
-def _benchmark_section(bench, cmp, g_star):
+def _precision_cols(frame):
+    """Sorted [(k, 'precision_at_<k>')] for the precision tiers present in a result frame."""
+    return sorted((int(c.rsplit("_", 1)[1]), c) for c in frame.columns
+                  if c.startswith("precision_at_") and c.rsplit("_", 1)[1].isdigit())
+
+
+def _benchmark_section(bench, cmp, g_star, position):
     out = ["## Market benchmark (§7.4)", ""]
     if bench.empty:
         return out + ["_No market benchmark available (run `make benchmark`)._", ""]
     sub = bench[bench["cutoff_games"] == g_star]
+    tier1_k, tier1_col = _precision_cols(bench)[0]  # smallest tier = tier-1 board
     out.append("Preseason ECR coverage of the eligible universe and the market's own ranking "
                "quality, per test season:")
     out.append("")
-    out.append("| season | eligible | ranked | coverage | market Spearman | market P@12 |")
+    out.append(f"| season | eligible | ranked | coverage | market Spearman | market P@{tier1_k} |")
     out.append("|---|---|---|---|---|---|")
     for _, r in sub.sort_values("test_season").iterrows():
         out.append(f"| {int(r['test_season'])} | {int(r['n_eligible'])} | "
                    f"{int(r['n_market_ranked'])} | {_fmt(r['coverage'],2)} | "
-                   f"{_fmt(r['spearman'])} | {_fmt(r['precision_at_12'],2)} |")
+                   f"{_fmt(r['spearman'])} | {_fmt(r[tier1_col],2)} |")
     out.append("")
     if not cmp.empty:
         out.append("**Head-to-head on the identical ranked rows** (mean across folds). "
                    "`weighted_tau` is the **top-weighted** rank score — errors near #1 count most:")
         out.append("")
-        metric_cols = [c for c in ["spearman", "weighted_tau", "precision_at_12",
-                       "precision_at_24"] if c in cmp.columns]
+        prec = _precision_cols(cmp)
+        metric_cols = [c for c in ["spearman", "weighted_tau"] if c in cmp.columns] \
+            + [c for _, c in prec]
         m = cmp.groupby("model")[metric_cols].mean().sort_values(
             "weighted_tau" if "weighted_tau" in metric_cols else "spearman", ascending=False)
-        head = {"spearman": "Spearman", "weighted_tau": "Weighted τ (top)",
-                "precision_at_12": "Precision@12 (tier-1)",
-                "precision_at_24": "Precision@24 (tier-2)"}
+        head = {"spearman": "Spearman", "weighted_tau": "Weighted τ (top)"}
+        for i, (k, c) in enumerate(prec, start=1):
+            head[c] = f"Precision@{k} ({position}{i})"
         out.append("| model | " + " | ".join(head[c] for c in metric_cols) + " |")
         out.append("|---|" + "|".join("---" for _ in metric_cols) + "|")
         for model, r in m.iterrows():

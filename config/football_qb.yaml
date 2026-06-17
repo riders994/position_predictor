@@ -1,0 +1,102 @@
+# Experiment config — NFL Quarterback (v1)
+# Generalized from football_rb.yaml (PROJECT_PLAN §9): same shared pipeline, QB-specific config.
+# QBs score off PASSING (nflverse fantasy_points_ppr already uses 4-pt passing TDs) + rushing
+# for mobile QBs, so the production/volume/efficiency/NGS blocks are passing-oriented.
+
+experiment:
+  sport: football
+  position: QB
+  name: football_qb_v1
+  version: v1                        # human-meaningful model version, stamped into the report header
+
+data:
+  source: nflverse                 # via nfl_data_py
+  earliest_season: 1999
+  latest_completed_season: 2025
+  raw_dir: data/raw
+  cache_format: parquet
+
+target:
+  scoring: PPR                     # passing/rushing scoring; PPR only matters for pass-catchers
+  metric: ppg                      # next-season points-per-game (primary ranking target)
+  predict_horizon: 1               # season N -> N+1
+
+features:
+  quantitative_only: true
+  offseason_workload_col: attempts  # QB competition currency = prior-season pass attempts (§5)
+
+availability_model:
+  enabled: true
+  label: games_played_next
+  model: gbm_count
+  derive_clears_cutoff: true
+  baseline: prior_games_played
+  wear_proxy_windows: [1, 3]
+
+eligibility:
+  # Cutoff is DERIVED analytically (Stage 5) — candidates are the robustness grid. QBs who play
+  # at all tend to start, so the relevant grid skews higher than skill positions.
+  candidate_games_played: [6, 7, 8, 10, 12, 14]
+  candidate_snap_share: [0.50, 0.70, 0.90]   # starting QBs run a near-full snap share
+  selection_method: reliability_stabilization
+  reliability_target: 0.70
+  reliability_k_max: 8
+  report_full_grid: true
+  chosen_games_played: 7      # Stage 5 (QB): reliability never clears 0.70 (peaks 0.614 @ k=7);
+                              #   QB PPG is noisier than RB (g*=4) / WR (g*=7) — TD/game-script variance.
+  chosen_snap_share: null
+
+scope:
+  players: returning_only          # >= 1 prior NFL season; rookies excluded in v1
+
+validation:
+  scheme: walk_forward
+  test_block_seasons: 5
+  history_windows_years: [10, 20, 30]
+
+models:
+  baselines: [persistence, smoothed_history, mean_reversion, linear]
+  candidates: [ridge, lasso, elasticnet, random_forest, lightgbm, xgboost]
+  stretch: [lambdamart, quantile_gbm]
+
+# Era-separate modeling (PROJECT_PLAN §6.3). Same era boundaries as RB/WR (driven by nflverse
+# coverage, not position). The ngs_passing block carries Next Gen Stats passing (CPOE, time to
+# throw, aggressiveness) for QBs. No team_context block: a starting QB ≈ the team's pass game,
+# so team-relative usage shares carry little signal.
+eras:
+  - name: boxscore        # box scores / weekly EPA only
+    start_season: 1999
+    end_season: 2011
+    feature_blocks: [volume, efficiency, production, rushing, player_attrs, trajectory,
+                     regression_mean, availability, offseason]
+  - name: snaps           # + snap-share usage (snaps 2012+)
+    start_season: 2012
+    end_season: 2015
+    feature_blocks: [volume, efficiency, production, rushing, player_attrs, trajectory,
+                     regression_mean, availability, offseason, snap_usage]
+  - name: ngs             # + Next Gen Stats passing (NGS 2016+)
+    start_season: 2016
+    end_season: null      # open-ended (current)
+    feature_blocks: [volume, efficiency, production, rushing, player_attrs, trajectory,
+                     regression_mean, availability, offseason, snap_usage, ngs_passing]
+
+era_modeling:
+  strategy: separate
+  route_by: feature_season
+  combine: val_weighted
+  combine_alternatives: [mean, recency_weighted]
+
+benchmark:
+  use_market_data: true
+  as_feature: false                # benchmark only, NOT a feature (compare, don't blend)
+  sources: [adp, ecr]
+
+metrics:
+  regression: [mae, rmse, r2]
+  ranking: [spearman, kendall, ndcg_at_k, precision_at_k]
+  precision_at_k_tiers: [6, 12, 24]   # elite QB1 / QB1 / QB2 (streamer) boards — ~32 NFL starters
+
+reproducibility:
+  random_seed: 1729
+  results_dir: reports/results
+  figures_dir: reports/figures
