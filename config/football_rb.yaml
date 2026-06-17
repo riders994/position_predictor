@@ -24,6 +24,7 @@ features:
   # Quantitative-only: numbers from box scores / pbp / snaps / rosters / combine.
   # No qualitative or hand-labeled inputs (e.g. "coaching change"); use stat proxies.
   quantitative_only: true
+  offseason_workload_col: touches   # season-N opportunity stat valuing backfield competition (§5)
 
 # Required for every football model: predict N+1 availability (injury/reinjury proxy).
 availability_model:

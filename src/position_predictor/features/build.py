@@ -264,69 +264,73 @@ def ngs_season(ngs, kind: str, *, regular_season_only: bool = True):
 
 # ------------------------------------------------------------------------ orchestrator
 
-def add_offseason(df, rosters, draft_picks, *, horizon=1, udfa_pick=300):
+def add_offseason(df, rosters, draft_picks, *, position="RB", workload_col="touches",
+                  horizon=1, udfa_pick=300):
     """Offseason context for the season-*N+horizon* prediction (PROJECT_PLAN §5, Sept-1 cutoff).
 
     Quantifies the roster/draft dynamics the market reacts to but prior-season box scores miss:
-    a **changed team**, a **drafted replacement** (and how high a pick), and how **crowded /
-    proven** the new backfield is. Every input — the N+1 draft (April) and the N+1 preseason
-    roster — predates the season, so these are legitimately known at draft time (by **Sept 1**):
-    *not* leakage, and exactly the information ECR already has. This is the one feature block that
-    reads season *N+1* (preseason) data; all other blocks use only data through season *N*.
+    a **changed team**, a **drafted replacement** at the player's position (and how high a pick),
+    and how **crowded / proven** the position room is. Every input — the N+1 draft (April) and the
+    N+1 preseason roster — predates the season, so these are legitimately known at draft time (by
+    **Sept 1**): *not* leakage, and exactly the information ECR already has. This is the one
+    feature block that reads season *N+1* (preseason) data; all others use only data through *N*.
 
-    ``rosters`` and ``draft_picks`` are the raw nflverse tables. Returns ``(df, columns)``; if
-    either is missing the block is skipped (empty column list).
+    Position-agnostic: ``position`` selects which drafted rookies / roster-mates count as
+    competition, and ``workload_col`` is the season-*N* opportunity stat used to value that
+    competition (RB ``touches``, WR/TE ``targets``, QB ``pass_attempts``). ``rosters`` and
+    ``draft_picks`` are the raw nflverse tables. Returns ``(df, columns)``; the block is skipped
+    (empty list) if an input is missing.
     """
     out = df.copy()
     if rosters is None or draft_picks is None or "recent_team" not in out.columns:
         return out, []
+    wcol = workload_col if workload_col in out.columns else "touches"
     out["_label"] = out["season"] + horizon  # the season being predicted (N+1)
 
-    # season-N touches per player, to value proven competition in the new backfield.
-    season_touches = out[["player_id", "season", "touches"]].dropna(subset=["player_id"])
+    # season-N workload per player, to value proven competition in the new position room.
+    season_load = out[["player_id", "season", wcol]].dropna(subset=["player_id"])
 
     # --- the player's team in the prediction season (from the N+1 preseason roster) ---
-    ros = rosters[["player_id", "season", "team", "position"]].dropna(
-        subset=["player_id", "team"])
-    team_next = ros.drop_duplicates(["player_id", "season"])[["player_id", "season", "team"]]
-    team_next = team_next.rename(columns={"season": "_label", "team": "team_next"})
+    ros = rosters[["player_id", "season", "team"]].dropna(subset=["player_id", "team"])
+    team_next = ros.drop_duplicates(["player_id", "season"]).rename(
+        columns={"season": "_label", "team": "team_next"})
     out = out.merge(team_next, on=["player_id", "_label"], how="left")
     out["changed_team_next"] = (
         out["team_next"].notna() & (out["team_next"] != out["recent_team"])).astype(int)
 
-    # --- rookie RB the team drafted in the N+1 draft (capital = best overall pick) ---
-    rb_draft = draft_picks[draft_picks.get("position") == "RB"].dropna(subset=["pick"])
-    rb_cap = rb_draft.groupby(["season", "team"]).agg(
-        rookie_rb_capital_next=("pick", "min"),
-        rookie_rb_count_next=("pick", "size")).reset_index().rename(
+    # --- rookie at the player's position the team drafted in the N+1 draft (capital = best pick) ---
+    pos_draft = draft_picks[draft_picks.get("position") == position].dropna(subset=["pick"])
+    cap = pos_draft.groupby(["season", "team"]).agg(
+        rookie_draft_capital_next=("pick", "min"),
+        rookie_count_next=("pick", "size")).reset_index().rename(
         columns={"season": "_label", "team": "team_next"})
-    out = out.merge(rb_cap, on=["_label", "team_next"], how="left")
-    out["rookie_rb_drafted_next"] = out["rookie_rb_capital_next"].notna().astype(int)
-    out["rookie_rb_capital_next"] = out["rookie_rb_capital_next"].fillna(udfa_pick)
-    out["rookie_rb_count_next"] = out["rookie_rb_count_next"].fillna(0)
+    out = out.merge(cap, on=["_label", "team_next"], how="left")
+    out["rookie_drafted_next"] = out["rookie_draft_capital_next"].notna().astype(int)
+    out["rookie_draft_capital_next"] = out["rookie_draft_capital_next"].fillna(udfa_pick)
+    out["rookie_count_next"] = out["rookie_count_next"].fillna(0)
 
-    # --- proven RB workload in the new backfield (N+1 roster RBs' prior-season touches) ---
-    rb_ros = rosters[rosters.get("position") == "RB"][["player_id", "season", "team"]].dropna()
-    rb_ros = rb_ros.drop_duplicates(["player_id", "season"])
-    rb_ros["_prior"] = rb_ros["season"] - 1
-    rb_ros = rb_ros.merge(
-        season_touches.rename(columns={"season": "_prior", "touches": "rb_touches"}),
+    # --- proven workload in the new position room (N+1 roster mates' prior-season workload) ---
+    pos_ros = rosters[rosters.get("position") == position][
+        ["player_id", "season", "team"]].dropna().drop_duplicates(["player_id", "season"])
+    pos_ros["_prior"] = pos_ros["season"] - 1
+    pos_ros = pos_ros.merge(
+        season_load.rename(columns={"season": "_prior", wcol: "_load"}),
         on=["player_id", "_prior"], how="left")
-    rb_ros["rb_touches"] = rb_ros["rb_touches"].fillna(0.0)
-    room = rb_ros.groupby(["team", "season"]).agg(
-        backfield_prior_touches_next=("rb_touches", "sum"),
-        backfield_rb_count_next=("player_id", "nunique")).reset_index().rename(
+    pos_ros["_load"] = pos_ros["_load"].fillna(0.0)
+    room = pos_ros.groupby(["team", "season"]).agg(
+        room_prior_workload_next=("_load", "sum"),
+        room_size_next=("player_id", "nunique")).reset_index().rename(
         columns={"season": "_label", "team": "team_next"})
     out = out.merge(room, on=["_label", "team_next"], how="left")
-    # exclude the player's own prior touches -> only the *competition's* proven workload.
-    out["backfield_prior_touches_next"] = (
-        out["backfield_prior_touches_next"].fillna(0.0) - out["touches"].fillna(0.0)
+    # exclude the player's own prior workload -> only the *competition's* proven workload.
+    out["room_prior_workload_next"] = (
+        out["room_prior_workload_next"].fillna(0.0) - out[wcol].fillna(0.0)
     ).clip(lower=0.0)
-    out["backfield_rb_count_next"] = out["backfield_rb_count_next"].fillna(1).astype(float)
+    out["room_size_next"] = out["room_size_next"].fillna(1).astype(float)
 
     out = out.drop(columns=["_label", "team_next"])
-    cols = ["changed_team_next", "rookie_rb_drafted_next", "rookie_rb_capital_next",
-            "rookie_rb_count_next", "backfield_prior_touches_next", "backfield_rb_count_next"]
+    cols = ["changed_team_next", "rookie_drafted_next", "rookie_draft_capital_next",
+            "rookie_count_next", "room_prior_workload_next", "room_size_next"]
     out[cols] = out[cols].astype(float)
     return out, cols
 
@@ -359,6 +363,7 @@ def build_features(config, *, write: bool = True):
     rosters = _raw("rosters.parquet")
     draft_picks = _raw("draft_picks.parquet")
     horizon = int(config.get("target.predict_horizon", 1))
+    workload_col = config.get("features.offseason_workload_col", "touches")
 
     block_columns: dict[str, list[str]] = {}
 
@@ -373,7 +378,8 @@ def build_features(config, *, write: bool = True):
     df, block_columns["trajectory"] = add_trajectory(df)
     df, block_columns["regression_mean"] = add_regression_mean(df)
     df, block_columns["ngs_efficiency"] = add_ngs_efficiency(df, ngs_rush, ngs_rec)
-    df, offseason_cols = add_offseason(df, rosters, draft_picks, horizon=horizon)
+    df, offseason_cols = add_offseason(df, rosters, draft_picks, position=position,
+                                       workload_col=workload_col, horizon=horizon)
     if offseason_cols:
         block_columns["offseason"] = offseason_cols
 

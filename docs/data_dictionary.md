@@ -102,14 +102,15 @@ seasons via `shift(1)` within player. Divide-by-zero → NaN. Era availability n
 | `regression_mean` | 1999+ | `td_per_touch`, and `*_vs_prior` gaps of `td_per_touch / ppg / yards_per_carry` vs the player's expanding **prior** mean — flag unsustainable production |
 | `snap_usage` | 2012+ | `snap_share, snaps_per_game, snap_share_delta` (NaN before 2012) |
 | `ngs_efficiency` | 2016+ | rushing: `ryoe_per_att, rush_pct_over_expected, ngs_efficiency, avg_time_to_los, pct_attempts_8plus_box`; receiving: `yac_above_expected, avg_separation`; coverage flags `has_ngs_rush, has_ngs_rec`. NGS only covers qualified players (~73% of top-36, ~6% of fringe), and missing NGS rushing ≈ a receiving-profile back — so the flags are **informative**. Whether the NGS values earn their place is settled by the §7.3 ablation; trees take raw NaN, linear models impute + use the flags. |
-| `offseason` | 1999+ | **Season-*N+1* preseason context known by Sept 1** (the one block that reads N+1 data — see leakage note): `changed_team_next` (moved teams N→N+1), `rookie_rb_drafted_next`/`rookie_rb_capital_next` (best overall pick of a RB the N+1 team drafted; sentinel 300 = none)/`rookie_rb_count_next`, `backfield_prior_touches_next` (proven season-N workload of the *other* RBs on the N+1 roster — competition in the room), `backfield_rb_count_next`. Quantifies the roster/draft dynamics ECR reacts to; the continuous capital/competition signals carry the weight. From `draft_picks` + `rosters`. |
+| `offseason` | 1999+ | **Season-*N+1* preseason context known by Sept 1** (the one block that reads N+1 data — see leakage note), **position-agnostic**: `changed_team_next` (moved teams N→N+1), `rookie_drafted_next`/`rookie_draft_capital_next` (best overall pick of a rookie **at the player's position** the N+1 team drafted; sentinel 300 = none)/`rookie_count_next`, `room_prior_workload_next` (proven season-N workload — `touches` for RB, `targets` for WR via `features.offseason_workload_col` — of the *other* same-position players on the N+1 roster; the competition in the room, self excluded), `room_size_next`. Quantifies the roster/draft dynamics ECR reacts to; the continuous capital/competition signals carry the weight. From `draft_picks` + `rosters`. |
 
 > **Leakage note for `offseason`:** every other block uses data only through season *N*. This
 > block deliberately reads the *N+1* **preseason** state (the April draft + the preseason roster),
 > all of which is settled by the **Sept 1** cutoff — before any season-*N+1* game is played — so it
 > is available at draft time and is *not* future leakage. It mirrors the information the ECR
 > benchmark already has. `team_next` uses the primary N+1 roster team (a rare midseason trade is an
-> approximation).
+> approximation). The block is parameterized by `experiment.position` +
+> `features.offseason_workload_col` so it generalizes across positions (§9).
 
 > Red-zone/goal-line touches, route participation, and PFR advanced stats are deferred to a
 > later enrichment pass (need pbp / PFR). Combine athletic testing is available via `combine`
