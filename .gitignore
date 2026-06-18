@@ -10,6 +10,9 @@ data/processed/*
 # --- Reports (regenerated artifacts) ---
 reports/figures/*
 reports/results/*
+# Regenerable serving outputs (projections / keeper board) — rebuild via `make project` / keeper.py
+reports/projections_*.csv
+reports/keeper_board.csv
 !reports/**/.gitkeep
 
 # --- Python ---

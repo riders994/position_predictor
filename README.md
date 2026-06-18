@@ -65,6 +65,23 @@ make fetch              # pull nflverse data → data/raw
 make experiment         # run the RB experiment end-to-end
 ```
 
+### Use the models — keeper-league assistant
+
+Project next season and get a prioritized keeper list (predicted rank + value vs the pick you'd
+pay). Input is a CSV of `player,pick`:
+
+```bash
+# next-season projection board for one position → reports/projections_football_rb.csv
+make project CONFIG=config/football_rb.yaml
+
+# keeper priorities for your league (RB/WR/QB; TE/K/DST shown as unscored)
+uv run python scripts/keeper.py --input examples/keepers_example.csv --teams 12 --format sf
+```
+
+`--format` is `1qb` / `sf` (superflex) / `2qb`; `--teams` is 8–16. Priority = **surplus** =
+`pick paid − projected board slot`, where the board is a value-over-replacement ranking from the
+models (ECR stays a benchmark, never blended).
+
 ## Status
 
 ✅ **RB v1 end-to-end complete.** Pipeline: fetch → build (+ target/eligibility & `status_next`)

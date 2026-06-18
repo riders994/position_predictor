@@ -4,7 +4,7 @@
 
 CONFIG ?= config/football_rb.yaml
 
-.PHONY: help setup fetch build features eligibility eda benchmark experiment report progress clean test lint
+.PHONY: help setup fetch build features eligibility eda benchmark experiment report progress project clean test lint
 
 help:
 	@echo "Targets:"
@@ -18,6 +18,7 @@ help:
 	@echo "  experiment   walk-forward CV x {10,20,30}yr x models"
 	@echo "  report       build metrics tables + figures -> reports/"
 	@echo "  progress     cross-version progress report -> reports/versions/"
+	@echo "  project      project upcoming season -> reports/projections_<stem>.csv"
 	@echo "  test / lint  pytest / ruff"
 
 setup:
@@ -49,6 +50,9 @@ report:
 
 progress:
 	uv run python scripts/make_progress.py --config $(CONFIG)
+
+project:
+	uv run python scripts/project.py --config $(CONFIG)
 
 test:
 	uv run pytest

@@ -789,6 +789,44 @@ provenance** — anyone should be able to trace *why* the project looks the way 
 
 ---
 
+## Entry 025 — Make the models usable: keeper-league assistant
+
+**Date:** 2026-06-18
+
+**Prompt (full text):**
+
+> Now that we've finalized our models, let's make them usable. First use case: keeper leagues. I
+> should be able to run a script that takes in a list of players and what pick they were drafted at
+> and get as output the predicted rank for next season and a prioritized keeper list
+
+**Response notes:**
+- First **inference/serving** path (everything prior was walk-forward eval). Two pieces:
+  - **`eval/projection.py`** — `project_position` fits the configured era ensemble on all labeled
+    history and predicts the latest, **censored** feature season (2024→2025 live board): projected
+    PPR PPG + within-position rank. Default model `ridge` (stable, strong top-of-board precision),
+    swappable via `projection.model`. Sanity-checked: top RBs = Saquon/Gibbs/Bijan, WRs =
+    Chase/St. Brown/Jefferson, QBs = Daniels/Lamar/Allen — a credible 2025 board. `scripts/project.py`
+    + `make project`.
+  - **`eval/keeper.py` + `scripts/keeper.py`** — turns per-position projections into one
+    cross-position **VORP** board (value over replacement), then ranks the user's keepers by
+    **surplus = pick paid − projected board slot**. Replacement levels are league-configurable per
+    the user's spec: **format ∈ {1qb, sf, 2qb}** (QB started-slots/team 1.0/1.7/2.0) × **8–16 teams**,
+    flex filled from the best remaining RB/WR. Name resolution is punctuation/suffix-insensitive with
+    a conservative fuzzy fallback; **TE/K/DST and unmatched names are reported as *unscored*** (TE was
+    never modeled).
+- **Design choices** (confirmed with the user): VORP-surplus prioritization (not raw PPG — handles
+  positional scarcity); exact-drafted-pick cost; league format a **runtime setting**. Kept it
+  **model-only** — ECR is not used in the keeper math (stays a benchmark). Verified the format toggle
+  works: superflex makes QBs the top keepers (Daniels QB1, +89 at pick 95); switching to 10-team 1QB
+  raises QB replacement (15.3→17.4) and drops Daniels' board slot 6→11 while RB/WR rise.
+- Scope note surfaced: the cross-position board covers **RB/WR/QB only**, so projected pick slots are
+  mildly compressed (missing ~1–2 TEs/round); documented, not hidden.
+- Tests: `tests/test_keeper.py` (replacement-level flex allocation, format depth, VORP/board,
+  name resolution, surplus+sort) — full suite **96/96 pass**, ruff clean. Example input at
+  `examples/keepers_example.csv`; README usage section added.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
