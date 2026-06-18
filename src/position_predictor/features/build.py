@@ -70,6 +70,33 @@ def add_team_context(df, team):
     return out, cols
 
 
+def add_air_yards(df):
+    """Receiving air-yards opportunity (RB/WR; 1999+). Depth + share of the team's passing game.
+
+    Air yards measure *intended* receiving opportunity independent of catches/yards, so they are
+    a leakage-free demand signal that survives a down year. Runs after :func:`add_team_context`
+    (which merges the team-season totals), so ``team_air_yards`` / ``team_targets`` are present.
+    ``wopr`` is the standard Weighted Opportunity Rating = 1.5·target_share + 0.7·air_yards_share.
+
+    **Dormant — not in the default pipeline.** Measured in the air-yards back-apply (RB v4 / WR v2
+    probe): flat for WR, slightly negative for RB tree models. WOPR is by construction a linear
+    combination of ``target_share`` + ``air_yards_share``, and ``target_share``/``targets`` are
+    already features, so air yards add ~no incremental signal over existing target volume. Kept
+    (tested) for re-use; re-enable by adding the call in :func:`build_features` + the ``air_yards``
+    block to a config's era schemas. See PROMPT_LOG.
+    """
+    out = df.copy()
+    out["adot"] = _div(out, "receiving_air_yards", "targets")         # average depth of target
+    out["air_yards_pg"] = _div(out, "receiving_air_yards", "games")
+    out["air_yards_share"] = _div(out, "receiving_air_yards", "team_air_yards")
+    out["racr"] = _div(out, "receiving_yards", "receiving_air_yards")  # air-yards conversion
+    tgt_share = _div(out, "targets", "team_targets")
+    if tgt_share is not None and "air_yards_share" in out.columns:
+        out["wopr"] = 1.5 * tgt_share + 0.7 * out["air_yards_share"]
+    cols = ["receiving_air_yards", "adot", "air_yards_pg", "air_yards_share", "racr", "wopr"]
+    return out, [c for c in cols if c in out.columns]
+
+
 def add_volume(df):
     """Per-game usage and weighted opportunity (season-N volume)."""
     out = df.copy()
@@ -310,6 +337,8 @@ def team_season_context(weekly, *, regular_season_only: bool = True):
     g = df.groupby(["recent_team", "season"], as_index=False)
     agg = g.agg(team_rush_att=("carries", "sum"),
                 team_targets=("targets", "sum"),
+                team_air_yards=("receiving_air_yards", "sum") if "receiving_air_yards" in df.columns
+                else ("targets", "sum"),
                 team_pass_att=("attempts", "sum") if "attempts" in df.columns
                 else ("targets", "sum"))
     games = (df.groupby(["recent_team", "season"])["week"].nunique()

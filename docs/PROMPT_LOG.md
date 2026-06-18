@@ -707,6 +707,42 @@ provenance** — anyone should be able to trace *why* the project looks the way 
 
 ---
 
+## Entry 023 — Air-yards receiving features (back-apply from QB) → REJECTED
+
+**Date:** 2026-06-17
+
+**Prompt (full text):**
+
+> Let's start the next step from the fresh primary [then] also add the air-yards piece for RBs
+> since we're doing ppr scoring
+
+**Response notes:**
+- **Back-apply step after QB** ([[iterative-backapply-process]]): QB v1 leaned on air-yards, and air
+  yards are a canonical *receiving* opportunity signal that RB/WR didn't use. Hypothesis: add
+  receiving air-yards depth/share + WOPR to the skill positions (position-agnostic, RB **and** WR
+  per the PPR point — pass-catching backs). Built on branch `air-yards-receiving`.
+- Added `receiving_air_yards` to `SEASON_SUM_COLS`, `team_air_yards` to `team_season_context`, and
+  `add_air_yards` (RB/WR): `adot` (depth of target), `air_yards_pg`, `air_yards_share`, `racr`
+  (air-yards conversion), `wopr` (=1.5·target_share + 0.7·air_yards_share). Wired into RB+WR eras
+  (1999+, all eras), bumped RB v3→v4 / WR v1→v2 for the probe.
+- **Measured vs baselines — REJECTED (no gain):**
+  - **WR v1→v2:** every model within ±0.001 Spearman, weighted_tau identical (0.712), P@12 flat
+    (0.52), P@24 flat-to-down. Zero incremental signal.
+  - **RB v3→v4:** linear flat; **trees slightly hurt** (xgboost Spearman 0.711→0.701, P@12
+    0.58→0.57).
+  - **Why:** WOPR is by construction a linear combo of `target_share` + `air_yards_share`, and
+    `target_share`/`targets` are already features — air yards add ~no information beyond existing
+    target volume; the redundant columns nick the trees. Same lesson as the rejected
+    receiving-NGS-for-RB and top-weighted-training probes: keep only what measurably helps.
+- **Resolution:** reverted configs (back to RB v3 / WR v1) + the `build_features` dispatch + report
+  artifacts — **no model change**. Kept `add_air_yards` + data plumbing **dormant** (docstring notes
+  it's out of the default pipeline) + a unit test, so the capability is preserved and re-enabling is
+  a 2-line change (dispatch + era block). Net branch diff = dormant function + `SEASON_SUM_COLS` /
+  `team_air_yards` plumbing + test + docs.
+- Tests: `test_add_air_yards_depth_share_and_wopr` — full suite **88/88 pass**, ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
