@@ -743,6 +743,52 @@ provenance** — anyone should be able to trace *why* the project looks the way 
 
 ---
 
+## Entry 024 — Exclude the COVID-2020 season (RB v4 / WR v2 / QB v2)
+
+**Date:** 2026-06-17
+
+> (Sequenced after the air-yards rejection, Entry 023, on its own branch.)
+
+**Prompt (full text):**
+
+> The 2020 covid season plays a big role in messing with the data. [...] I want to take that season
+> out of the analysis in some way. What would you recommend? [...later, after I quantified that
+> removing every 2020 *player* empties the 2021 fold and biases survivors toward inexperienced
+> players] Sure, that makes sense about the survivorship bias. Move forward with the third option.
+
+**Response notes:**
+- Recommended (and the user picked) excluding 2020 **as a season in both roles** — label *and*
+  feature season — while **keeping the full player population** (rejecting the more extreme
+  "remove every player who played in 2020," which I showed empties the 2021 test fold and biases
+  survivors toward players who hadn't debuted by 2020 → survivorship bias). The subtle win: also
+  threading the exclusion through the multi-year feature windows so 2020 doesn't leak into
+  neighbouring years' rolling/career/trajectory features.
+- **Implementation** (`data/build.apply_season_exclusion`, config `data.exclude_seasons: [2020]`):
+  (1) rows whose **label** season is 2020 (i.e. 2019 rows) keep their place as history but have
+  `_next` labels nulled + `status_next=excluded_season` (drop out of supervised use); (2) rows
+  **in** 2020 are dropped entirely, so the season never predicts and — being absent — is naturally
+  hopped over by per-player `shift`/`rolling`/`expanding` (verified: a back's `career_touches` goes
+  2019→2021, `ppg_delta1` at 2021 is measured vs 2019). Calendar-merge target made this clean.
+  Unavoidable cost (flagged): the **2021 label fold** is also lost (predicting it needs 2020
+  inputs). Test block → the 5 most-recent **clean** label seasons `[2018,2019,2022,2023,2024]`.
+- Applied to all three positions (RB v3→v4, WR v1→v2, QB v1→v2). **g\* is robust** — re-derived
+  eligibility unchanged (RB 4, WR 7, QB 7); RB reliability is actually a touch higher without 2020.
+- **Key analytical finding — the clean eval is *less* flattering, and that's the point.** Excluding
+  2020 **widens** the model's gap to the market on overall rank (RB Δ −0.021→−0.059, WR
+  −0.019→−0.046, QB −0.066→−0.110): 2020 was the fold where the *market itself* failed (preseason
+  ECR Spearman ~0.49 vs ~0.73–0.82 elsewhere), so it had been propping up the model's *relative*
+  standing. On non-COVID data the market is a clearly stronger overall-rank predictor than the
+  contaminated numbers implied — **but the model's top-tier edge holds or improves** (WR P@12
+  0.52→0.56 & beats market on P@24; QB beats market P@12 0.67 vs 0.61; RB still beats P@12).
+- Because v-latest is scored on **different folds** than v1–v3, added a **fold-change guard** to
+  `progress.py`: when a version's `test_label_seasons` differ from the prior version's, the
+  "Δ vs prev" is replaced with "eval set changed †" + a footnote, so the Spearman jump isn't
+  misread as a model gain. Compare against the (re-scored) market column instead.
+- Tests: `test_apply_season_exclusion_*` in `test_build_dataset.py` — full suite **89/89 pass**,
+  ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

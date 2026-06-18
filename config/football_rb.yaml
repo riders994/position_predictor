@@ -5,7 +5,7 @@ experiment:
   sport: football
   position: RB
   name: football_rb_v1
-  version: v3                        # human-meaningful model version, stamped into the report header
+  version: v4                        # human-meaningful model version, stamped into the report header
 
 data:
   source: nflverse                 # via nfl_data_py
@@ -15,6 +15,11 @@ data:
   latest_completed_season: 2025
   raw_dir: data/raw
   cache_format: parquet
+  # Anomalous seasons removed from supervised use (both as label and feature season) without
+  # dropping the players themselves — see data/build.apply_season_exclusion. 2020 = COVID
+  # (absences, opt-outs, depleted rosters); its outcome is near-unrankable (preseason ECR
+  # Spearman ~0.49 in 2020 vs ~0.73-0.82 elsewhere). Costs the 2021 label fold too.
+  exclude_seasons: [2020]
 
 target:
   scoring: PPR                     # 1 pt / reception
