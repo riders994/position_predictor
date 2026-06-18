@@ -56,6 +56,7 @@ SEASON_SUM_COLS = [
     "receiving_yards",
     "receiving_tds",
     "receiving_first_downs",
+    "receiving_air_yards",    # powers RB/WR air-yards opportunity features (aDOT, WOPR; 1999+)
     "rushing_fumbles_lost",
     "receiving_fumbles_lost",
     "rushing_epa",            # additive; powers EPA-per-play efficiency features (1999+)

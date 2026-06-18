@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from position_predictor.features.build import (  # noqa: E402
+    add_air_yards,
     add_availability,
     add_efficiency,
     add_ngs_efficiency,
@@ -409,3 +410,20 @@ def test_ngs_season_passing_renames():
     assert list(out["player_id"]) == ["A"]
     assert out.iloc[0]["cpoe"] == 2.1                  # week==0 summary row only
     assert out.iloc[0]["ngs_passer_rating"] == 95.0
+
+
+def test_add_air_yards_depth_share_and_wopr():
+    # Dormant block (measured no-gain), but kept correct & tested. Simulates a post-team_context
+    # frame: team_air_yards / team_targets already merged.
+    df = pd.DataFrame([
+        dict(player_id="A", season=2015, games=16, targets=120, receiving_yards=1200,
+             receiving_air_yards=1500, team_air_yards=3000, team_targets=400),
+    ])
+    out, cols = add_air_yards(df)
+    r = out.iloc[0]
+    assert r["adot"] == 1500 / 120                    # depth of target
+    assert r["air_yards_share"] == 1500 / 3000        # 0.5
+    assert r["racr"] == 1200 / 1500                   # air-yards conversion
+    # WOPR = 1.5*target_share + 0.7*air_yards_share = 1.5*(120/400) + 0.7*0.5
+    assert abs(r["wopr"] - (1.5 * (120 / 400) + 0.7 * 0.5)) < 1e-9
+    assert "wopr" in cols and "adot" in cols
