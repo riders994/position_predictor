@@ -1,0 +1,46 @@
+{
+  "sport": "football",
+  "position": "QB",
+  "version": "v2",
+  "test_label_seasons": [
+    2018,
+    2019,
+    2022,
+    2023,
+    2024
+  ],
+  "windows": [
+    10,
+    20,
+    30
+  ],
+  "chosen_cutoff_games": 7,
+  "headline": {
+    "best_model": "smoothed_history",
+    "best_combine": "n/a",
+    "window_years": 20,
+    "spearman_mean": 0.4898455222619413,
+    "precision_at_12_mean": 0.5666666666666667,
+    "mae_mean": 3.350134357526207,
+    "best_baseline": "smoothed_history",
+    "best_baseline_spearman_mean": 0.4898455222619413
+  },
+  "data_volume": {
+    "n_feature_rows": 1918,
+    "n_labeled_rows": 1338,
+    "n_features": 73,
+    "season_min": 1999,
+    "season_max": 2024,
+    "n_seasons": 25,
+    "per_era_rows": {
+      "boxscore": 763,
+      "snaps": 224,
+      "ngs": 351
+    }
+  },
+  "compute": {
+    "total_fit_seconds": 36.25899975300126,
+    "wall_seconds": 129.32976808999956,
+    "mean_fit_seconds_per_model": 0.6777221134996378
+  }
+}

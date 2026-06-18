@@ -14,7 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from position_predictor.data.build import (  # noqa: E402
+    STATUS_EXCLUDED,
     aggregate_player_seasons,
+    apply_season_exclusion,
     attach_next_season_target,
     attach_roster_attributes,
     attach_snap_share,
@@ -182,3 +184,41 @@ def test_snap_share_zero_when_out_all_year():
 def test_empty_weekly_returns_empty_frame():
     empty = pd.DataFrame(columns=["player_id", "season", "position", "season_type", "week"])
     assert len(aggregate_player_seasons(empty)) == 0
+
+
+def test_apply_season_exclusion_drops_feature_season_keeps_players_and_nulls_label():
+    # Player A spans 2018-2022 (played COVID 2020); B is 2019-only. horizon=1, exclude 2020.
+    df = pd.DataFrame([
+        dict(player_id="A", season=2018, target_ppg_next=10.0, games_next=16,
+             status_next="active"),
+        dict(player_id="A", season=2019, target_ppg_next=11.0, games_next=15,
+             status_next="active"),  # label season = 2020 -> excluded
+        dict(player_id="A", season=2020, target_ppg_next=12.0, games_next=10,
+             status_next="active"),  # feature season 2020 -> dropped
+        dict(player_id="A", season=2021, target_ppg_next=13.0, games_next=17,
+             status_next="active"),
+        dict(player_id="A", season=2022, target_ppg_next=14.0, games_next=17,
+             status_next="active"),
+        dict(player_id="B", season=2019, target_ppg_next=9.0, games_next=16,
+             status_next="active"),  # label 2020 -> excluded
+    ])
+    out = apply_season_exclusion(df, [2020], horizon=1)
+
+    # 2020 feature-season rows are gone entirely...
+    assert (out["season"] != 2020).all()
+    # ...but the player is NOT removed — A still has its other seasons (no survivorship bias).
+    assert set(out.loc[out.player_id == "A", "season"]) == {2018, 2019, 2021, 2022}
+
+    # label season 2020 (the 2019 rows) is kept as history but nulled + flagged, not supervised.
+    a19 = out[(out.player_id == "A") & (out.season == 2019)].iloc[0]
+    assert pd.isna(a19["target_ppg_next"]) and pd.isna(a19["games_next"])
+    assert a19["status_next"] == STATUS_EXCLUDED
+    # a clean pair (2021 -> label 2022) is untouched.
+    a21 = out[(out.player_id == "A") & (out.season == 2021)].iloc[0]
+    assert a21["target_ppg_next"] == 13.0 and a21["status_next"] == "active"
+
+
+def test_apply_season_exclusion_noop_when_empty():
+    df = pd.DataFrame([dict(player_id="A", season=2020, target_ppg_next=12.0,
+                            games_next=10, status_next="active")])
+    assert apply_season_exclusion(df, [], horizon=1).equals(df)

@@ -45,6 +45,16 @@ verified against real data, e.g. J.K. Dobbins 2021). Using *future* seasons:
 > (PROJECT_PLAN §4.2); Stage 2 materialises both the candidate **games** and **snap-share**
 > grids so downstream rank metrics can be reported across cutoffs for robustness.
 
+**Excluded seasons (`data.exclude_seasons`, e.g. `[2020]` COVID).** `apply_season_exclusion`
+removes an anomalous season from supervised use in *both* roles without dropping players:
+rows whose **label** season is excluded are kept as history but get `_next` labels nulled and
+`status_next = excluded_season`; rows **in** an excluded season are dropped entirely, so it never
+feeds a prediction and is hopped over by the per-player multi-year feature windows (no leakage into
+neighbouring years). Consequence: the season *after* an excluded one loses its label fold too
+(predicting it would need the excluded season's features). 2020 is excluded because its outcome is
+near-unrankable (preseason ECR Spearman ~0.49 vs ~0.73–0.82 elsewhere) and COVID absences would
+otherwise mislabel availability/wear. See PROMPT_LOG entry 024.
+
 ## Fantasy position eligibility (Stage 2) — not NFL designation
 
 A player-season is kept if the player is **fantasy-eligible** at the target position, which

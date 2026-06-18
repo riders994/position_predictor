@@ -81,6 +81,9 @@ IDENTITY_COLS = ["player_name", "player_display_name", "position", "position_gro
 # How a player's next season is classified (see module docstring).
 STATUS_ACTIVE, STATUS_INJURED, STATUS_RETIRED, STATUS_CENSORED = (
     "active", "injured_out", "retired", "censored")
+# A pair whose label season is a config-excluded season (e.g. COVID 2020): the row is kept as
+# history for neighbouring years' multi-year features but is not a supervised example.
+STATUS_EXCLUDED = "excluded_season"
 
 
 @dataclass(frozen=True)
@@ -287,6 +290,42 @@ def _fmt_snap(s) -> str:
     return f"{round(float(s) * 100):02d}"
 
 
+NEXT_LABEL_COLS = ["target_ppg_next", "ppr_points_next", "games_next", "snap_share_next"]
+
+
+def apply_season_exclusion(season_df, exclude_seasons, *, horizon: int = 1):
+    """Remove anomalous seasons (e.g. COVID 2020) from supervised use without survivorship bias.
+
+    A season is excluded in **both** of its roles, while *keeping the full player population*:
+
+    1. **As a label** — rows whose label season (``N + horizon``) is excluded are kept (so they
+       still anchor neighbouring years' multi-year features) but have their ``_next`` labels
+       nulled and ``status_next = excluded_season``, so they drop out of supervised training/eval.
+    2. **As a feature season** — rows *in* an excluded season are dropped entirely, so the season
+       never feeds a prediction and, being absent, is naturally hopped over by the per-player
+       rolling / career / trajectory windows (``shift``/``rolling``/``expanding``) of later years
+       — killing the multi-year leakage a plain row-filter would leave behind.
+
+    The unavoidable consequence (documented): the season *after* an excluded one loses its label
+    fold too, since predicting it would require the excluded season's features.
+    """
+    import numpy as np
+
+    excl = {int(s) for s in (exclude_seasons or [])}
+    if not excl:
+        return season_df
+    df = season_df.copy()
+    label_excluded = (df["season"] + horizon).isin(excl)
+    for c in NEXT_LABEL_COLS:
+        if c in df.columns:
+            df.loc[label_excluded, c] = np.nan
+    if "retired_next" in df.columns:
+        df.loc[label_excluded, "retired_next"] = False
+    df.loc[label_excluded, "status_next"] = STATUS_EXCLUDED
+    df = df[~df["season"].isin(excl)].reset_index(drop=True)
+    return df
+
+
 def build_dataset(config, *, position: str | None = None, horizon: int | None = None,
                   write: bool = True):
     """Orchestrate Stage 2: raw caches -> eligible player-season table -> interim parquet.
@@ -320,6 +359,7 @@ def build_dataset(config, *, position: str | None = None, horizon: int | None = 
     latest_season = data_max_season if latest_season is None \
         else min(int(latest_season), data_max_season)
     df = attach_next_season_target(df, horizon=horizon, latest_season=latest_season)
+    df = apply_season_exclusion(df, config.get("data.exclude_seasons", []), horizon=horizon)
     df = label_eligibility_grid(df, games_grid, snap_grid)
     df = df.sort_values(["season", "player_id"]).reset_index(drop=True)
 

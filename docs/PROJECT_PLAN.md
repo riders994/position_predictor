@@ -354,6 +354,14 @@ RB/WR). QB also forced report/progress **tier labels to be position-derived** (w
 **Recipe to add a scoring-family-new position:** new config + position feature module (+ any new
 NGS pull) + re-derive eligibility.
 
+**COVID-2020 excluded (2026-06-17, RB v4 / WR v2 / QB v2).** `data.exclude_seasons: [2020]` removes
+2020 as both a label and a feature season (keeping players; `data/build.apply_season_exclusion`),
+and is hopped over by the multi-year feature windows — no survivorship bias, no leakage. Notable
+result: the *clean* eval is **less** flattering — the model trails the market by more on overall
+rank, because 2020 was the fold where the market also failed and was propping up the model's
+relative standing; the model's top-tier (P@12) edge survives. `progress.py` flags the test-fold
+change so cross-version Spearman isn't misread. See PROMPT_LOG entry 024.
+
 ---
 
 ## 10. Reproducibility checklist

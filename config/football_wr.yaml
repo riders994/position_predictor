@@ -6,7 +6,7 @@ experiment:
   sport: football
   position: WR
   name: football_wr_v1
-  version: v1                        # human-meaningful model version, stamped into the report header
+  version: v2                        # human-meaningful model version, stamped into the report header
 
 data:
   source: nflverse                 # via nfl_data_py
@@ -15,6 +15,9 @@ data:
   latest_completed_season: 2025
   raw_dir: data/raw
   cache_format: parquet
+  # COVID 2020 removed from supervised use (label + feature season), players kept — see
+  # data/build.apply_season_exclusion + football_rb.yaml note. Costs the 2021 label fold.
+  exclude_seasons: [2020]
 
 target:
   scoring: PPR                     # 1 pt / reception (PPR especially rewards WR volume)

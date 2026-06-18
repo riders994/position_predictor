@@ -88,18 +88,34 @@ def build_progress(config, *, write: bool = True):
               "| version | best model | Spearman | Weighted τ |" + prec_headers
               + " Δ Spearman vs market |",
               "|---|---|---|---|" + "---|" * len(prec) + "---|"]
-    prev_spear = None
+    prev_spear, prev_folds, fold_change = None, None, False
     for r in rows:
         b, m = r["best"], r["market"]
         if not b:
             continue
+        folds = tuple(r["summary"].get("test_label_seasons") or [])
+        # A version's "Δ vs prev" is only meaningful if it was scored on the SAME test folds.
+        # When the eval set changes (e.g. excluding COVID 2020 shifts the test block), flag it so
+        # the delta isn't misread as a model gain/regression.
+        changed = prev_folds is not None and folds and folds != prev_folds
         d_mkt = (b["spearman"] - m["spearman"]) if m else None
-        delta = f" ({b['spearman'] - prev_spear:+.3f} vs prev)" if prev_spear is not None else ""
+        if prev_spear is None:
+            delta = ""
+        elif changed:
+            delta = " (eval set changed †)"
+            fold_change = True
+        else:
+            delta = f" ({b['spearman'] - prev_spear:+.3f} vs prev)"
         prec_cells = "".join(f" {_fmt(b[c], 2)} |" for c in prec)
         lines.append(
             f"| {r['version']} | {b['model']} | {_fmt(b['spearman'])}{delta} | "
             f"{_fmt(b['weighted_tau'])} |" + prec_cells + f" {_fmt(d_mkt)} |")
-        prev_spear = b["spearman"]
+        prev_spear, prev_folds = b["spearman"], folds
+    if fold_change:
+        lines += ["", "> † **Eval set changed** between versions (different test folds — e.g. "
+                  "excluding COVID 2020), so cross-version Spearman is not directly comparable at "
+                  "that boundary; compare against the market column (re-scored on each version's "
+                  "own folds) instead."]
 
     # ---- compute & data volume ----
     lines += ["", "## Cost: compute & data volume", "",
