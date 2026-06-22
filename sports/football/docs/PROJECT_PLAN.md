@@ -168,7 +168,7 @@ predates any season-*N+1* game. This is information available **at draft time** 
 ECR has — so it is fair to use without "blending" the market in: `changed_team_next`, the draft
 capital of a rookie RB the team added, and the proven workload of the *other* RBs now in the
 backfield. It stays quantitative-only (every value is a number from `draft_picks`/`rosters`).
-Blocks below; exact list maintained in `docs/data_dictionary.md`.
+Blocks below; exact list maintained in [`data_dictionary.md`](./data_dictionary.md).
 
 - **Volume / usage:** carries, targets, touches, snap share, route participation,
   target share, rush-attempt share, red-zone & goal-line touches, opportunity share,

@@ -1,8 +1,9 @@
-# Prompt Log
+# Prompt Log — Football
 
-A complete, chronological record of every prompt submitted to the AI assistant during
-this project, with notes on the response. Maintained for **reproducibility and decision
-provenance** — anyone should be able to trace *why* the project looks the way it does.
+A complete, chronological record of every prompt submitted to the AI assistant for the **football**
+modeling project, with notes on the response. Maintained for **reproducibility and decision
+provenance** — anyone should be able to trace *why* this project looks the way it does. (Each sport
+is a standalone project and keeps its own log.)
 
 > Convention: append a new entry for **every** prompt. Quote the prompt **in full**.
 > Keep response notes concise but specific (decisions made, files created, rationale).
