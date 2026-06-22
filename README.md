@@ -1,109 +1,43 @@
 # position_predictor
 
-Predict a pro sports player's **next-season fantasy rank** from their past data, run as a
-**reproducible experiment**. One independent process per **sport**; each **position** is
-modeled **separately** for accuracy.
+A collection of **independent, per-sport** fantasy-rank modeling projects. Each sport predicts a
+player's **next-season fantasy rank** from prior-season data — but the way fantasy scoring works and
+the way each sport shapes its data differ so much that **every sport is its own standalone modeling
+project**, not a shared engine. They live side by side under `sports/<sport>/` and share only the
+dev environment and lint/test config.
 
-**First model:** NFL — Running Back (RB).
-
----
-
-## What it does
-
-For a position, it uses a player's NFL history through season *N* to predict their
-**season *N+1* PPR points-per-game (PPG)**, then ranks players by that prediction and
-measures how well the predicted ranking matches reality — versus naive baselines and the
-ADP/expert-consensus market benchmark.
-
-Key design choices (full rationale in [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md)):
-
-- **Target:** next-season **PPR PPG** → derived rank (returning players only).
-- **Eligibility cutoff** (games played / snap share) for the ranking universe is
-  **derived analytically per model**, not hardcoded — a first-class pipeline step.
-- **Recency-bias study:** every model is run over **10-, 20-, and 30-year** training
-  windows and compared.
-- **Data:** [`nfl_data_py`](https://github.com/nflverse/nfl_data_py) / nflverse.
-- **Market data (ADP/ECR):** benchmark to beat, not a feature.
-
-## Project structure
+## Layout
 
 ```
 position_predictor/
-├── README.md
-├── pyproject.toml / uv.lock        # uv-managed, pinned deps
+├── README.md                  # this index
+├── pyproject.toml / uv.lock   # ONE shared dev env (deps) + ruff + pytest config
 ├── .python-version
-├── Makefile                        # reproducible pipeline targets
-├── config/                         # per-(sport,position) experiment configs (YAML)
-│   └── football_rb.yaml
-├── data/                           # git-ignored (except external/ + manifests)
-│   ├── raw/  interim/  processed/  external/
-├── docs/
-│   ├── PROJECT_PLAN.md             # canonical design doc
-│   ├── PROMPT_LOG.md               # full prompt history (reproducibility)
-│   └── data_dictionary.md          # feature & field definitions
-├── notebooks/football/rb/          # EDA, cutoff analysis, feature analysis, results
-├── src/position_predictor/         # shared library (fetch, features, models, eval)
-├── scripts/                        # stage entrypoints (fetch → build → ... → report)
-├── reports/                        # figures + results tables
-└── tests/
+├── .gitignore
+└── sports/
+    └── football/              # a complete, standalone project (NFL RB/WR/QB)
+        ├── README.md          # how to run it, headline results
+        ├── Makefile           # its pipeline targets
+        ├── src/position_predictor/   # its own code (fetch, features, models, eval)
+        ├── scripts/  tests/  config/  notebooks/  examples/
+        ├── docs/              # PROJECT_PLAN, data_dictionary, PROMPT_LOG (football)
+        ├── reports/           # committed write-ups + versions/ (generated artifacts git-ignored)
+        └── data/              # git-ignored cache (committed: manifests + external reference)
 ```
 
-## Pipeline stages
+A new sport is a **new project**: add `sports/<sport>/` (start fresh, or copy `sports/football/` as
+a template) and let it diverge — its own data sources, scoring, features, and models. Nothing in
+`sports/football/` is meant to be imported by another sport.
 
-`fetch → build dataset → target+eligibility → features → EDA → eligibility cutoff →
-feature selection → modeling (walk-forward × 10/20/30yr) → report`
+## Working on a sport
 
-See [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) §3.
-
-## Getting started
-
-> Tooling: [uv](https://docs.astral.sh/uv/) + Jupyter. (Not yet implemented — scaffold stage.)
+One shared uv env serves every sport (uv finds the root `pyproject.toml` by walking up):
 
 ```bash
-uv sync                 # create env from pyproject.toml / uv.lock
-make fetch              # pull nflverse data → data/raw
-make experiment         # run the RB experiment end-to-end
+uv sync                                   # create the shared env
+make -C sports/football help              # see that sport's pipeline targets
+uv run pytest                             # runs each sport's tests (testpaths in pyproject)
+uv run ruff check .
 ```
 
-### Use the models — keeper-league assistant
-
-Project next season and get a prioritized keeper list (predicted rank + value vs the pick you'd
-pay). Input is a CSV of `player,pick`:
-
-```bash
-# next-season projection board for one position → reports/projections_football_rb.csv
-make project CONFIG=config/football_rb.yaml
-
-# keeper priorities for your league (RB/WR/QB; TE/K/DST shown as unscored)
-uv run python scripts/keeper.py --input examples/keepers_example.csv --teams 12 --format sf
-```
-
-`--format` is `1qb` / `sf` (superflex) / `2qb`; `--teams` is 8–16. Priority = **surplus** =
-`pick paid − projected board slot`, where the board is a value-over-replacement ranking from the
-models (ECR stays a benchmark, never blended).
-
-## Status
-
-✅ **RB v1 end-to-end complete.** Pipeline: fetch → build (+ target/eligibility & `status_next`)
-→ era-aware features → eligibility cutoff (`g* = 4`) → EDA (`make eda`) → walk-forward experiment
-(`make experiment`) → market benchmark (`make benchmark`) → report (`make report`).
-
-**Headline (test seasons 2020–2024):** the era ensemble ranks returning RBs at **Spearman ≈ 0.74**
-on the full eligible universe, beating every must-beat baseline (persistence 0.69, linear 0.72).
-Against the **market** (FantasyPros preseason ECR) on the rows it ranks, the model does **not** win
-on overall rank (market 0.73 vs model 0.69) but **matches/edges it on top-12 precision** — with no
-market information. Full write-up in [`reports/REPORT_football_rb.md`](reports/REPORT_football_rb.md).
-
-**WR added** (`config/football_wr.yaml`): the shared pipeline generalized with only the
-`offseason` block needing position-parameterizing. WR eligibility re-derives to **g\* = 7 games**
-(WR scoring is noisier than RB); WR best-model Spearman ≈ 0.75, and the tree models **beat the
-market on Precision@12** (0.58 vs 0.57). NGS earns its place for WR (unlike RB).
-
-**Next:** QB (passing features). TE skipped (too few fantasy-relevant TEs/season).
-See [`PROMPT_LOG.md`](docs/PROMPT_LOG.md) for the full decision trail.
-
-## Reproducibility
-
-Pinned deps + interpreter, config-driven experiments, cached/manifested raw data, fixed
-seeds, notebooks that import library code only, results saved with their config, and a
-complete [`PROMPT_LOG.md`](docs/PROMPT_LOG.md). See PROJECT_PLAN §10.
+Then dive into [`sports/football/README.md`](sports/football/README.md) for that project.

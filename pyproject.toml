@@ -44,11 +44,12 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/position_predictor"]
+packages = ["sports/football/src/position_predictor"]
 
 [tool.ruff]
 line-length = 100
 target-version = "py312"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+# Per-sport projects live under sports/<sport>/; list each sport's tests here.
+testpaths = ["sports/football/tests"]
