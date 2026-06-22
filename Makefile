@@ -4,7 +4,7 @@
 
 CONFIG ?= config/football_rb.yaml
 
-.PHONY: help setup fetch build features eligibility eda benchmark experiment report progress project clean test lint
+.PHONY: help setup fetch build features eligibility eda benchmark experiment report progress project redraft clean test lint
 
 help:
 	@echo "Targets:"
@@ -19,6 +19,7 @@ help:
 	@echo "  report       build metrics tables + figures -> reports/"
 	@echo "  progress     cross-version progress report -> reports/versions/"
 	@echo "  project      project upcoming season -> reports/projections_<stem>.csv"
+	@echo "  redraft      check/fetch/project new-season draft board (QB/RB/WR) -> reports/redraft_<season>.csv"
 	@echo "  test / lint  pytest / ruff"
 
 setup:
@@ -53,6 +54,10 @@ progress:
 
 project:
 	uv run python scripts/project.py --config $(CONFIG)
+
+# Redraft draft board across all positions; override season with `make redraft SEASON=2026`.
+redraft:
+	uv run python scripts/redraft.py $(if $(SEASON),--season $(SEASON),)
 
 test:
 	uv run pytest
