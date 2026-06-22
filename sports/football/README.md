@@ -49,6 +49,9 @@ uv run python sports/football/scripts/keeper.py \
 
 (Or `cd sports/football` and drop the `-C`/path prefixes.)
 
+**Full command reference** — every stage and tool, with flags and outputs:
+[`docs/USAGE.md`](docs/USAGE.md).
+
 ## Headline
 
 Era-ensemble ranks returning players at **Spearman ≈ 0.74–0.75** (RB/WR) on the full eligible
