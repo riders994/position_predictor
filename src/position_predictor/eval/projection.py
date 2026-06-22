@@ -11,12 +11,20 @@ from __future__ import annotations
 TARGET = "target"
 
 
-def project_position(config, *, model=None, combine=None, write: bool = False):
-    """Project the upcoming season for one position; return a tidy projection frame.
+def project_position(config, *, model=None, combine=None, feature_season=None,
+                     write: bool = False):
+    """Project a season for one position; return a tidy projection frame.
 
     Columns: ``player_id, player_name, position, proj_ppg, proj_pos_rank, feature_season,
     proj_season``. The model defaults to ``projection.model`` (else ``ridge`` — stable, strong
     top-of-board precision), trained over all eras via the standard :class:`EraEnsemble`.
+
+    ``feature_season`` picks the **board** season (the rows scored); it defaults to the latest
+    season present (the live, censored season → upcoming-year board). Passing an earlier season
+    reconstructs the *preseason* projection that was knowable before that season's outcome — the
+    training set is restricted to rows whose label was known by then (``season < feature_season``),
+    so a postseason backtest never trains on the answer. In live mode this filter is a no-op (the
+    latest season is censored, so every labeled row already precedes it).
     """
     import json
 
@@ -40,9 +48,10 @@ def project_position(config, *, model=None, combine=None, write: bool = False):
         columns={"target_ppg_next": TARGET})
     block_columns = json.load(open(DATA_PROCESSED / f"{stem}_feature_blocks.json"))
 
-    latest = int(df["season"].max())
-    train = df[df[TARGET].notna()]                 # all labeled history (era ensemble routes by era)
-    board = df[df["season"] == latest].copy()      # live inputs: the latest, censored feature season
+    board_season = int(feature_season) if feature_season is not None else int(df["season"].max())
+    # labeled history known before the board season's outcome (era ensemble routes by era)
+    train = df[df[TARGET].notna() & (df["season"] < board_season)]
+    board = df[df["season"] == board_season].copy()  # the feature season being scored
     if train.empty or board.empty:
         return pd.DataFrame()
 
@@ -56,8 +65,8 @@ def project_position(config, *, model=None, combine=None, write: bool = False):
     out = board[["player_id", name_col, "proj_ppg", "proj_pos_rank"]].rename(
         columns={name_col: "player_name"})
     out.insert(1, "position", position.upper())
-    out["feature_season"] = latest
-    out["proj_season"] = latest + horizon
+    out["feature_season"] = board_season
+    out["proj_season"] = board_season + horizon
     out["proj_ppg"] = out["proj_ppg"].round(2)
 
     if write:

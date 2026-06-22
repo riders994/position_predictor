@@ -6,6 +6,8 @@ data/processed/*
 !data/raw/_manifests/
 !data/external/
 !data/**/.gitkeep
+# ADP cache is regenerable (re-fetched from FantasyFootballCalculator) — not committed
+data/external/adp_*.parquet
 
 # --- Reports (regenerated artifacts) ---
 reports/figures/*
@@ -15,6 +17,8 @@ reports/results/*
 reports/projections_*.csv
 reports/keeper_board.csv
 reports/redraft_*.csv
+reports/postseason_*.csv
+reports/postseason_*.md
 !reports/**/.gitkeep
 
 # --- Python ---
