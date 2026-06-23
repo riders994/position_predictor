@@ -26,7 +26,7 @@ end-of-season ranking.
 | Target metric | **Next-season points-per-game (PPG)** → derived rank | Removes raw injury/availability noise from the *prediction* target; rank is computed from predicted PPG. |
 | Ranking eligibility | Players who clear a **games-played / snap-share cutoff** | A high-PPG / low-games player still has value if they clear the bar. The cutoff is **derived analytically** (its own pipeline step), never hardcoded. |
 | Player scope | **Returning players only** (≥1 prior NFL season) | Clean feature set from NFL history. Rookies (CFB/draft data) are **out of scope — not pursued**. |
-| Data source | **nfl_data_py / nflverse** | Free, reproducible, deep (pbp, weekly, seasonal, rosters, snaps, draft, combine). |
+| Data source | **nflverse via `nflreadpy`** | Free, reproducible, deep (pbp, weekly, seasonal, rosters, snaps, draft, combine). Replaced the deprecated `nfl_data_py` in 2026 (see §2.1). |
 | History | **Comparative 10 / 20 / 30-year training windows** | Measure recency bias per position rather than assume one window. |
 | Market data (ADP/ECR) | **Benchmark only**, not a feature | Clean test of whether our stats-derived features add signal over the crowd. |
 
@@ -40,18 +40,26 @@ end-of-season ranking.
 
 ## 2. Data
 
-### 2.1 Recommended source — nflverse via `nfl_data_py`
+### 2.1 Recommended source — nflverse via `nflreadpy`
 
-| Dataset (`nfl_data_py` loader) | Contents | Coverage |
+> **2026 migration:** `nfl_data_py` is deprecated upstream and frozen at the `player_stats`
+> release (stops at 2024). We now use [`nflreadpy`](https://github.com/nflverse/nflreadpy),
+> nflverse's maintained loader, which serves the current `stats_player` release. It returns
+> **polars** frames; `data/fetch.py` converts each to pandas and renames a few `stats_player`
+> columns back to the pipeline's canonical schema (`passing_interceptions`→`interceptions`,
+> `sacks_suffered`→`sacks`, `team`→`recent_team`, roster `gsis_id`→`player_id`), so the
+> migration is contained to that module and the cached schema is unchanged.
+
+| Dataset (`nflreadpy` loader) | Contents | Coverage |
 |---|---|---|
-| `import_seasonal_data` | Season totals per player (rush/rec/TD/fantasy) | 1999– |
-| `import_weekly_data` | Per-game box scores (used to compute PPG, games played) | 1999– |
-| `import_seasonal_rosters` / `import_rosters` | Age, position, team, height/weight, experience | 1999– |
-| `import_snap_counts` | Offensive snaps & snap share | **2012–** |
-| `import_ngs_data` (Next Gen Stats) | Advanced rushing/receiving (efficiency over expected) | 2016– |
-| `import_pbp_data` | Play-by-play → EPA, success rate, route/usage proxies, red-zone/goal-line | 1999– |
-| `import_draft_picks` / `import_combine_data` | Draft capital, athletic profile | 1980s– |
-| `import_ids` | Cross-source player ID crosswalk | — |
+| `load_player_stats(summary_level="reg")` | Season totals per player (rush/rec/TD/fantasy) | 1999– |
+| `load_player_stats(summary_level="week")` | Per-game box scores (used to compute PPG, games played) | 1999– |
+| `load_rosters` | Age, position, team, height/weight, experience | 1999– |
+| `load_snap_counts` | Offensive snaps & snap share | **2012–** |
+| `load_nextgen_stats(stat_type=…)` (Next Gen Stats) | Advanced rushing/receiving/passing (efficiency over expected) | 2016– |
+| `load_pbp` | Play-by-play → EPA, success rate, route/usage proxies, red-zone/goal-line | 1999– |
+| `load_draft_picks` / `load_combine` | Draft capital, athletic profile | 1980s– |
+| `load_ff_playerids` | Cross-source player ID crosswalk | — |
 
 **Data-availability caveats (the comparative windows must respect these):**
 - Snap counts begin **2012** → the snap-share component of the eligibility cutoff and any snap features only exist for 2012+.

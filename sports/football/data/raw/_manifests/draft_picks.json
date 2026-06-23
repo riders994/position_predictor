@@ -1,6 +1,6 @@
 {
   "name": "draft_picks",
-  "source": "nflverse/nfl_data_py",
+  "source": "nflverse/nflreadpy",
   "note": "Draft capital (pick number).",
   "seasons": [
     1999,
@@ -29,12 +29,13 @@
     2022,
     2023,
     2024,
-    2025
+    2025,
+    2026
   ],
   "min_season": 1980,
-  "pulled_at": "2026-06-16T14:21:23.852738+00:00",
-  "n_rows": 6897,
+  "pulled_at": "2026-06-23T16:55:22.494166+00:00",
+  "n_rows": 7154,
   "n_cols": 36,
-  "cache_path": "/home/weezy/activity/position_predictor/data/raw/draft_picks.parquet",
-  "sha256": "bd4e726bb6f0ed90f5e8ef36503b1f894d265380c2db17082784bdada096bcd2"
+  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/draft_picks.parquet",
+  "sha256": "db9ddede2e21565edc82fcd3793de2f72891677942f55b6d00f345fe42fe7d15"
 }

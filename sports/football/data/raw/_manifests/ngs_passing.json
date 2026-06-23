@@ -1,6 +1,6 @@
 {
   "name": "ngs_passing",
-  "source": "nflverse/nfl_data_py",
+  "source": "nflverse/nflreadpy",
   "note": "Next Gen Stats passing \u2014 CPOE, time-to-throw, aggressiveness (2016+).",
   "seasons": [
     2016,
@@ -15,9 +15,9 @@
     2025
   ],
   "min_season": 2016,
-  "pulled_at": "2026-06-17T21:29:11.635534+00:00",
+  "pulled_at": "2026-06-23T17:18:08.993938+00:00",
   "n_rows": 5933,
   "n_cols": 29,
-  "cache_path": "/home/weezy/activity/position_predictor/data/raw/ngs_passing.parquet",
+  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/ngs_passing.parquet",
   "sha256": "322a9210002d82f028954718e15af5deb85224ecb98c0855affead61f2a1db9f"
 }

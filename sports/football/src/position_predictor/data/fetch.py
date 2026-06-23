@@ -1,4 +1,4 @@
-"""Fetch and cache nflverse datasets via ``nfl_data_py``.
+"""Fetch and cache nflverse datasets via ``nflreadpy``.
 
 Design goals (see docs/PROJECT_PLAN.md §2.4):
 - **Reproducible:** every pull is cached to ``data/raw/<name>.parquet`` and described by a
@@ -6,11 +6,18 @@ Design goals (see docs/PROJECT_PLAN.md §2.4):
   counts, and the content hash. Raw files are never edited in place.
 - **Availability-aware:** each dataset declares its earliest available season; requested
   seasons are clipped accordingly (e.g. snap counts only exist 2012+).
-- **Lazy + resilient:** ``nfl_data_py`` is imported only when a fetch runs, and each
+- **Lazy + resilient:** ``nflreadpy`` is imported only when a fetch runs, and each
   dataset is fetched independently so one failure does not abort the rest.
 
-The dataset registry is intentionally small and explicit. Loaders are thin lambdas so
-they are easy to adjust if an ``nfl_data_py`` signature changes between versions.
+The dataset registry is intentionally small and explicit. Loaders are thin wrappers so
+they are easy to adjust if an ``nflreadpy`` signature changes between versions.
+
+Provenance note (2026 migration): the previously-used ``nfl_data_py`` is deprecated upstream
+and still points at the frozen ``player_stats`` release, which stops at 2024. nflverse moved
+current player stats to the ``stats_player`` release (served by ``nflreadpy``). ``nflreadpy``
+returns **polars** frames, so each loader converts to pandas; two datasets are then normalised
+back to the column names the rest of the pipeline already expects (see ``*_RENAME`` below) so
+this migration is contained to this module and the downstream cache schema is unchanged.
 """
 
 from __future__ import annotations
@@ -31,7 +38,7 @@ class Dataset:
     Attributes
     ----------
     name: cache stem (-> data/raw/<name>.parquet)
-    loader: callable(years: list[int]) -> DataFrame. ``nfl_data_py`` is imported inside.
+    loader: callable(years: list[int]) -> DataFrame. ``nflreadpy`` is imported inside.
     min_season: earliest season the dataset exists for (used to clip requests).
     needs_years: whether the loader takes a season list (some loaders, e.g. ids, do not).
     large: heavy pulls (e.g. play-by-play) skipped unless explicitly included.
@@ -44,24 +51,46 @@ class Dataset:
     needs_years: bool = True
     large: bool = False
     note: str = ""
-    source: str = "nflverse/nfl_data_py"
+    source: str = "nflverse/nflreadpy"
+
+
+# nflverse's ``stats_player`` schema renames a few box-score columns relative to the old
+# ``player_stats`` release; map them back so downstream feature code is untouched.
+PLAYER_STATS_RENAME = {
+    "passing_interceptions": "interceptions",
+    "sacks_suffered": "sacks",
+    "team": "recent_team",
+}
+# ``load_rosters`` keys players on ``gsis_id``; the pipeline keys on ``player_id``.
+ROSTERS_RENAME = {"gsis_id": "player_id"}
 
 
 def _registry() -> dict[str, Dataset]:
-    """Build the dataset registry. ``nfl_data_py`` is imported lazily per loader call."""
+    """Build the dataset registry. ``nflreadpy`` is imported lazily per loader call."""
 
-    def L(method: str, *, stat_type: str | None = None):
-        """Make a loader that calls ``nfl_data_py.<method>``."""
+    def L(func: str, *, stat_type: str | None = None, summary_level: str | None = None,
+          rename: dict[str, str] | None = None):
+        """Make a loader that calls ``nflreadpy.<func>`` and returns a pandas frame.
+
+        ``nflreadpy`` returns polars frames keyed on ``seasons`` (first positional); we convert
+        to pandas and optionally rename columns to the pipeline's canonical schema. Loaders that
+        take no season list (``needs_years=False``) are called with no positional argument.
+        """
 
         def _load(years):
-            import nfl_data_py as nfl
+            import nflreadpy as nr
 
-            fn = getattr(nfl, method)
+            fn = getattr(nr, func)
+            kwargs = {}
             if stat_type is not None:
-                return fn(stat_type, years)
-            if years is None:
-                return fn()
-            return fn(years)
+                kwargs["stat_type"] = stat_type
+            if summary_level is not None:
+                kwargs["summary_level"] = summary_level
+            frame = fn(**kwargs) if years is None else fn(years, **kwargs)
+            df = frame.to_pandas()
+            if rename:
+                df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
+            return df
 
         return _load
 
@@ -95,30 +124,32 @@ def _registry() -> dict[str, Dataset]:
         return pd.DataFrame(rows)
 
     datasets = [
-        Dataset("seasonal", L("import_seasonal_data"), min_season=1999,
+        Dataset("seasonal", L("load_player_stats", summary_level="reg",
+                              rename=PLAYER_STATS_RENAME), min_season=1999,
                 note="Season totals per player (rush/rec/TD/fantasy)."),
-        Dataset("weekly", L("import_weekly_data"), min_season=1999,
+        Dataset("weekly", L("load_player_stats", summary_level="week",
+                            rename=PLAYER_STATS_RENAME), min_season=1999,
                 note="Per-game box scores -> PPG and games played."),
-        Dataset("rosters", L("import_seasonal_rosters"), min_season=1999,
+        Dataset("rosters", L("load_rosters", rename=ROSTERS_RENAME), min_season=1999,
                 note="Age, position, team, height/weight, experience."),
-        Dataset("snap_counts", L("import_snap_counts"), min_season=2012,
+        Dataset("snap_counts", L("load_snap_counts"), min_season=2012,
                 note="Offensive snaps & snap share (2012+)."),
-        Dataset("ngs_rushing", L("import_ngs_data", stat_type="rushing"), min_season=2016,
+        Dataset("ngs_rushing", L("load_nextgen_stats", stat_type="rushing"), min_season=2016,
                 note="Next Gen Stats rushing, efficiency-over-expected (2016+)."),
-        Dataset("ngs_receiving", L("import_ngs_data", stat_type="receiving"), min_season=2016,
+        Dataset("ngs_receiving", L("load_nextgen_stats", stat_type="receiving"), min_season=2016,
                 note="Next Gen Stats receiving (2016+)."),
-        Dataset("ngs_passing", L("import_ngs_data", stat_type="passing"), min_season=2016,
+        Dataset("ngs_passing", L("load_nextgen_stats", stat_type="passing"), min_season=2016,
                 note="Next Gen Stats passing — CPOE, time-to-throw, aggressiveness (2016+)."),
-        Dataset("draft_picks", L("import_draft_picks"), min_season=1980,
+        Dataset("draft_picks", L("load_draft_picks"), min_season=1980,
                 note="Draft capital (pick number)."),
-        Dataset("combine", L("import_combine_data"), min_season=2000,
+        Dataset("combine", L("load_combine"), min_season=2000,
                 note="Combine athletic testing (numeric)."),
-        Dataset("ids", L("import_ids"), needs_years=False,
+        Dataset("ids", L("load_ff_playerids"), needs_years=False,
                 note="Cross-source player ID crosswalk."),
         Dataset("sleeper_players", _load_sleeper, needs_years=False,
                 source="sleeper/v1/players/nfl",
                 note="Sleeper fantasy_positions eligibility (current snapshot; gsis_id join)."),
-        Dataset("pbp", L("import_pbp_data"), min_season=1999, large=True,
+        Dataset("pbp", L("load_pbp"), min_season=1999, large=True,
                 note="Play-by-play -> EPA, success rate, red-zone/usage proxies (heavy)."),
     ]
     return {d.name: d for d in datasets}
@@ -178,7 +209,7 @@ def _load_resilient(ds: Dataset, years: list[int]):
     """Load a dataset, tolerating a not-yet-published trailing season.
 
     nflverse serves some player-stats datasets (``weekly``/``seasonal``) as one release
-    asset *per season*, and ``nfl_data_py`` aborts the whole request if any single year's
+    asset *per season*, and the loader aborts the whole request if any single year's
     asset is missing (e.g. the current season before nflverse publishes it). The fast path
     is the single batch call; only if that fails do we retry **year-by-year** and keep the
     seasons that exist, so one missing trailing year cannot wipe out decades of box scores.

@@ -8,7 +8,7 @@ experiment:
   version: v4                        # human-meaningful model version, stamped into the report header
 
 data:
-  source: nflverse                 # via nfl_data_py
+  source: nflverse                 # via nflreadpy
   # nflverse coverage caps we accommodate (see PROJECT_PLAN §2.1):
   #   box scores 1999+, snap counts 2012+, NGS 2016+
   earliest_season: 1999

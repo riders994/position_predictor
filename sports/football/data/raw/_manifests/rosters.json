@@ -1,6 +1,6 @@
 {
   "name": "rosters",
-  "source": "nflverse/nfl_data_py",
+  "source": "nflverse/nflreadpy",
   "note": "Age, position, team, height/weight, experience.",
   "seasons": [
     1999,
@@ -32,9 +32,9 @@
     2025
   ],
   "min_season": 1999,
-  "pulled_at": "2026-06-16T14:21:14.429505+00:00",
-  "n_rows": 66457,
-  "n_cols": 37,
-  "cache_path": "/home/weezy/activity/position_predictor/data/raw/rosters.parquet",
-  "sha256": "1cd7b5f591ccd6bf9eeb66fb59c8213bf399aae4987e67c4c0037080771843c6"
+  "pulled_at": "2026-06-23T17:18:06.244153+00:00",
+  "n_rows": 66480,
+  "n_cols": 36,
+  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/rosters.parquet",
+  "sha256": "af91191cafd04b8e657d3771a6aee07be3ec17f00bdc3ed34d72cbf5e59ffc08"
 }

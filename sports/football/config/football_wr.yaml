@@ -9,7 +9,7 @@ experiment:
   version: v2                        # human-meaningful model version, stamped into the report header
 
 data:
-  source: nflverse                 # via nfl_data_py
+  source: nflverse                 # via nflreadpy
   #   box scores 1999+, snap counts 2012+, NGS 2016+
   earliest_season: 1999
   latest_completed_season: 2025
