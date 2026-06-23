@@ -129,9 +129,12 @@ seasons via `shift(1)` within player. Divide-by-zero → NaN. Era availability n
 > approximation). The block is parameterized by `experiment.position` +
 > `features.offseason_workload_col` so it generalizes across positions (§9).
 
-> Red-zone/goal-line touches, route participation, and PFR advanced stats are deferred to a
-> later enrichment pass (need pbp / PFR). Combine athletic testing is available via `combine`
-> but not yet joined.
+> Feature backlog (see PROJECT_PLAN §13 roadmap for status):
+> - **Red-zone/goal-line touches & route participation** need play-by-play — **out of scope**
+>   (user decision, reaffirmed 2026-06-23); not pursued.
+> - **PFR advanced stats** — deferred to a later enrichment pass (needs a scraper).
+> - **Combine athletic testing** is fetched/cached (`combine`) **but not yet joined** — open,
+>   in-scope item.
 
 ---
 
