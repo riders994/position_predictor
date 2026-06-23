@@ -7,14 +7,18 @@ companion to ECR when grading a season after the fact. We pull it from the free
 
     https://fantasyfootballcalculator.com/api/v1/adp/ppr?year=Y&teams=12&position=all
 
-FFC has no ``gsis_id``; we join to our universe by **normalised name + position** (reusing the
-keeper matcher), so a handful of names may not map — the caller reports the match count. The result
-is cached to ``data/external/adp_<stem>.parquet`` (a regenerable, gitignored artifact).
+FFC has occasional per-season holes (it has no 2025 board, while 2024 and 2026 are fine), so when
+it returns no data we **fall back to the FantasyPros consensus ADP board** for that year; the
+report notes which source was used. Neither source carries ``gsis_id``; we join to our universe by
+**normalised name + position** (reusing the keeper matcher), so a handful of names may not map —
+the caller reports the match count. The result is cached to ``data/external/adp_<stem>.parquet``
+(a regenerable, gitignored artifact).
 """
 
 from __future__ import annotations
 
 FFC_URL = "https://fantasyfootballcalculator.com/api/v1/adp/ppr?year={year}&teams={teams}&position=all"
+FANTASYPROS_URL = "https://www.fantasypros.com/nfl/adp/overall.php?year={year}"
 
 
 def fetch_ffc_adp(season: int, *, teams: int = 12):
@@ -40,6 +44,53 @@ def fetch_ffc_adp(season: int, *, teams: int = 12):
     return pd.DataFrame(rows)
 
 
+def fetch_fantasypros_adp(season: int):
+    """Fetch the FantasyPros consensus overall ADP board for ``season`` (FFC fallback).
+
+    FFC occasionally has no data for a given year (e.g. 2025), so we fall back to the
+    FantasyPros ``adp/overall`` board, which covers the same seasons. FantasyPros gates its
+    JSON API, so we parse the HTML table; its structure is stable and regular (one ``<tr>``
+    per player, with ``fp-player-name``/``fp-id`` attributes and the consensus ``AVG`` column).
+    We avoid an HTML-parser dependency by extracting the regular rows directly.
+
+    Returns the same shape as :func:`fetch_ffc_adp` — ``[name, position, team, adp,
+    times_drafted]`` (``times_drafted`` is unavailable here, left null). Raises on a
+    network/parse failure or an empty table so the caller can report "no ADP".
+    """
+    import re
+    import urllib.request
+
+    import pandas as pd
+
+    url = FANTASYPROS_URL.format(year=int(season))
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310 — fixed trusted host
+        html = resp.read().decode("utf-8", "replace")
+
+    body = re.search(r"<tbody>(.*?)</tbody>", html, re.S)
+    rows = re.findall(r"<tr>(.*?)</tr>", body.group(1), re.S) if body else []
+    out = []
+    for r in rows:
+        cells = re.findall(r"<td[^>]*>(.*?)</td>", r, re.S)
+        if len(cells) < 6:
+            continue
+        name = re.search(r'fp-player-name="([^"]+)"', cells[1])
+        smalls = re.findall(r"<small>(.*?)</small>", cells[1])
+        position = re.sub(r"\d+$", "", cells[2].strip())          # "WR1" -> "WR"
+        try:
+            adp = float(re.sub(r"<.*?>", "", cells[5]).strip())   # consensus AVG column
+        except ValueError:
+            continue
+        if not name:
+            continue
+        out.append({"name": name.group(1), "position": position,
+                    "team": smalls[0].strip() if smalls else None,
+                    "adp": adp, "times_drafted": None})
+    if not out:
+        raise RuntimeError(f"FantasyPros returned no ADP players for {season}")
+    return pd.DataFrame(out)
+
+
 def build_adp_benchmark(config, season: int, name_id_map: dict, *, write: bool = True,
                         teams: int = 12):
     """Preseason ADP for the configured position, mapped to our ``player_id`` (``gsis_id``).
@@ -56,7 +107,14 @@ def build_adp_benchmark(config, season: int, name_id_map: dict, *, write: bool =
     position = config.require("experiment.position").upper()
     stem = f"{sport}_{position}".lower()
 
-    raw = fetch_ffc_adp(season, teams=teams)
+    source = "FFC"
+    try:
+        raw = fetch_ffc_adp(season, teams=teams)
+    except Exception:
+        # FFC has occasional per-season holes (e.g. 2025); fall back to the FantasyPros
+        # consensus board, which covers those seasons. Surfaced via the match summary.
+        raw = fetch_fantasypros_adp(season)
+        source = "FantasyPros"
     pos = raw[raw["position"].str.upper() == position].copy()
     pos["player_id"] = pos["name"].map(lambda n: name_id_map.get(_norm(n)))
     matched = pos.dropna(subset=["player_id", "adp"]).copy()
@@ -78,4 +136,4 @@ def build_adp_benchmark(config, season: int, name_id_map: dict, *, write: bool =
             out_all = out
         out_all.to_parquet(path, index=False)
 
-    return out, {"ranked": int(len(pos)), "matched": int(len(out))}
+    return out, {"ranked": int(len(pos)), "matched": int(len(out)), "source": source}

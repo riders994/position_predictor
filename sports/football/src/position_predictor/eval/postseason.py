@@ -243,7 +243,8 @@ def render_markdown(result: PostseasonResult, *, top: int = 24) -> str:
         m = result.adp_match.get(pos, {})
         if m:
             lines.append(f"_ADP coverage: matched {m.get('matched', 0)}/{m.get('ranked', 0)} "
-                         f"FFC names to {pos}." + (f" ({m['error']})" if m.get("error") else "") + "_")
+                         f"{m.get('source', 'FFC')} names to {pos}."
+                         + (f" ({m['error']})" if m.get("error") else "") + "_")
             lines.append("")
         lines += _highlight_block(result.highlights.get(pos, {}))
 
