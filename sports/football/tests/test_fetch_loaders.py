@@ -51,7 +51,7 @@ def _install(monkeypatch, frame: pd.DataFrame) -> list[dict]:
     return calls
 
 
-def test_seasonal_uses_reg_summary_level_and_renames(monkeypatch):
+def test_player_stats_loaders_summary_level_and_renames(monkeypatch):
     raw = pd.DataFrame({
         "player_id": ["00-1"],
         "passing_interceptions": [3],
@@ -72,13 +72,10 @@ def test_seasonal_uses_reg_summary_level_and_renames(monkeypatch):
     # untouched columns pass through unchanged
     assert out["fantasy_points_ppr"].iloc[0] == 120.0
 
-
-def test_weekly_uses_week_summary_level(monkeypatch):
-    calls = _install(monkeypatch, pd.DataFrame({"player_id": ["x"]}))
+    # weekly is the same loader with the per-week summary level (multi-season passthrough)
     REGISTRY["weekly"].loader([2023, 2024])
-    assert calls[0]["func"] == "load_player_stats"
-    assert calls[0]["summary_level"] == "week"
-    assert calls[0]["seasons"] == [2023, 2024]
+    assert calls[1] == {"func": "load_player_stats", "seasons": [2023, 2024],
+                        "stat_type": None, "summary_level": "week"}
 
 
 def test_rosters_renames_gsis_id_to_player_id(monkeypatch):
