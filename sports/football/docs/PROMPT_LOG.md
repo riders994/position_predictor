@@ -828,6 +828,195 @@ is a standalone project and keeps its own log.)
 
 ---
 
+## Entry 026 — Redraft-league assistant (new-season draft board)
+
+**Date:** 2026-06-22
+
+> _Original prompt not captured at the time; reconstructed from PR #8 (`7be2237`)._ Build the second
+> serving use case after the keeper tool: a workflow that checks the just-completed season is
+> published, refreshes only what's stale, and projects the coming season into a draft board.
+
+**Response notes:**
+- Second **serving** path. One workflow: (a) gate on nflverse having published the completed season,
+  (b) refresh only stale caches, (c) project the coming season into a top board (default 20 QB /
+  50 RB / 75 WR).
+- **`data/availability.py`** — `check_season_available` (per-dataset network probe with row-count
+  floors so a *partial* release still fails the gate) and `datasets_needing_refresh` (manifest-driven
+  stale detection; always-refresh `ids`/`sleeper_players`/`draft_picks`). Both reused later by the
+  postseason tool.
+- **`eval/redraft.py`** — `run_redraft` orchestrates gate → fetch → per-position
+  build/features/`project_position` → combined board. `latest_completed_season` overridden at runtime
+  via a **deepcopied Config** so committed YAMLs are untouched. Top-N is "returning players *within*
+  top N" — projections stay pure (no ECR blend, per [[no-blend-ecr-benchmark]]); the list is trimmed
+  by `estimate_rookie_count` (draft class inside the latest `db_fpecr` board, graceful fallback to 0).
+- `scripts/redraft.py` + `make redraft [SEASON=]`; gate failure is a hard exit 1; writes
+  `reports/redraft_<season>.csv` (gitignored). Tests: `test_availability.py` + `test_redraft.py`
+  (no network/model). **107 pass.**
+
+---
+
+## Entry 027 — Postseason report (grade model / ECR / ADP vs actual finish)
+
+**Date:** 2026-06-22
+
+> _Original prompt not captured; reconstructed from PR #9 (`fa939dc`)._ Third (final football) serving
+> use case: after a season completes, grade the model's preseason projection against ECR, ADP, and the
+> actual finish.
+
+**Response notes:**
+- For a completed season Y: per player, the model's **preseason** projection for Y, the **ECR** and
+  **ADP** going into Y, the **actual** Y finish, plus a summary of how well each source called it.
+- **Leak-safety** is the crux: `eval/projection.py` `project_position` gains a `feature_season` param —
+  it boards that season and trains only on labels `season < feature_season`, so a backtest never
+  trains on the answer. No-op in live mode (latest season censored), so keeper/redraft/project callers
+  are unchanged. The invariant is pinned by a test.
+- **`data/adp.py` (new)** — historical PPR ADP from the **FantasyFootballCalculator** API (`db_fpecr`
+  carries no ADP). `fetch_ffc_adp` + `build_adp_benchmark` map FFC names → `gsis_id` by normalized
+  name+position (reusing `keeper._norm`), dense-rank within position, cache to
+  `data/external/adp_<stem>.parquet`. _(This FFC dependency is exactly what bites in Entry 030.)_
+- **`eval/postseason.py`** — `build_postseason_report`: gate (reused from redraft) → optional refresh →
+  per-position build/features/preseason projection → outer-join model/ECR/ADP/actual; scores each
+  source vs actual (Spearman, Precision@tier, mean abs rank error) on its covered-and-eligible rows,
+  plus hits/busts/value/reach highlights. `scripts/postseason.py` + `make postseason [SEASON=]`.
+- Tests: `test_adp.py` + `test_postseason.py` (incl. the leak-safe projection invariant). **115 pass.**
+
+---
+
+## Entry 028 — Reorg: each sport a standalone project + USAGE.md
+
+**Date:** 2026-06-22
+
+> _Original prompt not captured; reconstructed from PR #10 (`c487eb3`, `b320cd7`)._ Restructure so each
+> sport is its own independent project, superseding the earlier shared-engine idea; add a usage
+> reference for every command.
+
+**Response notes:**
+- Decision: fantasy scoring and per-sport data shaping differ enough that a **shared modeling engine
+  is the wrong abstraction**. The entire football project (code, scripts, tests, config, docs,
+  notebooks, examples, reports, data) moves under `sports/football/`; a new sport will be an
+  independent project beside it (not importing football's code).
+- **Zero code edits** to make it work: `io.py` derives `PROJECT_ROOT` from the package location, so once
+  the package sits at `sports/football/src/...`, all config/data/report paths follow automatically
+  (also dropped the `reports_dir(sport)` indirection a previous attempt had added). Whole tree moved
+  with `git mv` (history preserved).
+- Shared dev tooling stays at repo root: one `pyproject.toml` + `uv.lock`, with `packages`/`testpaths`
+  and `.gitignore` repointed at `sports/football`. **This is the move that orphaned the prompt log** —
+  `docs/PROMPT_LOG.md` → `sports/football/docs/PROMPT_LOG.md`, making it football-scoped with no
+  top-level log (see Entry 031). New root README = thin container index; new football README = project
+  landing page.
+- Follow-up `b320cd7`: **`docs/USAGE.md`** — command reference (flags, outputs, run order) for every
+  stage + serving tool, linked from the football README. Verified: `uv sync`, **115 pass**, ruff clean.
+
+---
+
+## Entry 029 — Migrate nflverse source: nfl_data_py → nflreadpy (data now 1999–2025)
+
+**Date:** 2026-06-23
+
+> _Original prompt not captured; reconstructed from PR #11 (`8c77d9f`, `f650829`, `551642a`,
+> `f41ceb9`)._ `nfl_data_py` is deprecated and frozen at 2024; migrate to the maintained `nflreadpy`
+> loader and bring the data current.
+
+**Response notes:**
+- `nfl_data_py` is deprecated upstream and frozen at the `player_stats` release (stops at 2024).
+  Switched the fetch registry to **`nflreadpy`** (nflverse's maintained loader, serving
+  `stats_player`).
+- **`data/fetch.py`** — mapped every loader to its nflreadpy equivalent. nflreadpy returns **polars**
+  frames; each loader converted to pandas and renamed `stats_player` columns back to the canonical
+  schema (`passing_interceptions`→`interceptions`, `sacks_suffered`→`sacks`, `team`→`recent_team`,
+  roster `gsis_id`→`player_id`), so the migration is contained to this module and the cached schema is
+  unchanged. _(The pandas conversion here is what Entry 030 later removes.)_
+- Re-pulled all 11 datasets (manifests now `source=nflreadpy`) and **added 2025**. Schema-scope review
+  confirmed the swap is neutral: every column the build/features/snaps code consumes survives, the
+  reg-season filter and NGS `week==0` conventions hold, and a full RB rebuild reproduces v4 exactly
+  (4464 rows, 3064 labeled). Metric shifts vs prior reports are driven by **+2025 / dropped-2018 fold**,
+  not the source.
+- Added `test_fetch_loaders.py` (fakes nflreadpy, asserts loader wiring + renames, no network).
+- `f650829`: regenerated WR/QB v2 reports on the new cache (WR Spearman 0.73→0.80, QB 0.49→0.57 — both
+  +2025-driven; both still beat market). `551642a`: refreshed PROJECT_PLAN/data_dictionary roadmap
+  (pbp marked out of scope). `f41ceb9`: a subagent suite review trimmed 3 weak tests (net −2, no
+  coverage lost) → **119 pass.**
+
+---
+
+## Entry 030 — Cleanup session: crash post-mortem, polars fetch, ADP fallback
+
+**Date:** 2026-06-23
+
+**Prompt (full text):** _(verbatim, sequential prompts from this session)_
+
+> The terminal window shut down while you were running the last process. Let's figure out what
+> happened. […] I asked you to fix the football readme. it references the 2024 postseason report, and
+> it should reference the 2025 one instead. when running the report, you and the terminal window
+> crashed. let's try to figure this out. […] commit the README fix. We'll look into the ADP issue
+> later, it might just be an update they need to push. […] Is there any way to reduce the memory usage
+> and reduce chance of OOM errors in future runs? […] Skip the pandas copy and see where else in the
+> codebase pandas can be skipped in favor of other packages. Sometimes it has high memory overhead.
+> […] Rethinking the FP thing. If our ECR is coming from FP via nflverse, how are we sourcing ECR for
+> 2025 season? […] yes, check what ADP files DynastyProcess publishes […] check if Sleeper exposes a
+> preseason ADP endpoint […] verify FFC 2025 is genuinely gone or just unpublished […] implement the
+> FFC→FantasyPros fallback and rerun the 2025 postseason report
+
+**Response notes:**
+- **Crash post-mortem.** The terminal died mid-run. Diagnosis: the *report generation* had actually
+  completed (all 5 RB-v4 report files written in a 1-second batch); the regenerated diff was pure
+  timing/branch-stamp noise (identical model metrics), so it was reverted. The real crash trigger was
+  separately found: `make postseason SEASON=2025` default-refreshes via `fetch_all(1999…2025,
+  overwrite=True)` — a full re-download whose peak memory plausibly OOM'd the 15 GiB / 512 MiB-swap
+  box. Running `--no-refresh` (cache already current) completes cleanly.
+- **README/USAGE 2025 fix** (`9495b35`, + USAGE.md follow-up): postseason example `SEASON=2024`→`2025`.
+- **Memory: keep the nflverse fetch in polars** (`014dba2`). Loaders no longer materialize a pandas
+  copy (undoing the conversion added in Entry 029); `write_parquet` is now polymorphic (polars writes
+  natively, strictly typed → the mixed-object coercion path is pandas-only). Cache + all downstream
+  pandas readers unchanged. Removes the ~2× peak on wide multi-season pulls. Pandas-skip survey: only
+  bulk paths matter — `build.py`/`features/build.py` flagged as the next tier (deferred); eval/serving
+  paths handle small tables, left as-is.
+- **ADP source investigation** (the bulk of the session). FFC returned no 2025 ADP. Walked the option
+  tree and ruled out dead ends with evidence: ECR actually comes from the **DynastyProcess** archive
+  `db_fpecr.parquet` (not nflverse — nflverse only supplies the `fantasypros_id`→`gsis_id` crosswalk),
+  pulled live; **DynastyProcess publishes no ADP file**; **Sleeper exposes no aggregate-ADP endpoint**
+  (per-draft picks only). Verified FFC 2025 is a **permanent hole** (`status:Error, "No ADP data
+  found."` across all formats/sizes, while 2023/2024 full and 2026 already live), and FantasyPros
+  **does** have 2025 (~336 players, consensus AVG).
+- **Implemented FFC→FantasyPros fallback** (`f57d036`): `fetch_fantasypros_adp` parses the FP overall
+  board with **stdlib regex** (no lxml/bs4 dep — none installed); `build_adp_benchmark` tries FFC then
+  falls back, records `source` in the match dict; report labels the source. 2025 ADP now grades:
+  **QB 40/40, RB 85/92, WR 106/110** matched. Merged as PR #12. **121 pass.**
+
+---
+
+## Entry 031 — Prompt-log audit + backfill (this entry)
+
+**Date:** 2026-06-23
+
+**Prompt (full text):** _(verbatim)_
+
+> What's going on with the prompt logs? I only see the football one, there's no full one, and the
+> football one stopped after the keeper tool was created. […] Branch off primary and backfill entries
+> 026-029 […] Make sure to include the prompts from this session investigating the prompt log, the
+> purpose of this project is to document as much as possible for future reproducibility
+
+**Response notes:**
+- **Two findings.** (1) *No "full" log:* the standalone-sports reorg (Entry 028, `c487eb3`) **renamed**
+  the only repo-root `docs/PROMPT_LOG.md` to `sports/football/docs/PROMPT_LOG.md` — it didn't create a
+  top-level one, so there's no repo-wide log and cross-cutting work has no home. (2) *Stale:* the log
+  stopped at Entry 025 (keeper); five subsequent bodies of work were unlogged.
+- I initially miscounted as four — **the redraft tool (PR #8) was also unlogged** (only an incidental
+  "redraft" mention existed in Entry 015), surfaced via the chronology check. Backfilled **all five**
+  (026 redraft, 027 postseason, 028 reorg, 029 nflreadpy, 030 this cleanup session) + this meta-entry
+  (031).
+- **Honesty constraint for reproducibility:** prompts for 026–029 weren't captured at the time, so they
+  are explicitly marked *reconstructed from the commit/PR* rather than presented as verbatim quotes;
+  030–031 carry the **actual** session prompts verbatim. Sourced entry detail from `git show` of each
+  PR's commits.
+- **Open structural question** (deferred, user hasn't decided): whether to (re)introduce a top-level
+  cross-cutting `docs/PROMPT_LOG.md` with per-sport logs underneath, vs. keeping the single
+  football-scoped file. Kept single-file for now.
+- Branched `docs-prompt-log-backfill` off the fresh `primary`; carried the orphaned USAGE.md 2025 fix
+  along (committed here).
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
