@@ -8,7 +8,7 @@ implemented. Every engineered feature must (a) be computed only from seasons ≤
 
 | Field | Description | Source |
 |---|---|---|
-| `player_id` | nflverse GSIS / canonical id | `import_ids` |
+| `player_id` | nflverse GSIS / canonical id | `load_ff_playerids` |
 | `player_name` | Display name | rosters |
 | `season` | Feature season *N* | — |
 | `team` | Team in season *N* | rosters |

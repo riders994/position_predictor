@@ -1,6 +1,6 @@
 {
   "name": "seasonal",
-  "source": "nflverse/nfl_data_py",
+  "source": "nflverse/nflreadpy",
   "note": "Season totals per player (rush/rec/TD/fantasy).",
   "seasons": [
     1999,
@@ -28,12 +28,13 @@
     2021,
     2022,
     2023,
-    2024
+    2024,
+    2025
   ],
   "min_season": 1999,
-  "pulled_at": "2026-06-16T17:26:50.183922+00:00",
-  "n_rows": 15102,
-  "n_cols": 58,
-  "cache_path": "/home/weezy/activity/position_predictor/data/raw/seasonal.parquet",
-  "sha256": "36de82d3e53129b55b91db775ef09fbe2f41af6110ed670d2a2e25b70e555a30"
+  "pulled_at": "2026-06-22T16:43:53.522216+00:00",
+  "n_rows": 49514,
+  "n_cols": 113,
+  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/seasonal.parquet",
+  "sha256": "27ede612554ee1a9164ca012baa000c75b81a36facf04b7dd801e2e3cf0714d3"
 }

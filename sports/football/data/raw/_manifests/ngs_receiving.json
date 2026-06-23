@@ -1,6 +1,6 @@
 {
   "name": "ngs_receiving",
-  "source": "nflverse/nfl_data_py",
+  "source": "nflverse/nflreadpy",
   "note": "Next Gen Stats receiving (2016+).",
   "seasons": [
     2016,
@@ -15,9 +15,9 @@
     2025
   ],
   "min_season": 2016,
-  "pulled_at": "2026-06-16T14:21:23.599734+00:00",
+  "pulled_at": "2026-06-23T17:18:08.843646+00:00",
   "n_rows": 14731,
   "n_cols": 23,
-  "cache_path": "/home/weezy/activity/position_predictor/data/raw/ngs_receiving.parquet",
+  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/ngs_receiving.parquet",
   "sha256": "73ac1ff57c9ab9c62ef49ce927d8348cc67af4b8c332d0916a2000ceb31ec1da"
 }

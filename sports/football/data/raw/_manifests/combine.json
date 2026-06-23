@@ -1,6 +1,6 @@
 {
   "name": "combine",
-  "source": "nflverse/nfl_data_py",
+  "source": "nflverse/nflreadpy",
   "note": "Combine athletic testing (numeric).",
   "seasons": [
     2000,
@@ -31,9 +31,9 @@
     2025
   ],
   "min_season": 2000,
-  "pulled_at": "2026-06-16T14:21:24.037232+00:00",
+  "pulled_at": "2026-06-23T17:18:09.142767+00:00",
   "n_rows": 8649,
   "n_cols": 18,
-  "cache_path": "/home/weezy/activity/position_predictor/data/raw/combine.parquet",
+  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/combine.parquet",
   "sha256": "54171193c900e6d7b11fcad6cffc1533da85b61e1b8b544769667743ff67e2f2"
 }

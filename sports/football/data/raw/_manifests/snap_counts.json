@@ -1,6 +1,6 @@
 {
   "name": "snap_counts",
-  "source": "nflverse/nfl_data_py",
+  "source": "nflverse/nflreadpy",
   "note": "Offensive snaps & snap share (2012+).",
   "seasons": [
     2012,
@@ -19,9 +19,9 @@
     2025
   ],
   "min_season": 2012,
-  "pulled_at": "2026-06-16T14:21:23.163764+00:00",
+  "pulled_at": "2026-06-23T17:18:08.563982+00:00",
   "n_rows": 324611,
   "n_cols": 16,
-  "cache_path": "/home/weezy/activity/position_predictor/data/raw/snap_counts.parquet",
+  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/snap_counts.parquet",
   "sha256": "74249893a9e3a163443e1fa85177a1c3ae491e57c2cd1a7c203393ed6ea95e8f"
 }

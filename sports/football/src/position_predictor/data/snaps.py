@@ -1,8 +1,8 @@
 """Snap-count aggregation with the pfr→gsis crosswalk (Stage 2 helper).
 
-nflverse ``import_snap_counts`` keys players on ``pfr_player_id`` (Pro-Football-Reference),
+nflverse ``load_snap_counts`` keys players on ``pfr_player_id`` (Pro-Football-Reference),
 **not** the gsis ``player_id`` used everywhere else in the pipeline. This module crosswalks
-snaps onto the gsis id via ``import_ids`` (``pfr_id`` ↔ ``gsis_id``) and aggregates per-game
+snaps onto the gsis id via ``load_ff_playerids`` (``pfr_id`` ↔ ``gsis_id``) and aggregates per-game
 offensive snaps into a season **snap share** — the second eligibility-cutoff dimension
 (PROJECT_PLAN §4.2, snaps available 2012+).
 

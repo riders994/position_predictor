@@ -8,8 +8,9 @@ license = { text = "MIT" }
 authors = [{ name = "Rohan V" }]
 
 dependencies = [
-    # data source
-    "nfl-data-py>=0.3.2",
+    # data source — nflreadpy is nflverse's maintained loader (supersedes the deprecated
+    # nfl-data-py, which is frozen at the 2024 player_stats release). Returns polars frames.
+    "nflreadpy>=0.1.5",
     "requests>=2.32",      # Sleeper fantasy-eligibility API pull
     # data wrangling
     "pandas>=2.2",
@@ -34,6 +35,11 @@ notebooks = [
     "ipykernel>=6.29",
     "shap>=0.45",          # feature-importance analysis
 ]
+
+# Test/lint tooling lives in a PEP 735 dependency-group (not optional-dependencies)
+# so a plain `uv sync` installs it — otherwise `uv run pytest` falls through to any
+# globally-installed pytest, which won't see this project's deps (e.g. pandas).
+[dependency-groups]
 dev = [
     "pytest>=8.2",
     "ruff>=0.5",
@@ -49,6 +55,11 @@ packages = ["sports/football/src/position_predictor"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+
+[tool.ruff.lint.per-file-ignores]
+# Notebooks bootstrap sys.path before importing position_predictor, so the package
+# imports legitimately come after a statement — E402 doesn't apply here.
+"*.ipynb" = ["E402"]
 
 [tool.pytest.ini_options]
 # Per-sport projects live under sports/<sport>/; list each sport's tests here.
