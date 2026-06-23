@@ -1,17 +1,16 @@
-# Prompt Log — Football
+# Prompt Log — Primary (all sports + repo-level)
 
-A chronological record of every prompt related to the **football** modeling project, with notes on the
-response. Maintained for **reproducibility and decision provenance** — anyone should be able to trace
-*why* this project looks the way it does.
+The **primary, chronological record of every prompt** submitted to the AI assistant across the whole
+repository — every sport plus repo-level/infrastructure work — with notes on the response. Maintained
+for **reproducibility and decision provenance** so anyone can trace *why* this repo looks the way it
+does. This file fulfills the original Entry 001 requirement of "a document that includes the full text
+of every prompt."
 
-> **Scope.** This is the football-domain view. The repo-wide superset (all sports + repo-level
-> infrastructure prompts) lives in the root [`docs/PROMPT_LOG.md`](../../../docs/PROMPT_LOG.md).
-> Entry numbers are **global** and shared with the primary, so they are stable for cross-referencing but
-> **non-contiguous here** where repo-level entries (e.g. the reorg, the log system) are kept to the
-> primary only.
->
-> Convention: append every football prompt to **both** this log and the primary, quoted **in full**;
-> keep response notes concise but specific (decisions, files, rationale).
+> **Logging convention.** Entry numbers are **global** and shared across all logs.
+> - Append **every** prompt here (the primary), with the prompt quoted **in full**.
+> - Also append each prompt to its sport's log (`sports/<sport>/docs/PROMPT_LOG.md`) when it relates to
+>   that sport; repo-level/infrastructure prompts (e.g. reorg, the log system itself) live here only.
+> - Keep response notes concise but specific (decisions, files, rationale).
 
 ---
 
@@ -887,6 +886,33 @@ response. Maintained for **reproducibility and decision provenance** — anyone 
 
 ---
 
+## Entry 028 — Reorg: each sport a standalone project + USAGE.md
+
+**Date:** 2026-06-22
+
+> _Original prompt not captured; reconstructed from PR #10 (`c487eb3`, `b320cd7`)._ Restructure so each
+> sport is its own independent project, superseding the earlier shared-engine idea; add a usage
+> reference for every command.
+
+**Response notes:**
+- Decision: fantasy scoring and per-sport data shaping differ enough that a **shared modeling engine
+  is the wrong abstraction**. The entire football project (code, scripts, tests, config, docs,
+  notebooks, examples, reports, data) moves under `sports/football/`; a new sport will be an
+  independent project beside it (not importing football's code).
+- **Zero code edits** to make it work: `io.py` derives `PROJECT_ROOT` from the package location, so once
+  the package sits at `sports/football/src/...`, all config/data/report paths follow automatically
+  (also dropped the `reports_dir(sport)` indirection a previous attempt had added). Whole tree moved
+  with `git mv` (history preserved).
+- Shared dev tooling stays at repo root: one `pyproject.toml` + `uv.lock`, with `packages`/`testpaths`
+  and `.gitignore` repointed at `sports/football`. **This is the move that orphaned the prompt log** —
+  `docs/PROMPT_LOG.md` → `sports/football/docs/PROMPT_LOG.md`, making it football-scoped with no
+  top-level log (see Entry 031). New root README = thin container index; new football README = project
+  landing page.
+- Follow-up `b320cd7`: **`docs/USAGE.md`** — command reference (flags, outputs, run order) for every
+  stage + serving tool, linked from the football README. Verified: `uv sync`, **115 pass**, ruff clean.
+
+---
+
 ## Entry 029 — Migrate nflverse source: nfl_data_py → nflreadpy (data now 1999–2025)
 
 **Date:** 2026-06-23
@@ -960,6 +986,66 @@ response. Maintained for **reproducibility and decision provenance** — anyone 
   board with **stdlib regex** (no lxml/bs4 dep — none installed); `build_adp_benchmark` tries FFC then
   falls back, records `source` in the match dict; report labels the source. 2025 ADP now grades:
   **QB 40/40, RB 85/92, WR 106/110** matched. Merged as PR #12. **121 pass.**
+
+---
+
+## Entry 031 — Prompt-log audit + backfill (this entry)
+
+**Date:** 2026-06-23
+
+**Prompt (full text):** _(verbatim)_
+
+> What's going on with the prompt logs? I only see the football one, there's no full one, and the
+> football one stopped after the keeper tool was created. […] Branch off primary and backfill entries
+> 026-029 […] Make sure to include the prompts from this session investigating the prompt log, the
+> purpose of this project is to document as much as possible for future reproducibility
+
+**Response notes:**
+- **Two findings.** (1) *No "full" log:* the standalone-sports reorg (Entry 028, `c487eb3`) **renamed**
+  the only repo-root `docs/PROMPT_LOG.md` to `sports/football/docs/PROMPT_LOG.md` — it didn't create a
+  top-level one, so there's no repo-wide log and cross-cutting work has no home. (2) *Stale:* the log
+  stopped at Entry 025 (keeper); five subsequent bodies of work were unlogged.
+- I initially miscounted as four — **the redraft tool (PR #8) was also unlogged** (only an incidental
+  "redraft" mention existed in Entry 015), surfaced via the chronology check. Backfilled **all five**
+  (026 redraft, 027 postseason, 028 reorg, 029 nflreadpy, 030 this cleanup session) + this meta-entry
+  (031).
+- **Honesty constraint for reproducibility:** prompts for 026–029 weren't captured at the time, so they
+  are explicitly marked *reconstructed from the commit/PR* rather than presented as verbatim quotes;
+  030–031 carry the **actual** session prompts verbatim. Sourced entry detail from `git show` of each
+  PR's commits.
+- **Open structural question** (deferred, user hasn't decided): whether to (re)introduce a top-level
+  cross-cutting `docs/PROMPT_LOG.md` with per-sport logs underneath, vs. keeping the single
+  football-scoped file. Kept single-file for now.
+- Branched `docs-prompt-log-backfill` off the fresh `primary`; carried the orphaned USAGE.md 2025 fix
+  along (committed here).
+
+---
+
+## Entry 032 — Split the prompt log into a primary + per-sport logs
+
+**Date:** 2026-06-23
+
+**Prompt (full text):** _(verbatim)_
+
+> I want one file with every prompt and one file in each sport directory of every prompt related to
+> that sport
+>
+> [follow-up] Don't use the word "master", it's not inclusive. Switch to "primary"
+
+**Response notes:**
+- Per the follow-up, the superset tier is named **"primary"** (not "master") throughout the logs.
+- Restructured the single football-scoped log (the reorg in Entry 028 had left it as the only log,
+  with no repo-wide one) into two tiers:
+  - **`docs/PROMPT_LOG.md` (this file)** — primary superset: every prompt, all sports + repo-level.
+  - **`sports/<sport>/docs/PROMPT_LOG.md`** — per-sport, filtered to that sport's domain work.
+- **Entry numbers are global** and shared across both tiers, so a number means the same entry
+  everywhere and cross-references hold. Per-sport files are therefore non-contiguous where repo-level
+  entries are skipped.
+- Classified **028 (reorg), 031 (log audit), 032 (this)** as repo-level/infrastructure → primary only;
+  all football-domain entries (001–027, 029, 030) appear in both. No content lost — the primary is a
+  strict superset and history is in git.
+- Maintenance convention recorded in both headers: football prompts append to **both** the primary and
+  the football log; repo-level prompts to the primary only.
 
 ---
 

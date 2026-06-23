@@ -120,9 +120,9 @@ Hard-stops (exit 1) if the feature season isn't published yet.
 
 **`postseason.py`** — after a season completes, grade model vs ECR vs ADP vs the actual finish.
 ```bash
-make postseason SEASON=2024                           # or:
+make postseason SEASON=2025                           # or:
 uv run python scripts/postseason.py [options]
-  --season 2024            # completed season (default: latest published)
+  --season 2025            # completed season (default: latest published)
   --no-refresh             # use the cache as-is
   --top 24                 # rows per position in the board table
   --configs ...            --out reports/postseason_<season>.md
