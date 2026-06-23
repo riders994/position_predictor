@@ -70,13 +70,16 @@ def test_top_weighted_sample_weights():
     assert w2[1] > w2[0] and w2[3] > w2[2]    # the within-season top weighted more each season
 
 
-def test_top_weighted_ensemble_fits_and_predicts():
+def test_top_weighted_ensemble_learns_signal():
+    # the only path exercising lightgbm + the top-weighted sample-weight path through fit;
+    # assert it still recovers the signal, not just that it runs.
     df = _synthetic()
     train = df[df.season <= 2014]
+    test = df[df.season >= 2015]
     ens = EraEnsemble("lightgbm", ERAS, BLOCKS, combine="mean", target_col="target",
                       seed=1, top_weighted=True).fit(train)
-    pred = ens.predict(df[df.season >= 2015])
-    assert len(pred) == len(df[df.season >= 2015])   # weighting path runs end-to-end
+    pred = ens.predict(test)
+    assert np.corrcoef(pred, test["target"])[0, 1] > 0.9
 
 
 def test_combiners_all_run_and_normalise():

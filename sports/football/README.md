@@ -42,7 +42,7 @@ make -C sports/football fetch build features eligibility experiment benchmark re
 # serving tools (write under sports/football/reports/)
 make -C sports/football project    CONFIG=config/football_rb.yaml   # next-season projection board
 make -C sports/football redraft    SEASON=2026                      # new-season draft board (QB/RB/WR)
-make -C sports/football postseason SEASON=2024                      # grade model/ECR/ADP vs actuals
+make -C sports/football postseason SEASON=2025                      # grade model/ECR/ADP vs actuals
 uv run python sports/football/scripts/keeper.py \
     --input sports/football/examples/keepers_example.csv --teams 12 --format sf
 ```

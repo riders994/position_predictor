@@ -276,8 +276,8 @@ features: **separate**, with nested schemas and window-level composition.
 
 - **Regularized linear:** Ridge / Lasso / ElasticNet (interpretable, strong baseline).
 - **Tree ensembles:** Random Forest, **gradient boosting (LightGBM / XGBoost / CatBoost)** — primary workhorse for tabular.
-- **Learning-to-rank (stretch):** LightGBM LambdaMART directly optimizing rank, compared against the regress-then-sort approach.
-- **Quantile / interval (stretch):** quantile GBM for floor–ceiling ranges.
+- **Learning-to-rank (~~stretch~~ tested & rejected):** LightGBM LambdaMART / top-weighted training was probed against the regress-then-sort approach and **rejected** — weighting by within-season finish nudged weighted-τ but **hurt Precision@12 (−0.03..−0.05)**. Not pursued further (see §13 roadmap).
+- **Quantile / interval (stretch, not started):** quantile GBM for floor–ceiling ranges (see §13 roadmap).
 
 ### 7.3 Era ensemble (window composition, §6.3)
 
@@ -490,8 +490,52 @@ Resolved (2026-06-17, RB v3 — back-applying WR learnings):
   RB2 tier (**P@24 ~0.72 vs 0.75**) — the market's broad consensus is stronger at ranking the
   middle of the board than our model.
 
-Still open:
-- **QB** next (passing features + `ngs_passing`); **TE skipped** (thin position).
-- The remaining gaps vs market are now sharper: **RB2-tier (P@24)** ranking, and overall rank.
-  LambdaMART is still the principled lever but the probe lowered its expected payoff; richer
-  RB2-relevant signal may matter more.
+Resolved (2026-06-17 → 06-23, since RB v3):
+- **QB model built (v1) → all positions now shipped: RB v4 / WR v2 / QB v2.** QB added a passing
+  feature family + `ngs_passing`; **g\* = 7** (QB noisiest, reliability peaks 0.614). Same shape as
+  RB/WR vs market: loses overall rank + top-weighted τ to ECR, **wins the tier-precision (QB1/QB2)
+  boards**.
+- **COVID-2020 excluded** (`data.exclude_seasons: [2020]`, both a label and feature season) → the
+  v4/v2 version bumps. Honest finding: on non-COVID data the market is a *stronger* overall-rank
+  predictor than the contaminated eval implied, but the model's top-tier (P@12) edge holds.
+- **Data source migrated `nfl_data_py` → `nflreadpy`** (merged PR #11): all 11 datasets re-pulled,
+  data now **1999–2025**, 2025 season added. Schema-neutral (verified — see §2.1).
+- **Serving tools shipped & merged:** project, keeper-league, redraft-league, postseason-grading.
+
+**The football project is functionally complete.** All remaining work is optional improvement /
+enrichment only — tracked in §13.
+
+---
+
+## 13. Roadmap (optional improvements — project is feature-complete without these)
+
+Status as of 2026-06-23. Nothing here is *required*: all four positions (RB/WR/QB, TE skipped) and
+the four serving tools ship today. This section is the single source of truth for what is open vs
+closed; the dated decisions live in §12.
+
+### Open · in-scope · actionable
+- [ ] **Join `combine` athletic-testing data as features.** Already fetched/cached (the `combine`
+  dataset) but never joined into the feature build (`data_dictionary.md`) — the cheapest untapped,
+  in-scope item.
+- [ ] **Promote snap-share to a *primary* eligibility dimension** (currently a secondary /
+  sensitivity dim only, §4.2).
+
+### Deferred · needs new data plumbing · lower priority
+- [ ] **PFR-scraped advanced-stats enrichment block** — needs a scraper; long-deferred (§12).
+- [ ] **Quantile / interval GBM** for floor–ceiling ranges — untried stretch (§7.2).
+
+### Out of scope · standing decisions · do NOT start without the user explicitly reversing
+- [x] **Play-by-play (pbp) features — red-zone / goal-line / route participation.** ⚠️ **User
+  decision, reaffirmed 2026-06-23: pbp is out of scope for this project at this time.** This is the
+  *only* remaining orthogonal signal that could close the model-vs-market **overall-rank** gap, but
+  it is intentionally not being pursued. The `pbp` dataset stays registered (`large=True`) but
+  unfetched. Revisit only on an explicit user request.
+- [x] **Learning-to-rank (LambdaMART) / top-weighted training** — tested & **rejected** (hurt
+  Precision@12 −0.03..−0.05; §7.2, §12). Not a future track unless a materially different
+  formulation is proposed.
+- [x] **Receiving-NGS-for-RB & air-yards receiving features** — tested & **rejected** (no ranking
+  gain; redundant with opportunity volume; §12).
+- [x] **Rookie / incoming-player model** — dropped; returning-players-only by design (§1.2, §12).
+- [x] **TE position** — skipped (too few fantasy-relevant TEs per season).
+- [x] **Blending ECR/ADP into the model** — by design the market stays a *benchmark to compare
+  against*, never a feature.
