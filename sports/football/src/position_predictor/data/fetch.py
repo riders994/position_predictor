@@ -87,10 +87,12 @@ def _registry() -> dict[str, Dataset]:
             if summary_level is not None:
                 kwargs["summary_level"] = summary_level
             frame = fn(**kwargs) if years is None else fn(years, **kwargs)
-            df = frame.to_pandas()
+            # Stay in polars: nflreadpy returns a polars frame, the cache is parquet, and
+            # write_parquet writes polars natively — so we never materialise a pandas copy
+            # (which would double peak memory on the wide multi-season pulls).
             if rename:
-                df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
-            return df
+                frame = frame.rename({k: v for k, v in rename.items() if k in frame.columns})
+            return frame
 
         return _load
 
@@ -223,7 +225,7 @@ def _load_resilient(ds: Dataset, years: list[int]):
     except Exception:
         if len(years) <= 1:
             raise  # nothing to salvage — surface the real error
-    import pandas as pd
+    import polars as pl
 
     frames, got, missing, last_exc = [], [], [], None
     for y in years:
@@ -236,7 +238,8 @@ def _load_resilient(ds: Dataset, years: list[int]):
     if not frames:
         raise last_exc  # dataset genuinely unavailable for every requested year
     note = f" (skipped unavailable {missing})" if missing else ""
-    return pd.concat(frames, ignore_index=True), got, note
+    # diagonal_relaxed: tolerate columns/dtypes that drift across nflverse eras.
+    return pl.concat(frames, how="diagonal_relaxed"), got, note
 
 
 def _write_manifest(ds: Dataset, result: FetchResult, cache_path) -> None:

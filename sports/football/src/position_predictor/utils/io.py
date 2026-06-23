@@ -36,12 +36,17 @@ def resolve(path: str | Path) -> Path:
 def write_parquet(df, path: Path):
     """Write a DataFrame to Parquet, creating parent dirs.
 
-    Some raw nflverse columns are mixed-type ``object`` (e.g. ``jersey_number`` mixes floats
-    and strings across seasons), which Arrow refuses to serialise. The happy path stays fast;
-    on a serialisation error we coerce only the offending mixed-type object columns to string
-    and retry, so caching never aborts the fetch.
+    Accepts either a polars or a pandas frame. Polars frames are strictly typed and write
+    natively (``write_parquet``), so the fetch path can cache nflverse pulls without ever
+    materialising a pandas copy. For pandas frames some raw nflverse columns are mixed-type
+    ``object`` (e.g. ``jersey_number`` mixes floats and strings across seasons), which Arrow
+    refuses to serialise; the happy path stays fast, and on a serialisation error we coerce
+    only the offending mixed-type object columns to string and retry so caching never aborts.
     """
     ensure_dir(path.parent)
+    if hasattr(df, "write_parquet"):  # polars frame — native, strictly typed
+        df.write_parquet(path)
+        return path
     try:
         df.to_parquet(path, index=False)
     except Exception:
