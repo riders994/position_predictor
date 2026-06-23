@@ -3,11 +3,11 @@
   "position": "QB",
   "version": "v2",
   "test_label_seasons": [
-    2018,
     2019,
     2022,
     2023,
-    2024
+    2024,
+    2025
   ],
   "windows": [
     10,
@@ -16,31 +16,31 @@
   ],
   "chosen_cutoff_games": 7,
   "headline": {
-    "best_model": "smoothed_history",
-    "best_combine": "n/a",
-    "window_years": 20,
-    "spearman_mean": 0.4898455222619413,
-    "precision_at_12_mean": 0.5666666666666667,
-    "mae_mean": 3.350134357526207,
+    "best_model": "lasso",
+    "best_combine": "val_weighted",
+    "window_years": 30,
+    "spearman_mean": 0.5716508899321158,
+    "precision_at_12_mean": 0.6166666666666666,
+    "mae_mean": 2.998231542046632,
     "best_baseline": "smoothed_history",
-    "best_baseline_spearman_mean": 0.4898455222619413
+    "best_baseline_spearman_mean": 0.5286776100870623
   },
   "data_volume": {
-    "n_feature_rows": 1918,
-    "n_labeled_rows": 1338,
+    "n_feature_rows": 1996,
+    "n_labeled_rows": 1398,
     "n_features": 73,
     "season_min": 1999,
-    "season_max": 2024,
-    "n_seasons": 25,
+    "season_max": 2025,
+    "n_seasons": 26,
     "per_era_rows": {
-      "boxscore": 763,
-      "snaps": 224,
-      "ngs": 351
+      "boxscore": 762,
+      "snaps": 222,
+      "ngs": 414
     }
   },
   "compute": {
-    "total_fit_seconds": 36.25899975300126,
-    "wall_seconds": 129.32976808999956,
-    "mean_fit_seconds_per_model": 0.6777221134996378
+    "total_fit_seconds": 35.48401436100903,
+    "wall_seconds": 65.28432501600037,
+    "mean_fit_seconds_per_model": 0.6853944930553553
   }
 }
