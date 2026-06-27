@@ -3,7 +3,7 @@
 
 CONFIG ?= config/nba_archetypes.yaml
 
-.PHONY: help setup fetch fetch-large build features archetypes fantasy test lint
+.PHONY: help setup fetch fetch-large build features archetypes fantasy compose test lint
 
 help:
 	@echo "Targets:"
@@ -14,8 +14,9 @@ help:
 	@echo "  features     engineer style features + z-scores -> data/processed"
 	@echo "  archetypes   Phase 1: soft-GMM archetypes -> reports/REPORT_archetypes.md"
 	@echo "  fantasy      Phase 2: max_pf optimal-lineup 9-cat success labels -> data/processed"
+	@echo "  compose      Phase 2: roster archetype composition + join to success -> data/processed"
 	@echo "  test / lint  pytest / ruff"
-	@echo "  (compose / predict stages: TODO — see PROJECT_PLAN)"
+	@echo "  (predict stage: TODO — see PROJECT_PLAN)"
 
 setup:
 	cd ../../ && uv sync
@@ -37,6 +38,9 @@ archetypes:
 
 fantasy:
 	uv run python scripts/fetch_fantasy.py --config $(CONFIG)
+
+compose:
+	uv run python scripts/compose.py --config $(CONFIG)
 
 test:
 	cd ../../ && uv run pytest sports/basketball/tests

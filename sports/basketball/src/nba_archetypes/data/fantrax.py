@@ -8,8 +8,16 @@ clean success label for Phase 2; ``actual_pf`` is kept for reference and ``lineu
 points a manager left on the table.
 
 The 9 ``max_pf`` categories match our format exactly (fg_pct, tpm, ft_pct, pts, reb, ast, stl, blk,
-to). ``m1/m2/m3_pf`` are the optimal totals under the three objectives (catwins / zscore / raw);
-``m1`` (catwins) is the primary roto/H2H success signal.
+to). The three optimal-PF estimates encode different *lineup-management* assumptions:
+
+- ``m1_pf`` — **actual competition**: your optimal lineup vs opponents' *actual* (often unset) lineups.
+- ``m2_pf`` — **both teams set their lineup** (the mutual/Nash ceiling): the realistic "if everyone
+  manages" outcome.
+- ``m3_pf`` — **maximal management**: the most aggressive optimization ceiling.
+
+**Grade off M2 > M3 > M1** (user directive): ``m2_pf`` is the primary success label (both managers
+optimize), ``m3_pf`` then ``m1_pf`` as fallbacks. ``primary_pf = m2_pf``; ``lineup_gap = m2_pf -
+actual_pf`` (category wins a manager left on the table vs the both-optimize ceiling).
 """
 from __future__ import annotations
 
@@ -74,7 +82,8 @@ def fetch_success_labels(config, *, weeks=None, methodology="hindsight", nash=Tr
             print(f"[fantasy] WARNING: league {lid} failed — {msg}")
     df = pd.DataFrame(rows)
     if not df.empty:
-        df["lineup_gap"] = df["m1_pf"] - df["actual_pf"]
+        df["primary_pf"] = df["m2_pf"]                    # grade off M2 (both teams optimize)
+        df["lineup_gap"] = df["m2_pf"] - df["actual_pf"]  # left on the table vs both-optimize ceiling
 
     if write and not df.empty:
         path = DATA_PROCESSED / "fantrax_success.parquet"

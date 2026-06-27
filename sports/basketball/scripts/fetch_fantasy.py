@@ -33,9 +33,11 @@ def main() -> int:
         print("[fantasy] no rows (check league_ids / connectivity).")
         return 1
     print(f"[fantasy] {len(df)} team-seasons across {df.league_id.nunique()} league(s). "
-          f"mean optimal catwins (m1_pf) {df.m1_pf.mean():.1f}, mean lineup_gap {df.lineup_gap.mean():.1f}")
-    print(df.sort_values("m1_pf", ascending=False)
-          [["league_id", "name", "actual_pf", "m1_pf", "lineup_gap"]].head(10).to_string(index=False))
+          f"primary=M2 (both optimize): mean {df.primary_pf.mean():.1f}, "
+          f"mean lineup_gap {df.lineup_gap.mean():.1f}")
+    print(df.sort_values("primary_pf", ascending=False)
+          [["league_id", "name", "actual_pf", "m2_pf", "m3_pf", "m1_pf", "lineup_gap"]]
+          .head(10).to_string(index=False))
     print("[fantasy] wrote data/processed/fantrax_success.parquet")
     return 0
 

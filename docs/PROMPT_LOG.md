@@ -1495,6 +1495,39 @@ the results of the other models?")_
 
 ---
 
+## Entry 047 — Phase 2: roster composition + M2 grading + name resolution
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Let's keep going with the roster/comp build now. For the max_pf success labels, prioritize
+> M2 > M3 > M1 as the metrics to grade off of. M2 assumes both teams set their lineup, M3 assumes
+> maximal management to set lineup, and M1 is just based on actual player competition.
+>
+> and make sure to look for other name resolution problems between the datasets. Sometimes fonts can
+> be different etc.
+
+**Response notes:**
+- **Grading = M2 > M3 > M1** (corrected the meanings I'd guessed): `m1` = vs opponents' *actual*
+  lineups; `m2` = **both teams optimize** (mutual/Nash ceiling) — the realistic "everyone manages";
+  `m3` = maximal management. Set `primary_pf = m2_pf` and `lineup_gap = m2_pf − actual_pf`.
+- **Built Phase-2 composition** (`eval/compose.py` + `scripts/compose.py` + `make compose`):
+  `fetch_rosters` (fantraxapi `team_roster`, retry/backoff), `team_composition` = name-match each
+  team's roster → ESPN archetype membership for the league's season (`season` inferred from
+  `roster.period_date`) → **soft archetype shares** `comp_<arch>` (mean membership) + hard counts
+  `n_<arch>` + `match_rate`; `build_phase2_table` joins the max_pf success labels.
+- **Name resolution hardened (the "fonts" issue = diacritics):** `_norm` now NFKD-folds accents
+  (Jokić/Dončić/Şengün/Jović → ascii) on *both* sides, plus punctuation/suffix stripping; added a
+  config `fantasy.name_aliases` escape hatch for nicknames and an **unmatched-player diagnostic** that
+  `make compose` prints, so residual mismatches surface against real data.
+- 19 basketball tests (accent folding, alias, composition math, unmatched), ruff clean, **151 total**.
+  Branch `basketball-phase2`.
+- **Pending:** the full-season success pull is still running (~53 min, cache 920 MB, progressing) and
+  holds Fantrax, so the **live roster fetch + actual mismatch report** runs next once it frees up.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

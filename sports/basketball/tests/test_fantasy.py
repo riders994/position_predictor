@@ -25,7 +25,9 @@ def test_success_labels_shape_and_lineup_gap(monkeypatch):
     df = fetch_success_labels(cfg, write=False)
 
     assert len(df) == 2 * len(cfg.get("fantasy.league_ids"))     # teams x leagues
-    assert {"league_id", "team_id", "name", "m1_pf", "lineup_gap"} <= set(df.columns)
+    assert {"league_id", "team_id", "name", "m1_pf", "m2_pf", "m3_pf",
+            "primary_pf", "lineup_gap"} <= set(df.columns)
     alpha = df[df.name == "Alpha"].iloc[0]
-    assert alpha["lineup_gap"] == 30.0                           # m1_pf - actual_pf = 150 - 120
+    # grade off M2 (both optimize): primary_pf = m2_pf; lineup_gap = m2_pf - actual_pf
+    assert alpha["primary_pf"] == 148.0 and alpha["lineup_gap"] == 28.0
     assert set(df["league_id"]) == set(cfg.get("fantasy.league_ids"))
