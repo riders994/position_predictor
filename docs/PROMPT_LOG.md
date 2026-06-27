@@ -1049,6 +1049,48 @@ of every prompt."
 
 ---
 
+## Entry 033 — Add the TE model (v1) + wire TE through the serving tooling
+
+**Date:** 2026-06-26
+
+**Prompt (full text):** _(verbatim, sequential prompts from this session)_
+
+> Is git fresh and up to date? Let's start the TE model. I think we need it to make the tooling layer
+> more complete.
+>
+> [clarifying answers] P@k board depth = **TE1/TE2 [12, 24]** (drop the fantasy-irrelevant TE3 tier);
+> scope = **returning-only** (consistent with RB/WR/QB v1).
+>
+> [follow-up] add a PROMPT_LOG entry for this, this piece should be automatic. It's the whole point of
+> the project.
+
+**Response notes:**
+- **Git hygiene first.** Was on the already-merged `docs-prompt-log-backfill` branch with
+  `origin/primary` 4 commits ahead and regeneration churn in the tree (an RB v4 re-run with *identical*
+  model metrics — only timestamps/hashes/wall-clock differed). Discarded the churn, fast-forwarded
+  `primary` to `20ce892`; left the unrelated untracked `data/raw/_manifests/pbp.json` alone. Branched
+  `te-model-v1`.
+- **TE v1 was a pure-config add** — TEs are pass-catchers, so they reuse WR's receiving feature
+  pipeline with **zero** build/feature code. New `config/football_te.yaml`: workload = `targets`, P@k
+  tiers `[12,24]` (TE1/TE2), returning-only, same era/CV/model grid as WR.
+- **Eligibility g\*=5.** TE split-half PPG reliability **clears 0.70 at k=5** (0.713) — TEs are *more*
+  stable than WR (never clears, g\*=7) or QB (g\*=7) once they play 5+ games. (Validates the "add a
+  position = new config + re-derive eligibility" claim for any position in an existing scoring family.)
+- **Results.** Best model `lasso` (a *linear* model wins) — Spearman **0.744 ± 0.069**, P@12 0.57,
+  MAE 1.83 PPG. Does **not** beat preseason ECR overall (0.782) but **edges it on the TE2 tier**; NGS
+  block dropped (no out-of-fold gain — consistent with RB/WR).
+- **Tooling completeness (the stated goal).** Wired TE through every multi-position consumer:
+  **redraft** (`DEFAULT_TOP_N["TE"]=24`, `_DRAFT_POS_TO_FANTASY`, `rookie_names`, `--top-te`),
+  **postseason** grading (`DEFAULT_CONFIGS`), and **keeper** (dedicated **1-TE slot**, *not*
+  flex-eligible — `MODELED_POS`/`DEFAULT_ROSTER`/`starters`). Added
+  `test_te_dedicated_slot_replacement`; updated README + PROJECT_PLAN (removed the stale "TE skipped"
+  notes). **122 tests pass, ruff clean.**
+- **Committed** `2ed3819` on `te-model-v1` (`pbp.json` deliberately excluded); pushed, PR pending.
+- **This entry is the follow-up's point:** prompt-logging is the project's reproducibility backbone and
+  must be **automatic** — appended here without being asked, going forward, for every prompt.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
