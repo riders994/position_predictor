@@ -43,6 +43,33 @@ fantasy:
     - blk3bn3clw9njuhc
     - wserh14rmbbpqtcg
 
+# Phase 1 — archetype discovery (soft GMM on the *_z style features; fit on E2+E3 eligible,
+# assigned to all eligible 2013+). k chosen via BIC plateau + the ~11-14 / "13 positions" target;
+# style space is continuous (low silhouette) so soft membership is the point. Names are PROVISIONAL
+# (tied to seed=1729, k=12) — formalized in the soft->hard consolidation after EDA.
+archetypes:
+  k: 12
+  k_range: [8, 16]
+  covariance_type: full
+  n_init: 5
+  # PCA-whiten before the GMM: the style features are collinear (3-pt-ness, usage), which makes a
+  # raw full-cov GMM overconfident (median top_prob ~1.0). Whitening to ~90% variance (8 PCs) gives
+  # genuinely SOFT membership (~47% of players are blends) AND raises YoY stability 0.55 -> 0.61.
+  pca_variance: 0.90
+  names:                            # by GMM component index (seed=1729, PCA-whitened); see reports/REPORT_archetypes.md
+    0: Foul-Drawing Iso Scorer
+    1: Lead Playmaker
+    2: Scoring Combo Guard
+    3: Connector Wing
+    4: Volume Wing Scorer
+    5: Two-Way Forward
+    6: 3-and-D Wing
+    7: Balanced Wing
+    8: Interior Big
+    9: High-Usage Primary
+    10: Rebounding Big-Forward
+    11: Rim-Running Center
+
 reproducibility:
   random_seed: 1729
   results_dir: reports/results

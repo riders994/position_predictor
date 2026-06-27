@@ -150,8 +150,26 @@ simulated fields seeded by real settings).
 - **Fantrax access** — leagues are public (no auth); confirm the read path (`fantraxapi` /
   endpoints) and extract settings + rosters/standings.
 - **Era boundaries** — provisional (§2.2); reevaluate if archetypes/results are weak.
-- **`k`** and the **soft→hard consolidation** — resolved in Phase-1 EDA.
+- **`k`** — chosen in Phase-1 EDA: **k=12** (BIC plateau ~11–12 + the ~11–14 target).
 - **Phase-2 "success" definition** — standings vs category z-totals vs H2H; 2-league small-sample
   augmentation.
-- **Eligibility floor** (minutes/games) — set in EDA.
+- **Eligibility floor** (minutes/games) — set in EDA (15 mpg / 20 gp).
 - **Rookie model** — deferred (separate college/HS + draft-coverage project).
+
+---
+
+## 8. Future improvements (deferred — tracked, not blocking)
+
+Phase 1 ships as a validated soft-GMM taxonomy (k=12, PCA-whitened, 61% YoY stability). These are
+known levers to revisit later; none block Phases 2/3:
+
+- **Soft→hard consolidation of the low-signal middle.** The catch-all *Balanced Wing* + the churniest
+  archetypes (*Connector Wing* 0.45, *Two-Way Forward* / *Rebounding Big-Forward* ~0.51 YoY) are
+  consolidation candidates — merge into a cleaner, more stable hard taxonomy after deeper EDA.
+- **Shot-zone enrichment** (`load_nba_shots`, large). Detailed rim/mid/3 + zone distribution would
+  sharpen the bigs/finishers and shooter splits beyond the current coarse `fg3a_rate` / `ft_rate`.
+- **nba_api play-type / tracking** enrichment (Synergy, passing/defensive matchups) — the richest
+  style signal; deepest-but-flakiest layer.
+- **`rosters` multi-season fix** — the sportsdataverse loader returned latest-season-only (537 rows);
+  needs a per-season pull if roster/position context is wanted downstream.
+- **Era boundaries** (E1/E2/E3) — provisional; revisit if results are weak.

@@ -1357,6 +1357,86 @@ the results of the other models?")_
 
 ---
 
+## Entry 042 — Phase 1: archetype discovery (soft GMM, k=12)
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Merged. Now what
+
+**Response notes:**
+- **k-selection EDA:** BIC has a relative plateau at k≈11–12 (then jumps at k≥13); silhouette is
+  uniformly low (0.04–0.07) — *expected*: NBA style is continuous/overlapping, which is exactly why
+  soft GMM + soft→hard is the right frame. With the ~11–14 / "13 positions" target → **k=12**.
+- **Fixed a NaN trap:** dropping rows with any NaN `*_z` excluded no-3PT bigs (Gobert's `fg3_pct` is
+  undefined) — the very archetype we want. Now **impute NaN→0** (neutral) instead of dropping; pool
+  stays 2,631 (fit) / 3,889 (assigned).
+- **`archetypes/discover.py`:** GMM fit on **eligible E2+E3** (2,631), soft membership **assigned to
+  all eligible 2013+** (3,889, so E1 carries archetypes for Phases 2/3). Membership parquet carries
+  the full prob vector `p0..p11` + `entropy` (blend-iness) — the soft input for Phase 2/3.
+- **12 coherent, named archetypes** (provisional, seed-tied): Rim-Running Center (Gobert/Capela),
+  3-and-D Wing (Mikal Bridges/Covington), Floor General (low-usage facilitator), High-Usage Shot
+  Creator (DeRozan/Kyrie), Movement Shooter (Hield/Lonzo), Slashing Forward (Giannis/Siakam),
+  Non-Shooting Interior Big (Mobley/Allen), Corner Specialist (PJ Tucker), Two-Way Forward, Volume
+  Perimeter Scorer, Connector Wing, Balanced Combo Wing. Same players recur across seasons in the same
+  archetype (good stability signal). Report → `reports/REPORT_archetypes.md`.
+- 11 tests, ruff clean, **143 total**. Branch `basketball-archetypes`.
+- **Next:** cross-season stability check + soft→hard consolidation/naming, then Phase 2 (Fantrax
+  league configs → archetype composition vs 9-cat success).
+
+---
+
+## Entry 043 — Phase 1 iteration: PCA-whiten (soft membership) + stability
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Keep iterating on phase 1
+
+**Response notes:**
+- **Diagnosed:** the raw full-cov GMM was **overconfident** (median `top_prob` 1.0, only 1% blends) —
+  the "soft" membership was effectively hard, because the style features are collinear (3-pt-ness,
+  usage). Compared covariance types: full has the best BIC by far but is overconfident; tied is softer
+  but fits much worse.
+- **Fix = PCA-whiten → GMM.** Decorrelating to ~90% variance (8 PCs) before the GMM gives genuinely
+  **soft** membership (median `top_prob` 0.85, **43% of player-seasons are blends**) *and* raises YoY
+  **stability 0.55 → 0.61**. Profiles are still computed on the original z-features, so interpretation
+  is unaffected; cluster indices changed, so the 12 names were re-derived (sharper now: Foul-Drawing
+  Iso Scorer = DeRozan/Harden/Butler; Lead Playmaker (Haliburton/CP3) split from Scoring Combo Guard
+  (Kyrie); High-Usage Primary = Luka/LeBron; Rim-Running Center = Gobert/Capela).
+- **Added cross-season stability** (`archetype_stability`): **61%** keep their archetype YoY (vs ~8%
+  random) — validation + the Phase-3 must-beat baseline. Per-archetype: Rim-Running Center stickiest
+  (0.78), Interior Big / High-Usage Primary ~0.70; the low-signal middle (Connector Wing 0.45, Two-Way
+  Forward / Rebounding Big-Forward 0.51) churns most → soft→hard consolidation candidates. Report now
+  surfaces softness + a stability table.
+- 13 tests, ruff clean, **145 total**. Branch `basketball-archetypes`.
+- **Next:** soft→hard consolidation of the low-signal middle (e.g. Balanced Wing catch-all);
+  optional shot-zone enrichment (`load_nba_shots`); then Phase 2.
+
+---
+
+## Entry 044 — Defer Phase-1 polish to a roadmap; ship Phase 1
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Let's mark these as future possible improvements for the model. We can come back later. Setup the PR
+> for me to merge and we can start phase 2
+
+**Response notes:**
+- Recorded the deferred Phase-1 levers in **PROJECT_PLAN §8 "Future improvements"** (soft→hard
+  consolidation of the low-signal middle; shot-zone enrichment via `load_nba_shots`; nba_api
+  play-type/tracking; `rosters` multi-season fix; era-boundary revisit) — tracked, none blocking.
+  Phase 1 ships as-is: k=12 PCA-whitened soft GMM, 43% blends, 61% YoY stability.
+- Branch `basketball-archetypes` finalized + pushed for merge (PR via compare URL). Phase 2 starts off
+  a fresh `primary` after merge: Fantrax fetch module (two public leagues → settings + rosters +
+  standings) → archetype composition vs 9-cat success.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
