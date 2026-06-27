@@ -1417,6 +1417,26 @@ the results of the other models?")_
 
 ---
 
+## Entry 044 — Defer Phase-1 polish to a roadmap; ship Phase 1
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Let's mark these as future possible improvements for the model. We can come back later. Setup the PR
+> for me to merge and we can start phase 2
+
+**Response notes:**
+- Recorded the deferred Phase-1 levers in **PROJECT_PLAN §8 "Future improvements"** (soft→hard
+  consolidation of the low-signal middle; shot-zone enrichment via `load_nba_shots`; nba_api
+  play-type/tracking; `rosters` multi-season fix; era-boundary revisit) — tracked, none blocking.
+  Phase 1 ships as-is: k=12 PCA-whitened soft GMM, 43% blends, 61% YoY stability.
+- Branch `basketball-archetypes` finalized + pushed for merge (PR via compare URL). Phase 2 starts off
+  a fresh `primary` after merge: Fantrax fetch module (two public leagues → settings + rosters +
+  standings) → archetype composition vs 9-cat success.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
