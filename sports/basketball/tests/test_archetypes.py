@@ -7,7 +7,11 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from nba_archetypes.archetypes.discover import _signature, feature_cols  # noqa: E402
+from nba_archetypes.archetypes.discover import (  # noqa: E402
+    _signature,
+    archetype_stability,
+    feature_cols,
+)
 from nba_archetypes.utils.config import Config  # noqa: E402
 
 
@@ -31,3 +35,25 @@ def test_config_names_cover_k():
     k = int(cfg.get("archetypes.k"))
     names = cfg.get("archetypes.names")
     assert set(names) == set(range(k)) and len(names) == k    # one provisional name per component
+
+
+def test_archetype_stability_counts_consecutive_pairs_only():
+    # P1: stays A in 2018->2019, switches A->B in 2019->2020 (3 consecutive pairs total).
+    # P2: 2018 then 2020 (gap) -> no consecutive pair. P3: single season -> none.
+    mem = pd.DataFrame({
+        "athlete_id": [1, 1, 1, 2, 2, 3],
+        "season":     [2018, 2019, 2020, 2018, 2020, 2019],
+        "arch":       [0, 0, 1, 0, 0, 2],
+        "arch_name":  ["A", "A", "B", "A", "A", "C"],
+    })
+    st = archetype_stability(mem)
+    assert st["n_pairs"] == 2                       # P1 18->19, P1 19->20; P2 has a season gap
+    assert st["overall"] == 0.5                     # one stay (A->A), one switch (A->B)
+    assert st["per_archetype"]["A"] == 0.5          # A: one stayed, one left
+
+
+def test_archetype_stability_empty_when_no_consecutive_pairs():
+    mem = pd.DataFrame({"athlete_id": [1, 2], "season": [2019, 2021],
+                        "arch": [0, 1], "arch_name": ["A", "B"]})
+    st = archetype_stability(mem)
+    assert st["n_pairs"] == 0 and st["per_archetype"] == {}

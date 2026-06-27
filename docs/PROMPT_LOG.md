@@ -1387,6 +1387,36 @@ the results of the other models?")_
 
 ---
 
+## Entry 043 — Phase 1 iteration: PCA-whiten (soft membership) + stability
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Keep iterating on phase 1
+
+**Response notes:**
+- **Diagnosed:** the raw full-cov GMM was **overconfident** (median `top_prob` 1.0, only 1% blends) —
+  the "soft" membership was effectively hard, because the style features are collinear (3-pt-ness,
+  usage). Compared covariance types: full has the best BIC by far but is overconfident; tied is softer
+  but fits much worse.
+- **Fix = PCA-whiten → GMM.** Decorrelating to ~90% variance (8 PCs) before the GMM gives genuinely
+  **soft** membership (median `top_prob` 0.85, **43% of player-seasons are blends**) *and* raises YoY
+  **stability 0.55 → 0.61**. Profiles are still computed on the original z-features, so interpretation
+  is unaffected; cluster indices changed, so the 12 names were re-derived (sharper now: Foul-Drawing
+  Iso Scorer = DeRozan/Harden/Butler; Lead Playmaker (Haliburton/CP3) split from Scoring Combo Guard
+  (Kyrie); High-Usage Primary = Luka/LeBron; Rim-Running Center = Gobert/Capela).
+- **Added cross-season stability** (`archetype_stability`): **61%** keep their archetype YoY (vs ~8%
+  random) — validation + the Phase-3 must-beat baseline. Per-archetype: Rim-Running Center stickiest
+  (0.78), Interior Big / High-Usage Primary ~0.70; the low-signal middle (Connector Wing 0.45, Two-Way
+  Forward / Rebounding Big-Forward 0.51) churns most → soft→hard consolidation candidates. Report now
+  surfaces softness + a stability table.
+- 13 tests, ruff clean, **145 total**. Branch `basketball-archetypes`.
+- **Next:** soft→hard consolidation of the low-signal middle (e.g. Balanced Wing catch-all);
+  optional shot-zone enrichment (`load_nba_shots`); then Phase 2.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

@@ -33,19 +33,23 @@ def select_k(config, k_range=None):
     from sklearn.metrics import silhouette_score
     from sklearn.mixture import GaussianMixture
 
+    from sklearn.decomposition import PCA
+
     df, _, zcols = _load()
     cov = config.get("archetypes.covariance_type", "full")
     n_init = int(config.get("archetypes.n_init", 5))
     seed = int(config.get("reproducibility.random_seed", 1729))
+    pca_var = config.get("archetypes.pca_variance", 0.90)
     lo, hi = k_range or config.get("archetypes.k_range", [8, 16])
     X = df[df.eligible & df.era_use_for_archetypes][zcols].fillna(0.0).to_numpy()
+    Z = PCA(n_components=pca_var, whiten=True, random_state=seed).fit_transform(X)
     rows = []
     for k in range(int(lo), int(hi) + 1):
         gm = GaussianMixture(k, covariance_type=cov, random_state=seed, n_init=n_init,
-                             max_iter=400).fit(X)
-        lab = gm.predict(X)
-        rows.append({"k": k, "bic": round(gm.bic(X), 0),
-                     "silhouette": round(float(silhouette_score(X, lab)), 3)})
+                             max_iter=400).fit(Z)
+        lab = gm.predict(Z)
+        rows.append({"k": k, "bic": round(gm.bic(Z), 0),
+                     "silhouette": round(float(silhouette_score(Z, lab)), 3)})
     return pd.DataFrame(rows)
 
 
@@ -56,16 +60,35 @@ class ArchetypeResult:
     names: dict
     k: int
     bic: float
+    softness: dict            # median_top_prob, pct_blends (genuinely-soft check)
+    stability: dict           # YoY persistence: overall, n_pairs, per_archetype
+
+
+def archetype_stability(mem) -> dict:
+    """Year-over-year hard-archetype persistence (validation + the Phase-3 must-beat baseline)."""
+    m = mem.sort_values(["athlete_id", "season"]).copy()
+    m["next_arch"] = m.groupby("athlete_id")["arch"].shift(-1)
+    m["next_season"] = m.groupby("athlete_id")["season"].shift(-1)
+    pairs = m[(m["next_season"] == m["season"] + 1) & m["next_arch"].notna()]
+    if pairs.empty:
+        return {"overall": float("nan"), "n_pairs": 0, "per_archetype": {}}
+    per = pairs.groupby("arch_name").apply(
+        lambda g: (g["arch"] == g["next_arch"]).mean(), include_groups=False)
+    return {"overall": round(float((pairs["arch"] == pairs["next_arch"]).mean()), 3),
+            "n_pairs": int(len(pairs)),
+            "per_archetype": per.round(3).sort_values().to_dict()}
 
 
 def discover_archetypes(config, *, k=None, write: bool = True) -> ArchetypeResult:
     import numpy as np
+    from sklearn.decomposition import PCA
     from sklearn.mixture import GaussianMixture
 
     df, block_map, zcols = _load()
     cov = config.get("archetypes.covariance_type", "full")
     n_init = int(config.get("archetypes.n_init", 5))
     seed = int(config.get("reproducibility.random_seed", 1729))
+    pca_var = config.get("archetypes.pca_variance", 0.90)
     k = int(k or config.get("archetypes.k", 12))
     names = {int(i): n for i, n in (config.get("archetypes.names", {}) or {}).items()}
 
@@ -74,9 +97,12 @@ def discover_archetypes(config, *, k=None, write: bool = True) -> ArchetypeResul
     Xf = fit[zcols].fillna(0.0).to_numpy()
     Xa = assign[zcols].fillna(0.0).to_numpy()
 
+    # PCA-whiten (decorrelate collinear style features) -> genuinely soft, more stable membership
+    pca = PCA(n_components=pca_var, whiten=True, random_state=seed).fit(Xf)
+    Zf, Za = pca.transform(Xf), pca.transform(Xa)
     gm = GaussianMixture(k, covariance_type=cov, random_state=seed, n_init=n_init,
-                         max_iter=400).fit(Xf)
-    probs = gm.predict_proba(Xa)
+                         max_iter=400).fit(Zf)
+    probs = gm.predict_proba(Za)
     hard = probs.argmax(axis=1)
 
     mem = assign[IDENTITY].copy()
@@ -90,19 +116,23 @@ def discover_archetypes(config, *, k=None, write: bool = True) -> ArchetypeResul
 
     # cluster profiles: mean z over the FIT pool (defines what each archetype IS)
     fit2 = fit.copy()
-    fit2["arch"] = gm.predict(Xf)
+    fit2["arch"] = gm.predict(Zf)
     prof = fit2.groupby("arch")[zcols].mean().round(2)
     prof.insert(0, "size", fit2.groupby("arch").size())
     prof.insert(1, "name", [names.get(int(a), f"A{a}") for a in prof.index])
+
+    softness = {"median_top_prob": round(float(mem["top_prob"].median()), 3),
+                "pct_blends": round(float((mem["top_prob"] < 0.8).mean()), 3)}
+    result = ArchetypeResult(mem, prof, names, k, gm.bic(Zf), softness,
+                             archetype_stability(mem))
 
     if write:
         ensure_dir(DATA_PROCESSED)
         write_parquet(mem, DATA_PROCESSED / "nba_archetype_membership.parquet")
         ensure_dir(REPORTS_DIR / "results")
         prof.to_csv(REPORTS_DIR / "results" / "archetype_profiles.csv")
-        (REPORTS_DIR / "REPORT_archetypes.md").write_text(
-            render_report(ArchetypeResult(mem, prof, names, k, gm.bic(Xf)), zcols, fit2))
-    return ArchetypeResult(mem, prof, names, k, gm.bic(Xf))
+        (REPORTS_DIR / "REPORT_archetypes.md").write_text(render_report(result, zcols, fit2))
+    return result
 
 
 def _signature(prof_row, zcols, n=3):
@@ -114,15 +144,20 @@ def _signature(prof_row, zcols, n=3):
 
 
 def render_report(result: ArchetypeResult, zcols, fit_assigned) -> str:
-    L = [f"# NBA Archetypes (Phase 1) — k={result.k} soft GMM", ""]
-    L.append("_Soft Gaussian-mixture on z-scored play-STYLE features (per-36 rates + shot profile + "
-             "tendencies), fit on eligible **E2+E3** (modern game) and assigned to all eligible "
-             "2013+ seasons. Style space is continuous, so membership is **soft** (probabilities); "
-             "the hard label is argmax. **Names are provisional** (seed-tied) pending soft→hard "
-             "consolidation._")
+    L = [f"# NBA Archetypes (Phase 1) — k={result.k} soft GMM (PCA-whitened)", ""]
+    L.append("_Soft Gaussian-mixture on **PCA-whitened** z-scored play-STYLE features (per-36 rates "
+             "+ shot profile + tendencies), fit on eligible **E2+E3** (modern game) and assigned to "
+             "all eligible 2013+ seasons. Whitening decorrelates the collinear style features so "
+             "membership is genuinely **soft**. The hard label is argmax; **names are provisional** "
+             "(seed-tied) pending soft→hard consolidation._")
     L.append("")
+    sf, st = result.softness, result.stability
     L.append(f"Fit pool: **{int(result.profiles['size'].sum())}** player-seasons · "
              f"BIC {result.bic:.0f}. Assigned (all eligible): **{len(result.membership)}**.")
+    L.append(f"Softness: median top_prob **{sf['median_top_prob']}**, "
+             f"**{sf['pct_blends']:.0%}** of player-seasons are blends (top_prob < 0.8).")
+    L.append(f"Stability: **{st['overall']:.0%}** keep their archetype year-over-year "
+             f"(N={st['n_pairs']} consecutive pairs; vs ~{1/result.k:.0%} random).")
     L.append("")
     L.append("## Archetypes")
     L.append("")
@@ -136,10 +171,24 @@ def render_report(result: ArchetypeResult, zcols, fit_assigned) -> str:
                        .drop_duplicates("player_name").player_name.head(3))
         L.append(f"| {a} | **{row['name']}** | {int(row['size'])} | +{hi} · −{lo} | {ex} |")
     L.append("")
+    L.append("## Cross-season stability (YoY persistence)")
+    L.append("")
+    L.append("Share of players who keep an archetype the next season — validation, and the "
+             "must-beat baseline for the Phase-3 predictor. Distinctive roles are stickiest; the "
+             "low-signal middle churns most (a soft→hard consolidation candidate).")
+    L.append("")
+    per = st["per_archetype"]
+    if per:
+        L.append("| archetype | YoY persistence |")
+        L.append("|---|---|")
+        for name in sorted(per, key=per.get, reverse=True):
+            L.append(f"| {name} | {per[name]:.2f} |")
+    L.append("")
     L.append("## Notes")
     L.append("- Membership table (`data/processed/nba_archetype_membership.parquet`) carries the full "
              "probability vector `p0..pK-1` + `entropy` (blend-iness) per player-season — the soft "
              "input for Phase 2 (composition) and Phase 3 (the predictor target).")
-    L.append("- Continuous style space → low silhouette is expected; soft membership is the design, "
-             "not a defect. Next: cross-season stability + soft→hard consolidation/naming.")
+    L.append("- PCA-whitening decorrelates the collinear style features → genuinely soft membership "
+             "and higher YoY stability than a raw full-cov GMM. Next: soft→hard consolidation of the "
+             "low-signal middle archetypes + finalize names.")
     return "\n".join(L) + "\n"

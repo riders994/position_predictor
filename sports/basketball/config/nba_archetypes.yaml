@@ -52,19 +52,23 @@ archetypes:
   k_range: [8, 16]
   covariance_type: full
   n_init: 5
-  names:                            # by GMM component index (seed-stable); see reports/REPORT_archetypes.md
-    0: Connector Wing
-    1: Two-Way Forward
-    2: Volume Perimeter Scorer
-    3: Non-Shooting Interior Big
-    4: Movement Shooter
-    5: Rim-Running Center
-    6: Floor General
-    7: High-Usage Shot Creator
-    8: 3-and-D Wing
-    9: Slashing Forward
-    10: Balanced Combo Wing
-    11: Corner Specialist
+  # PCA-whiten before the GMM: the style features are collinear (3-pt-ness, usage), which makes a
+  # raw full-cov GMM overconfident (median top_prob ~1.0). Whitening to ~90% variance (8 PCs) gives
+  # genuinely SOFT membership (~47% of players are blends) AND raises YoY stability 0.55 -> 0.61.
+  pca_variance: 0.90
+  names:                            # by GMM component index (seed=1729, PCA-whitened); see reports/REPORT_archetypes.md
+    0: Foul-Drawing Iso Scorer
+    1: Lead Playmaker
+    2: Scoring Combo Guard
+    3: Connector Wing
+    4: Volume Wing Scorer
+    5: Two-Way Forward
+    6: 3-and-D Wing
+    7: Balanced Wing
+    8: Interior Big
+    9: High-Usage Primary
+    10: Rebounding Big-Forward
+    11: Rim-Running Center
 
 reproducibility:
   random_seed: 1729
