@@ -1005,6 +1005,41 @@ response. Maintained for **reproducibility and decision provenance** — anyone 
 
 ---
 
+## Entry 035 — Handcuff-selection tool (RB backups to draft by starter injury risk)
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Code merged. I have a new tool to add to the football section. Handcuff Selection. Using the injury
+> model we should be able to predict who will miss games due to injury and using that whose backups to
+> draft
+>
+> [clarifying answers] Risk signal = **compute both (availability model + durability baselines) and
+> pick the backtest winner**; scope = **RB only**; output = **global handcuff board**.
+
+**Response notes:**
+- **Serving use-case #5.** `eval/handcuff.py` + `scripts/handcuff.py` + `make handcuff [SEASON=]` →
+  `reports/handcuff_<season>.{md,csv}`. RB-only; model-only (ECR/ADP stay benchmarks, never inputs).
+- **Definition.** No depth-chart dataset is fetched, so the **model defines the depth chart**: per
+  team, starter = top projected RB, handcuff = next. Score = **contingent upside** = (starter − backup
+  projected PPG) × the starter's projected **miss share**. Ranked by contingent upside.
+- **Risk signal chosen by a leak-safe backtest** (the user's "pick best") among the §7.4 availability
+  model + transparent durability baselines (prior-games, 3yr-availability index), by clears-cutoff AUC.
+- **Empirical reversal of the earlier read.** I had flagged that the availability GBM loses to a naive
+  prior-games baseline (true in the *windowed* experiment folds). With **full expanding-history
+  training** it actually **wins** (AUC 0.813 vs 0.784, MAE 4.31 vs 4.52) — *after* a bug fix:
+- **Bug found + fixed.** The `offseason` block's `_next` features (room competition / vacated workload)
+  are **all-zero for the live board's N+1 horizon**, which collapsed the Poisson prediction to ~0.1
+  games for *every* starter (risk wasn't differentiating anyone). Excluded the `offseason` block from
+  the availability feature set — it's opportunity context, not durability, so the fix is also correct
+  in principle. Risk now varies sensibly (CMC 5.4 / Kamara 9.8 / Bijan 3.4 expected games missed).
+- **2026 live board sanity:** top handcuffs Brian Robinson (CMC), Tyler Allgeier (Bijan), Jaylen Wright
+  (Achane); Kamara's age pushes his backup up the board. README / PROJECT_PLAN / Makefile updated.
+  **129 tests pass, ruff clean.** Branch `handcuff-tool`, committed + pushed, PR pending.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

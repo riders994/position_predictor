@@ -371,6 +371,19 @@ out-of-fold gain, like RB/WR). TE was also wired into the multi-position serving
 board, postseason grading, keeper as a dedicated 1-TE slot — not flex-eligible). This validates the
 "add a position = new config" claim for any position sharing an existing scoring family.
 
+**Handcuff-selection tool added (2026-06-27, serving use-case #5).** Ranks RB **backups to draft**
+by *contingent upside* = (starter − backup projected PPG) × the starter's projected **miss share**.
+`eval/handcuff.py` + `scripts/handcuff.py` + `make handcuff [SEASON=]` → `reports/handcuff_<season>.{md,csv}`.
+**Backup = same-team next-best projected RB** (no depth-chart dataset is fetched; the model defines the
+depth chart — RB1 = starter, RB2 = handcuff). **Risk signal is chosen by a leak-safe backtest** among
+the §7.4 availability model + transparent durability baselines (prior-games, 3yr-availability index),
+picking the best clears-cutoff AUC. **Key finding that overturns the earlier read:** the availability
+GBM *does* beat the prior-games baseline (AUC 0.813 vs 0.784, MAE 4.31 vs 4.52) **once trained on full
+expanding history and stripped of the `offseason` block** — that block's `_next` features (room
+competition / vacated workload) are all-zero for the live board's N+1 horizon and collapsed the Poisson
+prediction; they are opportunity context, not durability, so excluding them is both a fix and correct.
+RB-only (the canonical handcuff); model-only (ECR/ADP stay benchmarks). 129 tests pass.
+
 **COVID-2020 excluded (2026-06-17, RB v4 / WR v2 / QB v2).** `data.exclude_seasons: [2020]` removes
 2020 as both a label and a feature season (keeping players; `data/build.apply_season_exclusion`),
 and is hopped over by the multi-year feature windows — no survivorship bias, no leakage. Notable
@@ -509,7 +522,8 @@ Resolved (2026-06-17 → 06-23, since RB v3):
   predictor than the contaminated eval implied, but the model's top-tier (P@12) edge holds.
 - **Data source migrated `nfl_data_py` → `nflreadpy`** (merged PR #11): all 11 datasets re-pulled,
   data now **1999–2025**, 2025 season added. Schema-neutral (verified — see §2.1).
-- **Serving tools shipped & merged:** project, keeper-league, redraft-league, postseason-grading.
+- **Serving tools shipped:** project, keeper-league, redraft-league, postseason-grading (merged) +
+  handcuff-selection (2026-06-27, branch `handcuff-tool`).
 
 **The football project is functionally complete.** All remaining work is optional improvement /
 enrichment only — tracked in §13.
@@ -518,8 +532,9 @@ enrichment only — tracked in §13.
 
 ## 13. Roadmap (optional improvements — project is feature-complete without these)
 
-Status as of 2026-06-26. Nothing here is *required*: all four positions (RB/WR/QB/TE) and
-the four serving tools ship today. This section is the single source of truth for what is open vs
+Status as of 2026-06-27. Nothing here is *required*: all four positions (RB/WR/QB/TE) and
+the five serving tools (project, keeper, redraft, postseason, handcuff) ship today. This section is
+the single source of truth for what is open vs
 closed; the dated decisions live in §12.
 
 ### Open · in-scope · actionable
