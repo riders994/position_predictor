@@ -24,7 +24,8 @@ from position_predictor.eval.keeper import build_board, evaluate_keepers  # noqa
 from position_predictor.eval.projection import project_positions  # noqa: E402
 from position_predictor.utils.config import Config  # noqa: E402
 
-DEFAULT_CONFIGS = ["config/football_rb.yaml", "config/football_wr.yaml", "config/football_qb.yaml"]
+DEFAULT_CONFIGS = ["config/football_rb.yaml", "config/football_wr.yaml",
+                   "config/football_qb.yaml", "config/football_te.yaml"]
 
 
 def main() -> int:

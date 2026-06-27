@@ -347,8 +347,7 @@ The repo separates **shared core** from **per-(sport, position) configuration**:
 metrics / report were already config-driven by `experiment.position`; the **only** code needing
 parameterizing was the `offseason` block (now takes `position` + `features.offseason_workload_col`,
 position-agnostic column names). A new `config/football_wr.yaml` (workload = targets, WR snap grid)
-+ a re-derived eligibility cutoff was all else required. **TE is skipped** (too few
-fantasy-relevant TEs/season for a stable per-season ranking).
++ a re-derived eligibility cutoff was all else required.
 
 **QB added (2026-06-17).** Bigger than WR because the feature pipeline was rushing/receiving-only.
 The **target** needed nothing — nflverse `fantasy_points_ppr` already scores passing (4-pt pass
@@ -361,6 +360,16 @@ passing columns in `SEASON_SUM_COLS`, and the `passing` branch of `ngs_season()`
 RB/WR). QB also forced report/progress **tier labels to be position-derived** (was hardcoded RB1/2).
 **Recipe to add a scoring-family-new position:** new config + position feature module (+ any new
 NGS pull) + re-derive eligibility.
+
+**TE added (2026-06-26).** Pure config — TE shares WR's receiving feature pipeline, so a new
+`config/football_te.yaml` (workload = targets, P@k tiers `[12,24]` = TE1/TE2) + the re-derived
+eligibility cutoff was *all* that was required (no code in the build/feature layer). Eligibility:
+TE PPG reliability **clears 0.70 at g\*=5** (0.713) — TEs are *more* stable than WR (never clears,
+g\*=7) or QB (g\*=7) once they play 5+ games. Best model `lasso` ρ=0.744±0.069, P@12 0.57; the model
+does **not** beat preseason ECR overall (0.782) but edges it on the TE2 tier; NGS block dropped (no
+out-of-fold gain, like RB/WR). TE was also wired into the multi-position serving tooling (redraft
+board, postseason grading, keeper as a dedicated 1-TE slot — not flex-eligible). This validates the
+"add a position = new config" claim for any position sharing an existing scoring family.
 
 **COVID-2020 excluded (2026-06-17, RB v4 / WR v2 / QB v2).** `data.exclude_seasons: [2020]` removes
 2020 as both a label and a feature season (keeping players; `data/build.apply_season_exclusion`),
@@ -509,7 +518,7 @@ enrichment only — tracked in §13.
 
 ## 13. Roadmap (optional improvements — project is feature-complete without these)
 
-Status as of 2026-06-23. Nothing here is *required*: all four positions (RB/WR/QB, TE skipped) and
+Status as of 2026-06-26. Nothing here is *required*: all four positions (RB/WR/QB/TE) and
 the four serving tools ship today. This section is the single source of truth for what is open vs
 closed; the dated decisions live in §12.
 
@@ -536,6 +545,7 @@ closed; the dated decisions live in §12.
 - [x] **Receiving-NGS-for-RB & air-yards receiving features** — tested & **rejected** (no ranking
   gain; redundant with opportunity volume; §12).
 - [x] **Rookie / incoming-player model** — dropped; returning-players-only by design (§1.2, §12).
-- [x] **TE position** — skipped (too few fantasy-relevant TEs per season).
+- [x] **TE position** — **shipped (TE v1, 2026-06-26).** Originally skipped; later added to complete
+  the tooling layer. Pure-config add (shares WR's receiving pipeline); g\*=5, lasso ρ=0.744. See §12.
 - [x] **Blending ECR/ADP into the model** — by design the market stays a *benchmark to compare
   against*, never a feature.

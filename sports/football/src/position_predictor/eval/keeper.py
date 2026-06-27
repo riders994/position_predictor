@@ -11,18 +11,18 @@ subtract it from each projection, and rank everyone by VORP → a projected draf
 ranks the keepers: a player you keep at pick 100 who projects as a top-30 board slot is a +70
 steal. This is model-only — ECR stays a benchmark, never blended in.
 
-Scope: RB/WR/QB (the modeled positions). TE/K/DST and unmatched names are reported as *unscored*.
+Scope: QB/RB/WR/TE (the modeled positions). K/DST and unmatched names are reported as *unscored*.
 """
 from __future__ import annotations
 
 import re
 
-# Per-team started slots. QB depth is set by league format; flex is filled from RB/WR (we don't
-# model TE, so TE neither contributes flex nor gets a replacement level here — documented).
+# Per-team started slots. QB depth is set by league format. TE gets a dedicated slot (standard 1-TE
+# leagues) and its own replacement level, but is NOT flex-eligible here — flex is filled from RB/WR.
 QB_SLOTS_PER_TEAM = {"1qb": 1.0, "sf": 1.7, "2qb": 2.0}
-DEFAULT_ROSTER = {"RB": 2, "WR": 2, "FLEX": 1}   # excludes QB (by format) and TE (unscored)
+DEFAULT_ROSTER = {"RB": 2, "WR": 2, "TE": 1, "FLEX": 1}   # excludes QB (set by format)
 FLEX_POS = ("RB", "WR")
-MODELED_POS = ("QB", "RB", "WR")
+MODELED_POS = ("QB", "RB", "WR", "TE")
 
 
 def replacement_levels(proj, *, teams, fmt, roster=None):
@@ -38,7 +38,8 @@ def replacement_levels(proj, *, teams, fmt, roster=None):
     pools = {p: sorted(proj.loc[proj["position"] == p, "proj_ppg"], reverse=True)
              for p in MODELED_POS}
     starters = {"QB": round(teams * QB_SLOTS_PER_TEAM[fmt]),
-                "RB": teams * roster["RB"], "WR": teams * roster["WR"]}
+                "RB": teams * roster["RB"], "WR": teams * roster["WR"],
+                "TE": teams * roster.get("TE", 0)}
     # Flex (RB/WR-eligible here): hand each slot to whichever position's next-best player is higher.
     idx = {p: starters[p] for p in FLEX_POS}
     for _ in range(teams * roster.get("FLEX", 0)):

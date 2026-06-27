@@ -1,0 +1,104 @@
+# Experiment config — NFL Tight End (v1)
+# Generalized from football_wr.yaml (PROJECT_PLAN §9): same shared pipeline, TE-specific config.
+# TEs are pass-catchers, so the production/volume/efficiency/NGS blocks are receiving-oriented
+# (identical block wiring to WR). Config-driven so every number is explicit and reproducible.
+
+experiment:
+  sport: football
+  position: TE
+  name: football_te_v1
+  version: v1                        # human-meaningful model version, stamped into the report header
+
+data:
+  source: nflverse                 # via nflreadpy
+  #   box scores 1999+, snap counts 2012+, NGS 2016+
+  earliest_season: 1999
+  latest_completed_season: 2025
+  raw_dir: data/raw
+  cache_format: parquet
+  # COVID 2020 removed from supervised use (label + feature season), players kept — see
+  # data/build.apply_season_exclusion + football_rb.yaml note. Costs the 2021 label fold.
+  exclude_seasons: [2020]
+
+target:
+  scoring: PPR                     # 1 pt / reception (TE value in PPR leans on volume floor)
+  metric: ppg                      # next-season points-per-game (primary ranking target)
+  predict_horizon: 1               # season N -> N+1
+
+features:
+  quantitative_only: true
+  offseason_workload_col: targets  # TE competition currency = prior-season targets (§5), same as WR
+
+# Required for every football model: predict N+1 availability (injury/reinjury proxy).
+availability_model:
+  enabled: true
+  label: games_played_next
+  model: gbm_count
+  derive_clears_cutoff: true
+  baseline: prior_games_played
+  wear_proxy_windows: [1, 3]
+
+eligibility:
+  # The cutoff is DERIVED analytically (Stage 5) — these are the candidate grid for robustness.
+  candidate_games_played: [4, 6, 8, 10, 12]
+  candidate_snap_share: [0.30, 0.50, 0.70]   # TEs play a high snap share but a lower target share
+  selection_method: reliability_stabilization
+  reliability_target: 0.70
+  reliability_k_max: 8
+  report_full_grid: true
+  chosen_games_played: 5      # Stage 5 (TE): reliability clears 0.70 at k=5 (0.713) — TE PPG is
+                              #   MORE stable than WR (g*=7, never clears) / QB (g*=7) once g>=5.
+  chosen_snap_share: null
+
+scope:
+  players: returning_only          # >= 1 prior NFL season; rookies excluded in v1
+
+validation:
+  scheme: walk_forward
+  test_block_seasons: 5
+  history_windows_years: [10, 20, 30]
+
+models:
+  baselines: [persistence, smoothed_history, mean_reversion, linear]
+  candidates: [ridge, lasso, elasticnet, random_forest, lightgbm, xgboost]
+  stretch: [lambdamart, quantile_gbm]
+
+# Era-separate modeling (PROJECT_PLAN §6.3). Same era boundaries as WR (driven by nflverse
+# coverage, not position). The ngs_efficiency block carries receiving NGS for TEs.
+eras:
+  - name: boxscore
+    start_season: 1999
+    end_season: 2011
+    feature_blocks: [volume, efficiency, production, player_attrs, trajectory,
+                     regression_mean, availability, team_context, offseason]
+  - name: snaps
+    start_season: 2012
+    end_season: 2015
+    feature_blocks: [volume, efficiency, production, player_attrs, trajectory,
+                     regression_mean, availability, team_context, offseason, snap_usage]
+  - name: ngs
+    start_season: 2016
+    end_season: null
+    feature_blocks: [volume, efficiency, production, player_attrs, trajectory, regression_mean,
+                     availability, team_context, offseason, snap_usage, ngs_efficiency]
+
+era_modeling:
+  strategy: separate
+  route_by: feature_season
+  combine: val_weighted
+  combine_alternatives: [mean, recency_weighted]
+
+benchmark:
+  use_market_data: true
+  as_feature: false                # benchmark only, NOT a feature (compare, don't blend)
+  sources: [adp, ecr]
+
+metrics:
+  regression: [mae, rmse, r2]
+  ranking: [spearman, kendall, ndcg_at_k, precision_at_k]
+  precision_at_k_tiers: [12, 24]   # TE1 / TE2 boards (TE is shallow; no startable TE3 tier)
+
+reproducibility:
+  random_seed: 1729
+  results_dir: reports/results
+  figures_dir: reports/figures
