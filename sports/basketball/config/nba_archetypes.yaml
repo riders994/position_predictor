@@ -13,6 +13,12 @@ data:
   raw_dir: data/raw
   cache_format: parquet
 
+# Rotation-player filter for the clustering population (archetypes = role, not deep-bench noise).
+# Provisional — tune in EDA.
+eligibility:
+  min_minutes_pg: 15.0
+  min_games: 20
+
 # Style eras (PROJECT_PLAN §2.2; ending-year). Provisional — reevaluate if archetypes are weak.
 # Phase 1 (define archetypes) uses E2+E3; Phases 2/3 use all (E1+E2+E3).
 eras:

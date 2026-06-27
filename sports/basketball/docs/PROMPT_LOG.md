@@ -103,6 +103,35 @@ response. Maintained for **reproducibility and decision provenance**.
 
 ---
 
+## Entry 041 — Basketball build + style-feature stage
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Proceed into the build/feature stage
+
+**Response notes:**
+- **Stage 2 (`data/build.py`):** pivot the long ESPN `player_season_stats` → **wide per-(athlete,
+  season)** (one ESPN season row per player, verified — no multi-team dupes). Parse the
+  `"made-attempted"` combo fields out of `display_value` (`value` is null for those). Eligibility =
+  rotation players (`min_minutes_pg` 15 / `min_games` 20, config). **6,361 player-seasons, 3,889
+  eligible.**
+- **Stage 3 (`features/build.py`):** **19 style features** in 5 blocks — scoring (pts/fga/fta per-36),
+  shot_profile (`fg3a_rate`, `ft_rate`, fg3a36, shooting splits + scoring/shooting-eff), playmaking
+  (ast36/tov36/ast_tov), rebounding (oreb36/dreb36/`oreb_rate`), defense (stl36/blk36). All **per-36
+  (style not volume)** and **z-scored within season over eligible players** (era-relative); each
+  season tagged E1/E2/E3. **Phase-1 clustering pool (eligible & E2+E3) = 2,631 player-seasons.**
+- **Validated style separation:** Gobert `fg3a_rate 0.0` / `blk36 2.76` (rim-runner), Curry `0.55`
+  3-pt reliance, Chris Paul `ast36 11.0` (pure PG), Jokić `ast36 8.5` (playmaking big). Z-scores clean
+  (per-season mean 0 / std 1; 0.5% NaN).
+- 8 no-network tests (combo parse, era mapping, div-guard, block-map disjoint); ruff clean; **140
+  total** (132 football + 8 basketball). Branch `basketball-data-layer`.
+- **Next:** Phase 1 — GMM soft clustering on the `*_z` features (k≈11–14, BIC/silhouette), name +
+  stability-check the archetypes, then consolidate to a hard taxonomy after EDA.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
