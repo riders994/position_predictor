@@ -247,6 +247,29 @@ response. Maintained for **reproducibility and decision provenance**.
 
 ---
 
+## Entry 046 — Harden the success-label fetch (Fantrax rate-limit)
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Your previous work was halted by token limits. Please resume.
+
+**Response notes:**
+- On resume: the full-season `make fantasy` pull had **failed** — Fantrax **rate-limited** the heavy
+  full-season request volume (`"Invalid Request"` raised in max_pf's per-period
+  `get_team_roster_info`). The 1-week path is validated, so this is a data-pull robustness issue, not
+  core logic. (Code increment from Entry 045 was already committed/pushed — nothing lost.)
+- **Hardened `data/fantrax.py`:** extracted `_run_league` with **retry + backoff** (30s × attempt) and
+  a **warm box-score cache** (`cache_dir`, config `fantasy.cache_dir=.cache`, gitignored), plus
+  **per-league isolation** (one league failing no longer aborts the batch; the manifest records
+  `leagues_succeeded`). 1 test passes, ruff clean.
+- Re-running the full-season pull in the background with the warm cache + backoff.
+- **Next (unchanged):** roster pull (fantraxapi) + name-match fantasy rosters → NBA players → Phase-1
+  archetype membership = per-team archetype composition → relate to the max_pf success labels.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

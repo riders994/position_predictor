@@ -39,6 +39,7 @@ eras:
 fantasy:
   platform: fantrax
   format: 9cat
+  cache_dir: .cache               # max_pf box-score cache (gitignored); warm across retries
   league_ids:
     - blk3bn3clw9njuhc
     - wserh14rmbbpqtcg
