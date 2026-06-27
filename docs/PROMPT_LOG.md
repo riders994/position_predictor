@@ -1144,6 +1144,46 @@ of every prompt."
 
 ---
 
+## Entry 036 — Offseason-bug follow-ups: availability-model fix, degenerate-board warning, log fix
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Do both and fix up the prompt log issue mentioned above
+
+_(Context: "both" = (a) warn when the offseason block is degenerate on a live board, (b) drop the
+offseason block from the experiment's availability model; "the prompt log issue" = the root log's
+template had lost its `<!--` comment wrapper. All following an investigation of "does the bug affect
+the results of the other models?")_
+
+**Response notes:**
+- **First answered "does it affect the other models?" by measurement.** Experiment/headline metrics:
+  **unaffected** (they train/score on historical boards where the offseason `_next` features are
+  populated). Live PPG projections (project/keeper/redraft + handcuff's own projection):
+  **negligible** — projection model is `ridge` (linear), so zeroed features ≈ neutral (Spearman 0.998
+  zeroed-vs-dropped, 49/50 top-50 unchanged). The tree-based availability model was the **only** one
+  materially hit. Root cause = a **data gap**: `rosters` is cached only through 2025, and the offseason
+  `_next` features need the N+1 (2026) roster join.
+- **(a) Degenerate-board warning.** New `offseason_degenerate(df, block_columns, season)` helper —
+  flags when **every** offseason column is constant across players (all-zero *or* sentinel defaults
+  like draft-capital 300 / room-size 1; the "all-zero" check alone missed those). Wired as a build-time
+  warning (`build_features`) + a serving-time `warnings.warn` in `project_position` (covers
+  project/keeper/redraft/handcuff). Verified: fires on the live 2025 board, silent on healthy 2024.
+- **(b) Dropped offseason from the experiment's availability model** (`_availability_over_folds`), to
+  match the handcuff risk model. **Honest result:** in the *windowed* experiment the gbm still trails
+  the prior-games baseline — the handcuff "win" came from expanding full-history training, not the
+  offseason exclusion. But clears-AUC improved for 3/4 positions (RB 0.736→0.778, WR 0.798→0.814,
+  TE 0.775→0.798; QB 0.887→0.881, a slight dip but already the best). Updated only the `gbm_poisson`
+  line in the 4 **live** reports (surgical, no timing churn; version snapshots left immutable).
+- **(prompt-log fix)** Restored the root log's missing `<!-- Template for new entries:` opener (the
+  `-->` was orphaned, so the template was rendering as a literal entry).
+- Added `test_offseason_degenerate`. **130 tests pass, ruff clean.** Branch `handcuff-tool` (same PR).
+
+---
+
+<!-- Template for new entries:
+
 ## Entry NNN — <short title>
 
 **Date:** YYYY-MM-DD

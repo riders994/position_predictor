@@ -75,7 +75,7 @@ Predicting N+1 games played (gates projected eligibility / injury risk):
 | model | games MAE | clears-cutoff AUC |
 |---|---|---|
 | baseline_prior_games | 4.49 | 0.798 |
-| gbm_poisson | 4.96 | 0.798 |
+| gbm_poisson | 4.99 | 0.814 |
 
 ## Eligibility-cutoff sensitivity (§6.4)
 

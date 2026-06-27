@@ -55,6 +55,14 @@ def project_position(config, *, model=None, combine=None, feature_season=None,
     if train.empty or board.empty:
         return pd.DataFrame()
 
+    from ..features.build import offseason_degenerate
+    if offseason_degenerate(df, block_columns, board_season):
+        import warnings
+        warnings.warn(
+            f"offseason block is all-zero for board season {board_season} — the N+1 roster join "
+            f"is missing; this {position.upper()} board lacks offseason signal. Refresh next "
+            f"season's rosters/draft (e.g. `make redraft`) to populate it.", stacklevel=2)
+
     ens = EraEnsemble(model, eras, block_columns, combine=combine,
                       target_col=TARGET, seed=seed).fit(train)
     board["proj_ppg"] = ens.predict(board)
