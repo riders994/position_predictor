@@ -9,7 +9,7 @@ data:
   source: sportsdataverse           # base layer (hoopR data releases); + nba_api + Fantrax later
   # Season = season-ENDING year (2014 = the 2013-14 season). Floor = 2013-14 SportVU era (§2.2).
   earliest_season: 2014
-  latest_completed_season: 2025     # 2024-25 (2025-26 not yet started)
+  latest_completed_season: 2026     # 2025-26 complete as of mid-2026 (needed for the 2026 league)
   raw_dir: data/raw
   cache_format: parquet
 
@@ -63,19 +63,19 @@ archetypes:
   # raw full-cov GMM overconfident (median top_prob ~1.0). Whitening to ~90% variance (8 PCs) gives
   # genuinely SOFT membership (~47% of players are blends) AND raises YoY stability 0.55 -> 0.61.
   pca_variance: 0.90
-  names:                            # by GMM component index (seed=1729, PCA-whitened); see reports/REPORT_archetypes.md
-    0: Foul-Drawing Iso Scorer
-    1: Lead Playmaker
-    2: Scoring Combo Guard
-    3: Connector Wing
-    4: Volume Wing Scorer
-    5: Two-Way Forward
-    6: 3-and-D Wing
-    7: Balanced Wing
-    8: Interior Big
-    9: High-Usage Primary
-    10: Rebounding Big-Forward
-    11: Rim-Running Center
+  names:                            # by GMM component index (seed=1729, PCA-whitened, 2014-2026); see reports/REPORT_archetypes.md
+    0: Off-Ball Wing
+    1: 3-and-D Wing
+    2: High-Usage Primary
+    3: Scoring Combo Guard
+    4: Rim-Running Center
+    5: Foul-Drawing Iso Scorer
+    6: Two-Way Forward
+    7: Slashing Non-Shooter
+    8: Lead Playmaker
+    9: Interior Big
+    10: Connector Wing
+    11: Non-Shooting Center      # tiny (n~12) fg3_pct-artifact cluster of reserve bigs — consolidation candidate
 
 reproducibility:
   random_seed: 1729

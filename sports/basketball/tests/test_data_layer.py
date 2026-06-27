@@ -13,7 +13,7 @@ def test_config_loads_and_season_range():
     cfg = Config.load(ROOT / "config" / "nba_archetypes.yaml")
     assert cfg.get("experiment.sport") == "basketball"
     seasons = cfg.seasons()
-    assert seasons[0] == 2014 and seasons[-1] == 2025          # 2013-14 floor .. 2024-25
+    assert seasons[0] == 2014 and seasons[-1] == 2026          # 2013-14 floor .. 2025-26
     # Phase 1 uses E2+E3 only; Phase 2/3 use all eras.
     eras = cfg.get("eras")
     assert [e["name"] for e in eras] == ["E1", "E2", "E3"]

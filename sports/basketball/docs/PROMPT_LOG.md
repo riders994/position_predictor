@@ -303,6 +303,35 @@ response. Maintained for **reproducibility and decision provenance**.
 
 ---
 
+## Entry 048 — Extend the archetype pipeline to 2026 + re-derive names
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Proceed with the 2026 extension and re-derive names
+
+**Response notes:**
+- **Live roster fetch revealed the dominant Phase-2 mismatch was a season gap, not names:** the two
+  leagues are different seasons (`blk3...`=2025, `wserh14...`=2026), but the archetypes only went to
+  2025. (Name resolution itself is solid — 2025 league 93.7%; accent-folding + 3 nickname aliases.)
+- **Extended to 2026** (`data.latest_completed_season` 2025→2026; 2025-26 is complete as of mid-2026).
+  Re-ran fetch (`player_season_stats` 273k→298k rows) → build → features (clustering pool 2631→2981)
+  → discover. Uses ESPN + local compute only, so no conflict with the running Fantrax success pull.
+- **Re-derived the 12 names** (PCA-whitened GMM re-fit reshuffles indices): Off-Ball Wing, 3-and-D
+  Wing, High-Usage Primary, Scoring Combo Guard, Rim-Running Center, Foul-Drawing Iso Scorer, Two-Way
+  Forward, Slashing Non-Shooter, Lead Playmaker, Interior Big, Connector Wing, and a tiny (n≈12)
+  **Non-Shooting Center** `fg3_pct`-artifact cluster (flagged as a consolidation candidate). Re-fit
+  healthy: 40% blends, **YoY stability 0.61→0.63**. Membership now covers **2014–2026**.
+- **Both leagues now compose** (cached rosters): overall **88%** (2025 93.7%, 2026 83.5%). The lower
+  2026 rate is the injury-heavy 2025-26 (Tatum/Lillard/Murray/Beal/VanVleet missed the season) + rookies
+  — legitimate eligibility exclusions, not name bugs.
+- 151 tests, ruff clean. Branch `basketball-phase2`.
+- **Next:** finish the success pull, then `make compose` (join composition → M2 success) → the
+  composition-vs-success modeling.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
