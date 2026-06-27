@@ -1,0 +1,24 @@
+{
+  "name": "rosters",
+  "source": "sportsdataverse",
+  "note": "player-team-season rosters",
+  "seasons": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "pulled_at": "2026-06-27T15:51:21.084385+00:00",
+  "n_rows": 537,
+  "n_cols": 36,
+  "cache_path": "/home/weezy/activity/position_predictor/sports/basketball/data/raw/rosters.parquet",
+  "sha256": "f74e54e035b207ab4e9831956a01730e8277d935713c2a9f859aa4b14c0a81f2"
+}

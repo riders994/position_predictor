@@ -71,6 +71,38 @@ response. Maintained for **reproducibility and decision provenance**.
 
 ---
 
+## Entry 040 — Basketball data layer: scaffold + Stage-1 fetch
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Merged. Lets' get started.
+>
+> [follow-up] You won't need the cookie, those leagues are public
+
+**Response notes:**
+- **Scaffolded the standalone `sports/basketball/` project** mirroring football: dirs (config / data /
+  reports / scripts / src / tests / notebooks), package **`nba_archetypes`**, shared utils (`io.py`
+  path-depth-based, `config.py`) reused from football's pattern. Registered the package + tests in the
+  root `pyproject.toml` (single shared env); added a basketball Makefile.
+- **Data deps added + validated via `uv sync`:** `sportsdataverse` (base hoopR loaders), `nba_api`
+  (granular play-type/tracking, later), `fantraxapi` (Phase-2 leagues). All installed clean; football
+  unaffected.
+- **Stage-1 fetch built + run** (`data/fetch.py` + `scripts/fetch_data.py`, registry + cache +
+  manifests like football). Live pull 2014–2025 (season = ending year; 2014 = 2013-14 floor):
+  `player_season_stats` 272,763×15 (long format, pivot in build), `rosters`, `team_season_stats`
+  cached + manifested. `shots`/`player_boxscore` are large/opt-in (`--include-large`).
+- **Fantrax validated:** league `blk3bn3clw9njuhc` reads **without auth** (public confirmed) — 14
+  teams; `standings` / `team_roster` / `scoring_period_results` / `position_counts` available for
+  Phase 2.
+- 3 no-network tests, ruff clean; football's 132 still pass. Branch `basketball-data-layer`.
+- **Next:** `rosters` loader returned only 537 rows (likely latest-season-only — investigate in
+  build); build the long→wide player-season + style features; add nba_api/shots enrichment + a
+  Fantrax fetch module.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
