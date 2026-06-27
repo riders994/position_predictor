@@ -1182,6 +1182,45 @@ the results of the other models?")_
 
 ---
 
+## Entry 037 — QB handcuff mode: injury-risk list (+ starter-training and outlier findings)
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim, sequential)_
+
+> For the QB handcuff tool, it's sufficient to generate a list of QBs who are likely to get injured and
+> miss multiple games. That way someone who drafts them knows to draft a backup
+>
+> Can the model be refined by focusing only on QBs projected to be starters?
+>
+> Josh Allen could also be an outlier. He's elite for a reason.
+
+**Response notes:**
+- **QB mode = injury-risk list, not a backup board.** A QB backup rarely inherits standalone value, so
+  the QB deliverable is just projected starters ranked by injury/availability risk, flagging who to
+  handcuff. `eval/handcuff.py`: refactored shared setup into `_board_with_risk`, added
+  `build_injury_risk_list` / `run_injury_risk` / `render_injury_markdown`; `scripts/handcuff.py`
+  dispatches by position (RB → contingent-upside board; else → list). `make handcuff
+  CONFIG=config/football_qb.yaml` → `reports/handcuff_qb_<season>.{md,csv}`. The QB availability model
+  is genuinely strong (clears-AUC **0.895**, beats both baselines).
+- **"Refine by focusing only on projected starters?" — tested, answer is no for *training*.**
+  Restricting the availability model's *training* rows to starters slightly *lowers* AUC (0.848→0.833
+  g≥10, 0.808 g≥7 — less data hurts) and doesn't fix the conservatism (durable QBs still ~14 predicted
+  vs ~17 actual). The backup rows help the model learn. Correct version of the idea = filter the
+  *scoring* population to projected starters (which the list already does via `top_starters`), not the
+  training population.
+- **Absolute games are biased low** (the QB pool is backup-heavy → regression to a ~6–7 game mean), so
+  the list uses **relative quartile tiers** (High = riskiest 25%), not the raw `exp_games_missed`. The
+  markdown leads with tiers and omits the raw number.
+- **"Josh Allen could be an outlier" — agreed, and handled.** The model reads rushing/workload as
+  injury exposure, so it initially put Allen in a (tercile) High tier. Switched tiers to **quartiles**
+  → Allen and Lamar correctly drop to Moderate, and the High set becomes all-defensible (Murray,
+  Daniels, Rodgers, Dart, Burrow, Stroud). Added an explicit report caveat that durable high-usage QBs
+  are outliers the model can over-flag — *not* hard-coding any player. Added 2 tests. **132 pass, ruff
+  clean.** Branch `handcuff-tool`.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

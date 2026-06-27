@@ -177,13 +177,14 @@ class HandcuffResult:
     cutoff: int
 
 
-def run_handcuff(config, *, draft_season=None, signal=None, seed=None,
-                 max_starter_rank=36):
-    """Full handcuff workflow for one (RB) config. See module docstring.
+def _board_with_risk(config, *, draft_season, signal, seed):
+    """Shared setup for the handcuff tools: project the position and attach the injury-risk signal.
 
-    ``draft_season`` defaults to the upcoming season (latest feature season + horizon); passing an
-    earlier year reconstructs that draft's board leak-safely (risk + projection train only on
-    strictly earlier labeled rows). ``signal`` overrides the backtest-chosen risk signal.
+    Returns ``(proj, features_board, risk, backtest, chosen, winner, board_season, horizon,
+    cutoff)``. ``draft_season`` defaults to the upcoming season; passing an earlier year
+    reconstructs that draft leak-safely (risk + projection train only on strictly earlier labeled
+    rows). The risk feature set drops the offseason block — it is opportunity context (not
+    durability) and degenerate on a live board's N+1 horizon, which wrecks the tree count model.
     """
     import json
 
@@ -200,10 +201,6 @@ def run_handcuff(config, *, draft_season=None, signal=None, seed=None,
 
     df = read_parquet(DATA_PROCESSED / f"{stem}_features.parquet")
     block_columns = json.load(open(DATA_PROCESSED / f"{stem}_feature_blocks.json"))
-    # The availability model is a *durability* model — the offseason "_next" block (room
-    # competition / vacated workload / rookie drafted) is opportunity context, not durability, and
-    # it is degenerate (all-zero) for the live board's N+1 horizon, which collapses the prediction.
-    # Drop it from the risk feature set; keep every durability/workload/age/trajectory block.
     feature_cols = [c for c in _all_feature_columns(block_columns, df.columns)
                     if c not in set(block_columns.get("offseason", []))]
 
@@ -215,13 +212,73 @@ def run_handcuff(config, *, draft_season=None, signal=None, seed=None,
     backtest, winner = backtest_risk_signals(history, feature_cols, cutoff=cutoff,
                                              horizon=horizon, seed=seed)
     chosen = signal or winner
-
     risk = project_risk(df, feature_cols, features_board, board_season=board_season,
                         signal=chosen, horizon=horizon, seed=seed)
-    rb_proj = project_position(config, feature_season=board_season)
-    board = build_handcuff_board(rb_proj, features_board, risk, max_starter_rank=max_starter_rank)
+    proj = project_position(config, feature_season=board_season)
+    return (proj, features_board, risk, backtest, chosen, winner, board_season, horizon, cutoff)
+
+
+def run_handcuff(config, *, draft_season=None, signal=None, seed=None, max_starter_rank=36):
+    """Full RB handcuff workflow (starter→backup contingent-upside board). See module docstring."""
+    (proj, features_board, risk, backtest, chosen, winner,
+     board_season, horizon, cutoff) = _board_with_risk(
+        config, draft_season=draft_season, signal=signal, seed=seed)
+    board = build_handcuff_board(proj, features_board, risk, max_starter_rank=max_starter_rank)
     return HandcuffResult(board=board, backtest=backtest, signal=chosen, winner=winner,
                           season=board_season + horizon, cutoff=cutoff)
+
+
+@dataclass
+class InjuryRiskResult:
+    risk_list: object
+    backtest: object
+    signal: str
+    winner: str
+    season: int
+    cutoff: int
+    n_starters: int
+
+
+def build_injury_risk_list(proj, risk, *, top_starters=32):
+    """Rank projected-starter QBs by injury/availability risk and tier them.
+
+    For pass-catchers a backup rarely inherits standalone value, so for QB the useful deliverable is
+    just *who is likely to miss time* → draft a backup. Returns the projected top-``top_starters``
+    QBs ranked by expected games missed, with **relative** tiers (High/Moderate/Lower terciles of
+    the starter cohort). NB the QB games model regresses toward a backup-heavy pool mean, so the
+    *ranking* is trustworthy (clears-AUC ~0.90) but the absolute games number is not — hence tiers.
+    """
+    m = proj.merge(risk, on="player_id", how="left")
+    starters = m[m["proj_pos_rank"] <= top_starters].copy()
+    starters = starters.sort_values("exp_games_missed", ascending=False).reset_index(drop=True)
+    n = len(starters)
+    if n == 0:
+        return starters
+    starters.insert(0, "risk_rank", range(1, n + 1))
+
+    # Quartile tiers (rank is 0-based here). High = top 25% only, so the actionable
+    # "draft a backup" flag stays high-precision — within the starter cohort the model's
+    # discrimination is softer than its headline AUC, so a loose cut flags durable QBs too.
+    def _tier(i):
+        if i < n * 0.25:
+            return "High"
+        return "Lower" if i >= n * 0.75 else "Moderate"
+
+    starters["risk_tier"] = [_tier(i) for i in range(n)]
+    starters["draft_backup"] = starters["risk_tier"] == "High"
+    cols = ["risk_rank", "player_name", "proj_pos_rank", "proj_ppg", "pred_games_next",
+            "exp_games_missed", "risk_tier", "draft_backup"]
+    return starters[cols]
+
+
+def run_injury_risk(config, *, draft_season=None, signal=None, seed=None, top_starters=32):
+    """Injury-risk list for a position (used for QB). See :func:`build_injury_risk_list`."""
+    (proj, _features_board, risk, backtest, chosen, winner,
+     board_season, horizon, cutoff) = _board_with_risk(
+        config, draft_season=draft_season, signal=signal, seed=seed)
+    risk_list = build_injury_risk_list(proj, risk, top_starters=top_starters)
+    return InjuryRiskResult(risk_list=risk_list, backtest=backtest, signal=chosen, winner=winner,
+                            season=board_season + horizon, cutoff=cutoff, n_starters=len(risk_list))
 
 
 def render_markdown(result: HandcuffResult, *, top: int | None = None) -> str:
@@ -263,5 +320,53 @@ def render_markdown(result: HandcuffResult, *, top: int | None = None) -> str:
             f"{r['starter']} ({int(r['starter_pos_rank'])}) | "
             f"{r['starter_exp_games_missed']:.1f} | {r['contingent_upside']:.2f} | "
             f"{r['handcuff_value']:.2f} |")
+    lines.append("")
+    return "\n".join(lines) + "\n"
+
+
+def render_injury_markdown(result: InjuryRiskResult, *, position: str = "QB") -> str:
+    """Render a position injury-risk list to markdown (the same content the CSV carries)."""
+    lines = [f"# {position} Injury-Risk List — {result.season}", ""]
+    lines.append(f"_Projected {position} starters ranked by injury/availability risk — "
+                 f"**draft a backup** for the High tier. Model-only (ECR/ADP are benchmarks)._")
+    lines.append("")
+    lines.append("> **Read the tiers, not the raw number.** The QB games model regresses toward a "
+                 "backup-heavy pool mean, so it ranks risk well (clears-cutoff AUC ~0.90) but "
+                 "under-predicts absolute games for everyone. `risk_tier` is **relative to the "
+                 "projected-starter cohort** (High = riskiest quartile).")
+    lines.append(">")
+    lines.append("> **Caveat:** the model reads rushing/workload as injury exposure, so durable "
+                 "high-usage QBs (e.g. Josh Allen, Lamar Jackson) can be flagged riskier than their "
+                 "track record warrants — they are outliers who sustain that load. Treat a long "
+                 "clean availability history as a discount on the model's ranking.")
+    lines.append("")
+
+    lines.append("## Risk signal (leak-safe backtest)")
+    lines.append("")
+    lines.append(f"Chosen: **`{result.signal}`** (best clears-cutoff AUC at g\\*={result.cutoff}; "
+                 f"`winner`=`{result.winner}`).")
+    lines.append("")
+    bt = result.backtest
+    if bt is not None and not bt.empty:
+        lines.append("| signal | games MAE | clears AUC | folds |")
+        lines.append("|---|---|---|---|")
+        for _, r in bt.iterrows():
+            lines.append(f"| {r['signal']} | {r['games_mae']:.2f} | "
+                         f"{r['clears_auc']:.3f} | {int(r['n_folds'])} |")
+        lines.append("")
+
+    lines.append(f"## {position}s most likely to miss time (draft a backup)")
+    lines.append("")
+    rl = result.risk_list
+    if rl is None or rl.empty:
+        lines.append(f"_No projected {position} starters found._")
+        return "\n".join(lines) + "\n"
+    lines.append(f"| # | {position} ({position} rank) | proj PPG | risk tier | draft a backup? |")
+    lines.append("|---|---|---|---|---|")
+    for _, r in rl.iterrows():
+        flag = "**yes**" if bool(r["draft_backup"]) else "—"
+        lines.append(f"| {int(r['risk_rank'])} | {r['player_name']} "
+                     f"({int(r['proj_pos_rank'])}) | {r['proj_ppg']:.1f} | "
+                     f"{r['risk_tier']} | {flag} |")
     lines.append("")
     return "\n".join(lines) + "\n"

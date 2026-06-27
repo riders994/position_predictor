@@ -10,6 +10,7 @@ from position_predictor.eval.handcuff import (
     _season_length,
     backtest_risk_signals,
     build_handcuff_board,
+    build_injury_risk_list,
     project_risk,
 )
 
@@ -115,3 +116,39 @@ def test_backtest_returns_all_signals_and_valid_winner():
     assert winner in SIGNALS
     # table sorted by clears_auc desc → the winner has the max AUC.
     assert table.iloc[0]["signal"] == winner
+
+
+def test_injury_risk_list_ranks_tiers_and_filters_starters():
+    # 8 projected starters + 1 non-starter (rank 40, must be dropped by top_starters=8).
+    proj = pd.DataFrame({
+        "player_id": list("abcdefgh") + ["z"],
+        "player_name": [f"QB{c}" for c in "abcdefgh"] + ["Backup Z"],
+        "position": ["QB"] * 9,
+        "proj_ppg": [18, 17, 16, 15, 14, 13, 12, 11, 5.0],
+        "proj_pos_rank": [1, 2, 3, 4, 5, 6, 7, 8, 40],
+    })
+    risk = pd.DataFrame({
+        "player_id": list("abcdefgh") + ["z"],
+        "pred_games_next": [5, 7, 9, 10, 11, 12, 13, 14, 2.0],
+        "exp_games_missed": [12, 10, 8, 7, 6, 5, 4, 3, 15.0],
+        "miss_share": [0.7, 0.6, 0.47, 0.41, 0.35, 0.29, 0.24, 0.18, 0.88],
+    })
+    rl = build_injury_risk_list(proj, risk, top_starters=8)
+    assert len(rl) == 8                                   # non-starter z dropped
+    assert "z" not in set(rl["player_name"])
+    # ranked by exp_games_missed desc: most at-risk first
+    assert list(rl["player_name"])[:2] == ["QBa", "QBb"]
+    assert list(rl["risk_rank"]) == list(range(1, 9))
+    # quartile tiers: High = top 25% (2 of 8), Lower = bottom 25% (2 of 8)
+    assert list(rl["risk_tier"]) == ["High", "High", "Moderate", "Moderate",
+                                     "Moderate", "Moderate", "Lower", "Lower"]
+    # draft_backup flags exactly the High tier
+    assert list(rl["draft_backup"]) == [True, True, False, False, False, False, False, False]
+
+
+def test_injury_risk_list_empty_when_no_starters():
+    proj = pd.DataFrame({"player_id": ["a"], "player_name": ["QBa"], "position": ["QB"],
+                         "proj_ppg": [10.0], "proj_pos_rank": [50]})
+    risk = pd.DataFrame({"player_id": ["a"], "pred_games_next": [8.0],
+                         "exp_games_missed": [9.0], "miss_share": [0.5]})
+    assert build_injury_risk_list(proj, risk, top_starters=32).empty

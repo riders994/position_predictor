@@ -21,7 +21,7 @@ help:
 	@echo "  project      project upcoming season -> reports/projections_<stem>.csv"
 	@echo "  redraft      check/fetch/project new-season draft board (QB/RB/WR) -> reports/redraft_<season>.csv"
 	@echo "  postseason   grade model/ECR/ADP vs actual finish -> reports/postseason_<season>.{md,csv}"
-	@echo "  handcuff     rank RB backups to draft by starter injury risk -> reports/handcuff_<season>.{md,csv}"
+	@echo "  handcuff     RB backups to draft by starter risk (or QB injury-risk list w/ CONFIG=...qb) -> reports/handcuff_<pos>_<season>.{md,csv}"
 	@echo "  test / lint  pytest / ruff"
 
 setup:
@@ -65,9 +65,10 @@ redraft:
 postseason:
 	uv run python scripts/postseason.py $(if $(SEASON),--season $(SEASON),)
 
-# Handcuff board — RB backups to draft by starter injury risk; `make handcuff SEASON=2026`.
+# Handcuff tool — RB backup board (default) or QB injury-risk list (CONFIG=config/football_qb.yaml).
+# `make handcuff SEASON=2026` / `make handcuff CONFIG=config/football_qb.yaml`.
 handcuff:
-	uv run python scripts/handcuff.py $(if $(SEASON),--season $(SEASON),)
+	uv run python scripts/handcuff.py $(if $(CONFIG),--config $(CONFIG),) $(if $(SEASON),--season $(SEASON),)
 
 test:
 	uv run pytest

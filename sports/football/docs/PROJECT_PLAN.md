@@ -382,7 +382,19 @@ GBM *does* beat the prior-games baseline (AUC 0.813 vs 0.784, MAE 4.31 vs 4.52) 
 expanding history and stripped of the `offseason` block** — that block's `_next` features (room
 competition / vacated workload) are all-zero for the live board's N+1 horizon and collapsed the Poisson
 prediction; they are opportunity context, not durability, so excluding them is both a fix and correct.
-RB-only (the canonical handcuff); model-only (ECR/ADP stay benchmarks). 129 tests pass.
+Model-only (ECR/ADP stay benchmarks).
+
+**QB mode added (2026-06-27).** A QB backup rarely inherits standalone value, so for QB the tool emits
+a simpler **injury-risk list** instead of a starter→backup board: projected starters ranked by the
+availability model (which is *strong* for QB — clears-AUC 0.895), tiered High/Moderate/Lower so the
+"draft a backup" flag is the riskiest quartile. `scripts/handcuff.py` dispatches by position (RB →
+board; else → list); `make handcuff CONFIG=config/football_qb.yaml`. **Two findings worth recording:**
+(1) restricting *training* to starters does **not** refine the model — it slightly lowers AUC
+(0.848→0.833, less data) and doesn't fix the conservatism; filter the *scoring* population to starters
+instead. (2) the QB games model regresses toward a backup-heavy pool mean, so absolute games are biased
+low (the list uses **relative tiers**, not the raw number), and it reads rushing/workload as injury
+exposure → durable high-usage QBs (Allen, Lamar) can be over-flagged (noted as an explicit caveat in
+the report). 132 tests pass.
 
 **COVID-2020 excluded (2026-06-17, RB v4 / WR v2 / QB v2).** `data.exclude_seasons: [2020]` removes
 2020 as both a label and a feature season (keeping players; `data/build.apply_season_exclusion`),
