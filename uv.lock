@@ -1341,6 +1341,20 @@ wheels = [
 ]
 
 [[package]]
+name = "max-pf"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "requests" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/07/27/fdf07d715282df9876cad4098df20caa0a2ccf8aa11c81ad988b6667e543/max_pf-2.0.0.tar.gz", hash = "sha256:6230b153577f28cbe1c7eed4469b71785dbc63a74729dbb7a4b5b9f1eca1506e", size = 103789, upload-time = "2026-06-22T22:59:26.863Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4a/b7/f10010568ce1510419787f29f077e8b9fd33037e40552f042e842277bc38/max_pf-2.0.0-py3-none-any.whl", hash = "sha256:2dca32fcc79974517da7928a2bf00e0ffafb5c6e92aaab5cfa6296996952c1b3", size = 78719, upload-time = "2026-06-22T22:59:25.779Z" },
+]
+
+[[package]]
 name = "mistune"
 version = "3.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1847,6 +1861,7 @@ dependencies = [
     { name = "fantraxapi" },
     { name = "lightgbm" },
     { name = "matplotlib" },
+    { name = "max-pf" },
     { name = "nba-api" },
     { name = "nflreadpy" },
     { name = "numpy" },
@@ -1882,6 +1897,7 @@ requires-dist = [
     { name = "jupyterlab", marker = "extra == 'notebooks'", specifier = ">=4.2" },
     { name = "lightgbm", specifier = ">=4.3" },
     { name = "matplotlib", specifier = ">=3.9" },
+    { name = "max-pf" },
     { name = "nba-api", specifier = ">=1.4" },
     { name = "nflreadpy", specifier = ">=0.1.5" },
     { name = "numpy", specifier = ">=1.26" },

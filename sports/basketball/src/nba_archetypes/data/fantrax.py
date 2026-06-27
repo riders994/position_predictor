@@ -1,0 +1,72 @@
+"""Phase 2 (success labels) — optimal-lineup season estimates via the ``max_pf`` package.
+
+Actual win/loss is contaminated: some managers never set their lineups, so realized results
+under-report roster quality. ``max_pf`` recomputes each team's **9-category "points-for"** under
+*optimal* lineups from realized box scores (``methodology="hindsight"``), and with ``nash=True`` the
+**mutual ceiling** — "how the season would go if *everyone* set their lineup." That optimal PF is the
+clean success label for Phase 2; ``actual_pf`` is kept for reference and ``lineup_gap`` measures the
+points a manager left on the table.
+
+The 9 ``max_pf`` categories match our format exactly (fg_pct, tpm, ft_pct, pts, reb, ast, stl, blk,
+to). ``m1/m2/m3_pf`` are the optimal totals under the three objectives (catwins / zscore / raw);
+``m1`` (catwins) is the primary roto/H2H success signal.
+"""
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+
+from ..utils.io import (DATA_PROCESSED, MANIFEST_DIR, ensure_dir, sha256_file, write_parquet)
+
+
+def fetch_success_labels(config, *, weeks=None, methodology="hindsight", nash=True,
+                         write: bool = True):
+    """Run ``max_pf`` for each configured league; return a tidy team-season success table.
+
+    Columns: ``league_id, team_id, name, periods, actual_pf, m1_pf, m2_pf, m3_pf, lineup_gap``
+    (``lineup_gap = m1_pf - actual_pf`` = optimal-vs-realized category wins left on the table).
+    """
+    import max_pf
+    import pandas as pd
+
+    league_ids = config.get("fantasy.league_ids", []) or []
+    rows = []
+    for lid in league_ids:
+        res = max_pf.run({"platform": "fantrax", "league_id": lid},
+                         weeks=weeks, methodology=methodology, nash=nash)
+        for t in res:
+            rows.append({
+                "league_id": lid, "team_id": t.team_id, "name": t.name,
+                "periods": t.periods, "actual_pf": t.actual_pf,
+                "m1_pf": t.m1_pf, "m2_pf": t.m2_pf, "m3_pf": t.m3_pf,
+            })
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        df["lineup_gap"] = df["m1_pf"] - df["actual_pf"]
+
+    if write and not df.empty:
+        path = DATA_PROCESSED / "fantrax_success.parquet"
+        ensure_dir(DATA_PROCESSED)
+        write_parquet(df, path)
+        _write_manifest(df, league_ids, methodology, nash, weeks, path)
+    return df
+
+
+def _write_manifest(df, league_ids, methodology, nash, weeks, path) -> None:
+    ensure_dir(MANIFEST_DIR)
+    manifest = {
+        "name": "fantrax_success",
+        "source": "max_pf",
+        "note": "optimal-lineup 9-cat points-for (success labels) per fantasy team",
+        "league_ids": list(league_ids),
+        "methodology": methodology,
+        "nash": bool(nash),
+        "weeks": "full_season" if weeks is None else str(weeks),
+        "pulled_at": datetime.now(timezone.utc).isoformat(),
+        "n_rows": int(df.shape[0]),
+        "n_cols": int(df.shape[1]),
+        "cache_path": str(path),
+        "sha256": sha256_file(path),
+    }
+    with open(MANIFEST_DIR / "fantrax_success.json", "w") as fh:
+        json.dump(manifest, fh, indent=2)

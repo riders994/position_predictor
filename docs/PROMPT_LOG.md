@@ -1437,6 +1437,41 @@ the results of the other models?")_
 
 ---
 
+## Entry 045 — Phase 2 start: optimal-lineup success labels via max_pf
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> For Phase 2, some of these teams didn't set their lineups so win/loss records might not be useful.
+> Use this python package to get estimates of how the season would go if everyone sets their lineup:
+> https://github.com/riders994/basketball_max_pf. Phase 1 is merged.
+>
+> [follow-up] Package is available in pypi at max-pf
+
+**Response notes:**
+- **Why:** actual W/L is contaminated — some managers never set lineups, so realized results
+  under-report roster quality. `max_pf` recomputes each team's optimal-lineup outcome.
+- **Added `max-pf` (2.0.0).** It's purpose-built for **9-cat** fantasy basketball; its 9 categories
+  match ours exactly; it vendors `fantraxapi` and is literally tested against these league IDs (public,
+  no auth). API: `run({"platform":"fantrax","league_id":...}, methodology="hindsight", nash=True) ->
+  list[TeamSeason]`. `TeamSeason` = `team_id, name, periods, actual_pf, m1/m2/m3_pf` — `actual_pf` =
+  category wins realized; `m1/m2/m3_pf` = **optimal-lineup** ceilings under the 3 objectives
+  (catwins/zscore/raw); `nash=True` = the **mutual ceiling** ("if *everyone* optimizes").
+- **Built `data/fantrax.py::fetch_success_labels` + `scripts/fetch_fantasy.py` + `make fantasy`** →
+  `data/processed/fantrax_success.parquet` (`league_id, team, actual_pf, m1/m2/m3_pf, lineup_gap`).
+  The Phase-2 success label = optimal `m1_pf` (not `actual_pf`); `lineup_gap = m1_pf − actual_pf`
+  quantifies points left on the table.
+- **Validated live:** 30 team-seasons across both leagues; `lineup_gap` flags the unset-lineup teams
+  (e.g. ChampagniePapi 6.5→8.0, Clingan On 6.0→8.0 over a 1-week probe). Full-season pull via
+  `make fantasy`.
+- 14 tests (max_pf.run monkeypatched), ruff clean, **146 total**. Branch `basketball-phase2`.
+- **Next:** rosters aren't in `TeamSeason` → build the roster pull (fantraxapi) + name-match fantasy
+  rosters → NBA players → Phase-1 archetype membership = **per-team archetype composition**, then
+  relate composition → the max_pf success labels.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

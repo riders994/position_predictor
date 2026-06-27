@@ -31,6 +31,7 @@ dependencies = [
     "sportsdataverse>=0.0.36",  # base: hoopR/sportsdataverse NBA loaders (box/advanced)
     "nba_api>=1.4",             # granular: stats.nba.com play-type / tracking / shot zones
     "fantraxapi>=0.2",          # Phase-2 fantasy team configs from the two public Fantrax leagues
+    "max-pf",                   # Phase-2 optimal-lineup ("max points-for") season estimates
 ]
 
 [project.optional-dependencies]
