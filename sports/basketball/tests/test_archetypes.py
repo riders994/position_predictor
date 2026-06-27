@@ -1,0 +1,33 @@
+"""No-network unit tests for archetype-discovery helpers (GMM fit covered by the live run)."""
+import sys
+from pathlib import Path
+
+import pandas as pd
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from nba_archetypes.archetypes.discover import _signature, feature_cols  # noqa: E402
+from nba_archetypes.utils.config import Config  # noqa: E402
+
+
+def test_feature_cols_flattens_block_map():
+    block_map = {"shot_profile": ["fg3a_rate_z", "ft_rate_z"], "defense": ["blk36_z"]}
+    assert feature_cols(block_map) == ["fg3a_rate_z", "ft_rate_z", "blk36_z"]
+
+
+def test_signature_reports_top_hi_and_lo_features():
+    zcols = ["fg3a_rate_z", "blk36_z", "oreb_rate_z", "ast36_z"]
+    row = pd.Series({"size": 50, "name": "X",
+                     "fg3a_rate_z": -1.6, "blk36_z": 2.3, "oreb_rate_z": 2.0, "ast36_z": 0.1})
+    hi, lo = _signature(row, zcols, n=2)
+    # highest two (+) first, lowest two (−)
+    assert hi.startswith("blk36 +2.3") and "oreb_rate +2.0" in hi
+    assert lo.startswith("fg3a_rate -1.6")
+
+
+def test_config_names_cover_k():
+    cfg = Config.load(ROOT / "config" / "nba_archetypes.yaml")
+    k = int(cfg.get("archetypes.k"))
+    names = cfg.get("archetypes.names")
+    assert set(names) == set(range(k)) and len(names) == k    # one provisional name per component

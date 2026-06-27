@@ -132,6 +132,36 @@ response. Maintained for **reproducibility and decision provenance**.
 
 ---
 
+## Entry 042 — Phase 1: archetype discovery (soft GMM, k=12)
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Merged. Now what
+
+**Response notes:**
+- **k-selection EDA:** BIC has a relative plateau at k≈11–12 (then jumps at k≥13); silhouette is
+  uniformly low (0.04–0.07) — *expected*: NBA style is continuous/overlapping, which is exactly why
+  soft GMM + soft→hard is the right frame. With the ~11–14 / "13 positions" target → **k=12**.
+- **Fixed a NaN trap:** dropping rows with any NaN `*_z` excluded no-3PT bigs (Gobert's `fg3_pct` is
+  undefined) — the very archetype we want. Now **impute NaN→0** (neutral) instead of dropping; pool
+  stays 2,631 (fit) / 3,889 (assigned).
+- **`archetypes/discover.py`:** GMM fit on **eligible E2+E3** (2,631), soft membership **assigned to
+  all eligible 2013+** (3,889, so E1 carries archetypes for Phases 2/3). Membership parquet carries
+  the full prob vector `p0..p11` + `entropy` (blend-iness) — the soft input for Phase 2/3.
+- **12 coherent, named archetypes** (provisional, seed-tied): Rim-Running Center (Gobert/Capela),
+  3-and-D Wing (Mikal Bridges/Covington), Floor General (low-usage facilitator), High-Usage Shot
+  Creator (DeRozan/Kyrie), Movement Shooter (Hield/Lonzo), Slashing Forward (Giannis/Siakam),
+  Non-Shooting Interior Big (Mobley/Allen), Corner Specialist (PJ Tucker), Two-Way Forward, Volume
+  Perimeter Scorer, Connector Wing, Balanced Combo Wing. Same players recur across seasons in the same
+  archetype (good stability signal). Report → `reports/REPORT_archetypes.md`.
+- 11 tests, ruff clean, **143 total**. Branch `basketball-archetypes`.
+- **Next:** cross-season stability check + soft→hard consolidation/naming, then Phase 2 (Fantrax
+  league configs → archetype composition vs 9-cat success).
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

@@ -43,6 +43,29 @@ fantasy:
     - blk3bn3clw9njuhc
     - wserh14rmbbpqtcg
 
+# Phase 1 — archetype discovery (soft GMM on the *_z style features; fit on E2+E3 eligible,
+# assigned to all eligible 2013+). k chosen via BIC plateau + the ~11-14 / "13 positions" target;
+# style space is continuous (low silhouette) so soft membership is the point. Names are PROVISIONAL
+# (tied to seed=1729, k=12) — formalized in the soft->hard consolidation after EDA.
+archetypes:
+  k: 12
+  k_range: [8, 16]
+  covariance_type: full
+  n_init: 5
+  names:                            # by GMM component index (seed-stable); see reports/REPORT_archetypes.md
+    0: Connector Wing
+    1: Two-Way Forward
+    2: Volume Perimeter Scorer
+    3: Non-Shooting Interior Big
+    4: Movement Shooter
+    5: Rim-Running Center
+    6: Floor General
+    7: High-Usage Shot Creator
+    8: 3-and-D Wing
+    9: Slashing Forward
+    10: Balanced Combo Wing
+    11: Corner Specialist
+
 reproducibility:
   random_seed: 1729
   results_dir: reports/results
