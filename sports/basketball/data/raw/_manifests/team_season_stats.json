@@ -1,0 +1,24 @@
+{
+  "name": "team_season_stats",
+  "source": "sportsdataverse",
+  "note": "team-season aggregates (pace / usage context)",
+  "seasons": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "pulled_at": "2026-06-27T15:51:24.325600+00:00",
+  "n_rows": 16560,
+  "n_cols": 16,
+  "cache_path": "/home/weezy/activity/position_predictor/sports/basketball/data/raw/team_season_stats.parquet",
+  "sha256": "731736b71c31227ca3a3a4492e27aebb53b393a1add977327ac1c37aec98f646"
+}

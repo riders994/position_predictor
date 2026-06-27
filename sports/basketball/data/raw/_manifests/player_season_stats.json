@@ -1,0 +1,24 @@
+{
+  "name": "player_season_stats",
+  "source": "sportsdataverse",
+  "note": "player-season aggregate stats (long format; pivoted in build)",
+  "seasons": [
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "pulled_at": "2026-06-27T15:51:20.837825+00:00",
+  "n_rows": 272763,
+  "n_cols": 15,
+  "cache_path": "/home/weezy/activity/position_predictor/sports/basketball/data/raw/player_season_stats.parquet",
+  "sha256": "a74aa01c6bf3602eb7e34883fe4a1d808e07e36fa5db90199dbda57086508118"
+}

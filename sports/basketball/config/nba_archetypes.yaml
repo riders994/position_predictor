@@ -1,0 +1,49 @@
+# Config — NBA fantasy-archetype project (see docs/PROJECT_PLAN.md).
+# Single source of truth: seasons, eras, sources. No magic numbers in code.
+
+experiment:
+  sport: basketball
+  name: nba_archetypes_v1
+
+data:
+  source: sportsdataverse           # base layer (hoopR data releases); + nba_api + Fantrax later
+  # Season = season-ENDING year (2014 = the 2013-14 season). Floor = 2013-14 SportVU era (§2.2).
+  earliest_season: 2014
+  latest_completed_season: 2025     # 2024-25 (2025-26 not yet started)
+  raw_dir: data/raw
+  cache_format: parquet
+
+# Rotation-player filter for the clustering population (archetypes = role, not deep-bench noise).
+# Provisional — tune in EDA.
+eligibility:
+  min_minutes_pg: 15.0
+  min_games: 20
+
+# Style eras (PROJECT_PLAN §2.2; ending-year). Provisional — reevaluate if archetypes are weak.
+# Phase 1 (define archetypes) uses E2+E3; Phases 2/3 use all (E1+E2+E3).
+eras:
+  - name: E1                        # 2013-14 .. 2016-17 — SportVU begins; pace-and-space ramp
+    start_season: 2014
+    end_season: 2017
+    use_for_archetypes: false
+  - name: E2                        # 2017-18 .. 2019-20 — 3-pt explosion; switch defense
+    start_season: 2018
+    end_season: 2020
+    use_for_archetypes: true
+  - name: E3                        # 2020-21 .. present — post-bubble modern
+    start_season: 2021
+    end_season: null
+    use_for_archetypes: true
+
+# Phase-2 fantasy target: two PUBLIC Fantrax sample leagues (9-cat). No auth needed.
+fantasy:
+  platform: fantrax
+  format: 9cat
+  league_ids:
+    - blk3bn3clw9njuhc
+    - wserh14rmbbpqtcg
+
+reproducibility:
+  random_seed: 1729
+  results_dir: reports/results
+  figures_dir: reports/figures
