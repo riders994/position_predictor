@@ -1091,7 +1091,21 @@ of every prompt."
 
 ---
 
-<!-- Template for new entries:
+## Entry 034 — Prompt-log convention: write the primary log first
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> It's better to do the main prompt log first. A prompt could apply to multiple sports.
+
+**Response notes:**
+- Convention refinement: when logging a prompt, **write the repo-wide primary `docs/PROMPT_LOG.md`
+  first**, then fan out to the relevant per-sport log(s). Rationale (user's): a single prompt can apply
+  to **multiple sports**, so the primary is the canonical superset that owns the entry number; per-sport
+  copies are derived from it.
+- Repo-level/infrastructure prompt → **primary only** (no per-sport copy), consistent with Entries
+  028/031/032.
 
 ## Entry NNN — <short title>
 
