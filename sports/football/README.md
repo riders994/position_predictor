@@ -1,7 +1,7 @@
 # Football (NFL) — fantasy-rank modeling project
 
 Predict an NFL player's **next-season PPR points-per-game** and the rank it implies, modeled
-**separately per position** (RB, WR, QB; TE skipped — too few fantasy-relevant TEs/season). A
+**separately per position** (RB, WR, QB, TE). A
 standalone project: its own code, data, and pipeline. Design rationale in
 [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md); full decision trail in
 [`docs/PROMPT_LOG.md`](docs/PROMPT_LOG.md).
@@ -41,7 +41,7 @@ make -C sports/football fetch build features eligibility experiment benchmark re
 
 # serving tools (write under sports/football/reports/)
 make -C sports/football project    CONFIG=config/football_rb.yaml   # next-season projection board
-make -C sports/football redraft    SEASON=2026                      # new-season draft board (QB/RB/WR)
+make -C sports/football redraft    SEASON=2026                      # new-season draft board (QB/RB/WR/TE)
 make -C sports/football postseason SEASON=2025                      # grade model/ECR/ADP vs actuals
 uv run python sports/football/scripts/keeper.py \
     --input sports/football/examples/keepers_example.csv --teams 12 --format sf

@@ -38,10 +38,25 @@ def test_replacement_levels_flex_allocation_and_first_non_starter():
     repl, starters = replacement_levels(_proj(), teams=2, fmt="1qb", roster=ROSTER)
     # QB: round(2*1)=2 starters -> replacement = 3rd QB (26).
     # Dedicated RB=2, WR=2; 2 flex slots go to best-remaining: WR17 then RB16 -> RB3, WR3.
-    assert starters == {"QB": 2, "RB": 3, "WR": 3}
+    # ROSTER has no TE slot -> 0 TE starters (starters always reports every modeled position).
+    assert starters == {"QB": 2, "RB": 3, "WR": 3, "TE": 0}
     assert repl["QB"] == 26      # pool[2]
     assert repl["RB"] == 14      # pool[3]
     assert repl["WR"] == 15      # pool[3]
+
+
+def test_te_dedicated_slot_replacement():
+    # TE gets its own slot + replacement level but is NOT flex-eligible (flex stays RB/WR).
+    proj = pd.concat([_proj(), pd.DataFrame(
+        [dict(player_id=f"TE{i}", player_name=f"T {i}", position="TE",
+              proj_ppg=v, proj_pos_rank=i + 1)
+         for i, v in enumerate([16, 13, 11, 9, 7])])], ignore_index=True)
+    roster = {"RB": 1, "WR": 1, "TE": 1, "FLEX": 1}
+    repl, starters = replacement_levels(proj, teams=2, fmt="1qb", roster=roster)
+    # TE: 2 teams * 1 slot = 2 started -> replacement = 3rd TE (11). Flex untouched by TE.
+    assert starters["TE"] == 2
+    assert repl["TE"] == 11       # pool[2]
+    assert starters["RB"] == 3 and starters["WR"] == 3
 
 
 def test_format_changes_qb_depth():

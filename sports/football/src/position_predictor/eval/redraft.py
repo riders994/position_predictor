@@ -33,10 +33,11 @@ from ..eval.projection import project_position
 from ..features.build import build_features
 from ..utils.config import Config
 
-# Default board depth per position (PPR redraft boards).
-DEFAULT_TOP_N = {"QB": 20, "RB": 50, "WR": 75}
-# PFR draft-class position → our fantasy position (TE intentionally unmodeled).
-_DRAFT_POS_TO_FANTASY = {"QB": "QB", "RB": "RB", "FB": "RB", "WR": "WR"}
+# Default board depth per position (PPR redraft boards). TE is shallow — a top-24 board covers
+# the startable TE1/TE2 tiers.
+DEFAULT_TOP_N = {"QB": 20, "RB": 50, "WR": 75, "TE": 24}
+# PFR draft-class position → our fantasy position.
+_DRAFT_POS_TO_FANTASY = {"QB": "QB", "RB": "RB", "FB": "RB", "WR": "WR", "TE": "TE"}
 
 
 @dataclass
@@ -87,7 +88,7 @@ def _rookie_market_context(draft_season: int):
 
     from ..utils.io import DATA_RAW
 
-    rookie_names: dict[str, set[str]] = {"QB": set(), "RB": set(), "WR": set()}
+    rookie_names: dict[str, set[str]] = {"QB": set(), "RB": set(), "WR": set(), "TE": set()}
     try:
         dp = pd.read_parquet(DATA_RAW / "draft_picks.parquet", columns=["season", "position",
                                                                          "pfr_player_name"])

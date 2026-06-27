@@ -1,0 +1,46 @@
+{
+  "sport": "football",
+  "position": "TE",
+  "version": "v1",
+  "test_label_seasons": [
+    2019,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "windows": [
+    10,
+    20,
+    30
+  ],
+  "chosen_cutoff_games": 5,
+  "headline": {
+    "best_model": "lasso",
+    "best_combine": "val_weighted",
+    "window_years": 30,
+    "spearman_mean": 0.743993086233808,
+    "precision_at_12_mean": 0.5666666666666667,
+    "mae_mean": 1.8303726810197538,
+    "best_baseline": "linear",
+    "best_baseline_spearman_mean": 0.7260693327455681
+  },
+  "data_volume": {
+    "n_feature_rows": 3027,
+    "n_labeled_rows": 2079,
+    "n_features": 81,
+    "season_min": 1999,
+    "season_max": 2025,
+    "n_seasons": 26,
+    "per_era_rows": {
+      "boxscore": 1058,
+      "snaps": 350,
+      "ngs": 671
+    }
+  },
+  "compute": {
+    "total_fit_seconds": 38.141778166000165,
+    "wall_seconds": 66.84886137299998,
+    "mean_fit_seconds_per_model": 0.7417069964444573
+  }
+}

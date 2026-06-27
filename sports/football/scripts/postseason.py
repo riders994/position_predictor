@@ -17,7 +17,8 @@ from position_predictor.eval.postseason import build_postseason_report, render_m
 from position_predictor.utils.config import Config  # noqa: E402
 from position_predictor.utils.io import REPORTS_DIR, ensure_dir  # noqa: E402
 
-DEFAULT_CONFIGS = ["config/football_qb.yaml", "config/football_rb.yaml", "config/football_wr.yaml"]
+DEFAULT_CONFIGS = ["config/football_qb.yaml", "config/football_rb.yaml",
+                   "config/football_wr.yaml", "config/football_te.yaml"]
 
 
 def main() -> int:
