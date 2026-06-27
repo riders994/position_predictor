@@ -36,6 +36,24 @@ def _sorted(df):
     return df.sort_values(["player_id", "season"]).reset_index(drop=True)
 
 
+def offseason_degenerate(df, block_columns, season):
+    """True if the ``offseason`` block carries no per-player signal for ``season``.
+
+    The offseason ``_next`` features (room competition, vacated workload, incoming rookie, team
+    change) need the **N+1 season's rosters/draft** join. On a *live board* built before next
+    season's rosters are fetched, that join produces nothing — every column collapses to a constant
+    (all-zero, or a sentinel default like draft-capital 300 / room-size 1). That's neutral for the
+    linear projection model but enough to wreck a tree model (it was silently zeroing the
+    availability model). Detect it as **zero variance across players** in every offseason column, so
+    serving tools can tell the user to refresh rather than ship a board missing offseason signal.
+    """
+    cols = [c for c in block_columns.get("offseason", []) if c in df.columns]
+    rows = df[df["season"] == season]
+    if not cols or rows.empty:
+        return False
+    return all(rows[c].nunique(dropna=False) <= 1 for c in cols)
+
+
 # --------------------------------------------------------------------------- blocks
 
 def add_production(df):
@@ -533,6 +551,12 @@ def build_features(config, *, write: bool = True):
         block_columns["offseason"] = offseason_cols
 
     df = df.sort_values(["season", "player_id"]).reset_index(drop=True)
+
+    latest = int(df["season"].max())
+    if offseason_degenerate(df, block_columns, latest):
+        print(f"[features] WARNING: the offseason block is all-zero for the latest season "
+              f"{latest} — the N+1 roster join is missing (fetch next season's rosters/draft to "
+              f"populate it). Live-board projections will lack offseason signal.")
 
     if not write:
         return df, block_columns

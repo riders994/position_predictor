@@ -303,7 +303,13 @@ def _benchmark_comparison(df, eras, block_columns, test_labels, horizon, window,
 def _availability_over_folds(train, df, eras, block_columns, test_labels, horizon, g_star,
                              seed, key):
     """Fit the N+1 games count model on the window; score each held-out season (§7.4)."""
-    cols = _all_feature_columns(block_columns, df.columns)
+    # Availability is a *durability* model, so exclude the offseason block — it is opportunity
+    # context (not durability) and is degenerate (all-zero) on a live board's N+1 horizon. Matches
+    # the handcuff tool's risk model. NB this is a consistency/correctness change, not a win here:
+    # in this windowed setup the gbm still trails the prior-games baseline (it only overtakes it
+    # under expanding full-history training, as the handcuff backtest shows).
+    cols = [c for c in _all_feature_columns(block_columns, df.columns)
+            if c not in set(block_columns.get("offseason", []))]
     tr = train[train[GAMES_TARGET].notna()]
     rows = []
     if len(tr) < 30:

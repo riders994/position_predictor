@@ -32,6 +32,7 @@ from position_predictor.features.build import (  # noqa: E402
     add_trajectory,
     add_volume,
     ngs_season,
+    offseason_degenerate,
     team_season_context,
 )
 
@@ -427,3 +428,21 @@ def test_add_air_yards_depth_share_and_wopr():
     # WOPR = 1.5*target_share + 0.7*air_yards_share = 1.5*(120/400) + 0.7*0.5
     assert abs(r["wopr"] - (1.5 * (120 / 400) + 0.7 * 0.5)) < 1e-9
     assert "wopr" in cols and "adot" in cols
+
+
+def test_offseason_degenerate_detects_missing_n1_join():
+    bc = {"offseason": ["changed_team_next", "room_prior_workload_next",
+                        "rookie_draft_capital_next", "room_size_next"]}
+    df = pd.DataFrame({
+        "season": [2024, 2024, 2025, 2025],
+        # 2024 board: real per-player signal (varies). 2025 live board: N+1 join missing →
+        # every offseason column is constant (all-zero or a sentinel default like 300 / 1).
+        "changed_team_next": [0, 1, 0, 0],
+        "room_prior_workload_next": [120.0, 300.0, 0.0, 0.0],
+        "rookie_draft_capital_next": [40.0, 300.0, 300.0, 300.0],
+        "room_size_next": [2, 3, 1, 1],
+    })
+    assert offseason_degenerate(df, bc, 2025) is True    # constant defaults → degenerate
+    assert offseason_degenerate(df, bc, 2024) is False   # varies across players → healthy
+    assert offseason_degenerate(df, {"offseason": []}, 2025) is False  # no block → not flagged
+    assert offseason_degenerate(df, bc, 1999) is False   # season absent → not flagged

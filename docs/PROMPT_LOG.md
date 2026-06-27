@@ -1107,6 +1107,122 @@ of every prompt."
 - Repo-level/infrastructure prompt → **primary only** (no per-sport copy), consistent with Entries
   028/031/032.
 
+---
+
+## Entry 035 — Handcuff-selection tool (RB backups to draft by starter injury risk)
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Code merged. I have a new tool to add to the football section. Handcuff Selection. Using the injury
+> model we should be able to predict who will miss games due to injury and using that whose backups to
+> draft
+>
+> [clarifying answers] Risk signal = **compute both (availability model + durability baselines) and
+> pick the backtest winner**; scope = **RB only**; output = **global handcuff board**.
+
+**Response notes:**
+- **Serving use-case #5.** `eval/handcuff.py` + `scripts/handcuff.py` + `make handcuff [SEASON=]` →
+  `reports/handcuff_<season>.{md,csv}`. RB-only; model-only (ECR/ADP stay benchmarks, never inputs).
+- **Definition.** No depth-chart dataset is fetched, so the **model defines the depth chart**: per
+  team, starter = top projected RB, handcuff = next. Score = **contingent upside** = (starter − backup
+  projected PPG) × the starter's projected **miss share**. Ranked by contingent upside.
+- **Risk signal chosen by a leak-safe backtest** (the user's "pick best") among the §7.4 availability
+  model + transparent durability baselines (prior-games, 3yr-availability index), by clears-cutoff AUC.
+- **Empirical reversal of the earlier read.** I had flagged that the availability GBM loses to a naive
+  prior-games baseline (true in the *windowed* experiment folds). With **full expanding-history
+  training** it actually **wins** (AUC 0.813 vs 0.784, MAE 4.31 vs 4.52) — *after* a bug fix:
+- **Bug found + fixed.** The `offseason` block's `_next` features (room competition / vacated workload)
+  are **all-zero for the live board's N+1 horizon**, which collapsed the Poisson prediction to ~0.1
+  games for *every* starter (risk wasn't differentiating anyone). Excluded the `offseason` block from
+  the availability feature set — it's opportunity context, not durability, so the fix is also correct
+  in principle. Risk now varies sensibly (CMC 5.4 / Kamara 9.8 / Bijan 3.4 expected games missed).
+- **2026 live board sanity:** top handcuffs Brian Robinson (CMC), Tyler Allgeier (Bijan), Jaylen Wright
+  (Achane); Kamara's age pushes his backup up the board. README / PROJECT_PLAN / Makefile updated.
+  **129 tests pass, ruff clean.** Branch `handcuff-tool`, committed + pushed, PR pending.
+
+---
+
+## Entry 036 — Offseason-bug follow-ups: availability-model fix, degenerate-board warning, log fix
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Do both and fix up the prompt log issue mentioned above
+
+_(Context: "both" = (a) warn when the offseason block is degenerate on a live board, (b) drop the
+offseason block from the experiment's availability model; "the prompt log issue" = the root log's
+template had lost its `<!--` comment wrapper. All following an investigation of "does the bug affect
+the results of the other models?")_
+
+**Response notes:**
+- **First answered "does it affect the other models?" by measurement.** Experiment/headline metrics:
+  **unaffected** (they train/score on historical boards where the offseason `_next` features are
+  populated). Live PPG projections (project/keeper/redraft + handcuff's own projection):
+  **negligible** — projection model is `ridge` (linear), so zeroed features ≈ neutral (Spearman 0.998
+  zeroed-vs-dropped, 49/50 top-50 unchanged). The tree-based availability model was the **only** one
+  materially hit. Root cause = a **data gap**: `rosters` is cached only through 2025, and the offseason
+  `_next` features need the N+1 (2026) roster join.
+- **(a) Degenerate-board warning.** New `offseason_degenerate(df, block_columns, season)` helper —
+  flags when **every** offseason column is constant across players (all-zero *or* sentinel defaults
+  like draft-capital 300 / room-size 1; the "all-zero" check alone missed those). Wired as a build-time
+  warning (`build_features`) + a serving-time `warnings.warn` in `project_position` (covers
+  project/keeper/redraft/handcuff). Verified: fires on the live 2025 board, silent on healthy 2024.
+- **(b) Dropped offseason from the experiment's availability model** (`_availability_over_folds`), to
+  match the handcuff risk model. **Honest result:** in the *windowed* experiment the gbm still trails
+  the prior-games baseline — the handcuff "win" came from expanding full-history training, not the
+  offseason exclusion. But clears-AUC improved for 3/4 positions (RB 0.736→0.778, WR 0.798→0.814,
+  TE 0.775→0.798; QB 0.887→0.881, a slight dip but already the best). Updated only the `gbm_poisson`
+  line in the 4 **live** reports (surgical, no timing churn; version snapshots left immutable).
+- **(prompt-log fix)** Restored the root log's missing `<!-- Template for new entries:` opener (the
+  `-->` was orphaned, so the template was rendering as a literal entry).
+- Added `test_offseason_degenerate`. **130 tests pass, ruff clean.** Branch `handcuff-tool` (same PR).
+
+---
+
+## Entry 037 — QB handcuff mode: injury-risk list (+ starter-training and outlier findings)
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim, sequential)_
+
+> For the QB handcuff tool, it's sufficient to generate a list of QBs who are likely to get injured and
+> miss multiple games. That way someone who drafts them knows to draft a backup
+>
+> Can the model be refined by focusing only on QBs projected to be starters?
+>
+> Josh Allen could also be an outlier. He's elite for a reason.
+
+**Response notes:**
+- **QB mode = injury-risk list, not a backup board.** A QB backup rarely inherits standalone value, so
+  the QB deliverable is just projected starters ranked by injury/availability risk, flagging who to
+  handcuff. `eval/handcuff.py`: refactored shared setup into `_board_with_risk`, added
+  `build_injury_risk_list` / `run_injury_risk` / `render_injury_markdown`; `scripts/handcuff.py`
+  dispatches by position (RB → contingent-upside board; else → list). `make handcuff
+  CONFIG=config/football_qb.yaml` → `reports/handcuff_qb_<season>.{md,csv}`. The QB availability model
+  is genuinely strong (clears-AUC **0.895**, beats both baselines).
+- **"Refine by focusing only on projected starters?" — tested, answer is no for *training*.**
+  Restricting the availability model's *training* rows to starters slightly *lowers* AUC (0.848→0.833
+  g≥10, 0.808 g≥7 — less data hurts) and doesn't fix the conservatism (durable QBs still ~14 predicted
+  vs ~17 actual). The backup rows help the model learn. Correct version of the idea = filter the
+  *scoring* population to projected starters (which the list already does via `top_starters`), not the
+  training population.
+- **Absolute games are biased low** (the QB pool is backup-heavy → regression to a ~6–7 game mean), so
+  the list uses **relative quartile tiers** (High = riskiest 25%), not the raw `exp_games_missed`. The
+  markdown leads with tiers and omits the raw number.
+- **"Josh Allen could be an outlier" — agreed, and handled.** The model reads rushing/workload as
+  injury exposure, so it initially put Allen in a (tercile) High tier. Switched tiers to **quartiles**
+  → Allen and Lamar correctly drop to Moderate, and the High set becomes all-defensible (Murray,
+  Daniels, Rodgers, Dart, Burrow, Stroud). Added an explicit report caveat that durable high-usage QBs
+  are outliers the model can over-flag — *not* hard-coding any player. Added 2 tests. **132 pass, ruff
+  clean.** Branch `handcuff-tool`.
+
+---
+
+<!-- Template for new entries:
+
 ## Entry NNN — <short title>
 
 **Date:** YYYY-MM-DD
