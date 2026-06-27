@@ -41,8 +41,14 @@ fantasy:
   format: 9cat
   cache_dir: .cache               # max_pf box-score cache (gitignored); warm across retries
   league_ids:
-    - blk3bn3clw9njuhc
-    - wserh14rmbbpqtcg
+    - blk3bn3clw9njuhc            # season 2025 (2024-25)
+    - wserh14rmbbpqtcg            # season 2026 (2025-26)
+  # Residual Fantrax->ESPN name mismatches that survive accent/punct normalization (nicknames).
+  # Found via the `make compose` unmatched diagnostic; accents are handled in _norm, not here.
+  name_aliases:
+    Nicolas Claxton: Nic Claxton
+    Cameron Thomas: Cam Thomas
+    Carlton Carrington: Bub Carrington
 
 # Phase 1 — archetype discovery (soft GMM on the *_z style features; fit on E2+E3 eligible,
 # assigned to all eligible 2013+). k chosen via BIC plateau + the ~11-14 / "13 positions" target;
