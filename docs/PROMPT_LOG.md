@@ -1221,6 +1221,26 @@ the results of the other models?")_
 
 ---
 
+## Entry 038 — Commit report .md files (un-ignore so they're publicly viewable)
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Remove the md files for reports from the gitignore so they can be viewed by the public
+
+**Response notes:**
+- The only report `.md` still git-ignored was `sports/*/reports/postseason_*.md` (everything else —
+  `REPORT_*.md`, `versions/**`, `handcuff_*.md` — was already committed). Removed that `.gitignore`
+  rule so postseason reports render on GitHub; the regenerable serving **CSVs** stay ignored (the user
+  asked for the `.md` files). Committed the now-tracked `postseason_2025.md` and updated the
+  `.gitignore` header comment to say report `.md` files are committed.
+- Repo-level/infra change → **primary log only** (per the 028/031/032/034 convention).
+- Branch `publish-report-md`, stacked on `handcuff-tool` to keep the prompt log linear (primary only
+  has through Entry 034; 035–037 are still on `handcuff-tool`, so a branch off primary would collide).
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

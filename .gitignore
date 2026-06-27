@@ -1,5 +1,6 @@
 # Each sport is its own project under sports/<sport>/; its data cache + generated reports are
-# regenerable and git-ignored (committed: manifests, external reference data, REPORT_*.md, versions/).
+# regenerable and git-ignored (committed: manifests, external reference data, report .md files,
+# versions/ — only the regenerable CSVs/figures stay ignored).
 
 # --- Data (large / regenerated) ---
 sports/*/data/raw/*
@@ -15,12 +16,12 @@ sports/*/data/external/adp_*.parquet
 # --- Reports (regenerated artifacts) ---
 sports/*/reports/figures/*
 sports/*/reports/results/*
-# Regenerable serving outputs (projections / keeper board / redraft board / postseason)
+# Regenerable serving-output CSVs (projections / keeper board / redraft board / postseason).
+# The human-readable report .md files ARE committed so they're viewable on GitHub (public).
 sports/*/reports/projections_*.csv
 sports/*/reports/keeper_board.csv
 sports/*/reports/redraft_*.csv
 sports/*/reports/postseason_*.csv
-sports/*/reports/postseason_*.md
 !sports/*/reports/**/.gitkeep
 
 # --- Python ---
