@@ -1241,6 +1241,61 @@ the results of the other models?")_
 
 ---
 
+## Entry 039 — Basketball project kickoff & 3-phase plan
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim, sequential planning prompts; clarifying-question answers noted)_
+
+> Both merged. We're going to start the basketball project off of a fresh primary. I want to start
+> with a planning session and I'll lay out my plan after you refresh git
+>
+> This is a complex process. First, I want to identify position archetypes. This is inspired by the
+> idea of their being 11-14 actual positions in basketball (rather than the traditional five) defined
+> by their style of play. Second, we will use these archetypes to experiment with team configurations
+> and try to identify groupings of players that fit certain archetypes that lead to successful fantasy
+> seasons.
+>
+> Phase 3 is building an archetype predictor. Based on past data for a player, predit their
+> archetype(s) for next season
+>
+> I want to focus on the modern game, so let's only consider players from the last 2 eras when
+> developing the player archetypes. We can pull player data from previous eras for phase 2 and phase 3
+> to increase depth of dataset. We start with soft archetypes and then group them into hard archetypes
+> after EDA. Furthest back we should go is 2013+. We'll use 2 sample leagues to source examples of team
+> configurations for the league type we will be optimizing. Rookies out for now, that will be a
+> separate model since it's based on college/high school data + probably more soft data around draft
+> coverage.
+>
+> Here are the IDs for the two fantrax leagues: blk3bn3clw9njuhc wserh14rmbbpqtcg. that should be
+> enough to grab data from the API (or using the python package). I like those era boundaries. We can
+> reevaluate if the results aren't good. Phase 3 is the final phase for now. We'll finish this up
+> before coming up with anything else for basketball.
+>
+> You won't need the cookie, those leagues are public
+>
+> [clarifying-question answers] Phase 2 = **fantasy roster construction**; format = **9-cat roto/H2H**;
+> data = **layered hoopR/sportsdataverse → Basketball-Reference → nba_api**.
+
+**Response notes:**
+- Scaffolded the standalone `sports/basketball/` project (docs only so far) and wrote
+  `docs/PROJECT_PLAN.md` — the design of record. A **new problem shape** vs football (clustering +
+  composition + predictor, not next-season rank regression); reuses the repo's reproducibility /
+  config / prompt-log conventions.
+- **3 phases.** (1) Archetype discovery — unsupervised **soft GMM** membership → consolidate to a
+  hard taxonomy after EDA, ~11–14 archetypes. (2) Archetype composition → **9-cat** fantasy success,
+  with real labels from the two Fantrax leagues (category-portfolio / punt-aware roster
+  construction). (3) Next-season archetype predictor — supervised, **leak-safe N→N+1**, persistence
+  baseline, age/trajectory the key signal. Production flow: predict archetypes → score compositions →
+  draft.
+- **Eras / scope:** floor **2013**. E1 2013–17 / E2 2017–20 / E3 2020–present (provisional). **Phase
+  1 = E2+E3** (modern only); **Phase 2/3 = all 2013+**. Returning players only; rookies deferred.
+- **Data:** layered hoopR → Basketball-Reference → nba_api. Fantrax leagues are **public** → no auth.
+- Repo-wide + per-sport basketball logs created; this is the kickoff entry in both. Branch
+  `basketball-plan`. Planning only — no pipeline code yet.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
