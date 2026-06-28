@@ -6,14 +6,16 @@
 
 ## Generalization (leave-one-league-season-out)
 
-| model | out-of-fold R² | out-of-fold MAE |
-| --- | --- | --- |
-| baseline (mean) | -0.000 | 0.064 |
-| Ridge | -0.011 | 0.064 |
-| Lasso | -0.000 | 0.064 |
-| GBM (depth2) | -0.372 | 0.073 |
+| model | out-of-fold R² | out-of-fold MAE | within-league ρ |
+| --- | --- | --- | --- |
+| baseline (mean) | -0.000 | 0.064 | +nan |
+| Ridge | -0.011 | 0.064 | -0.201 |
+| Lasso | -0.000 | 0.064 | +nan |
+| GBM (depth2) | -0.372 | 0.073 | -0.088 |
 
-> Composition has **no reliable out-of-sample predictive power** at this sample size — the value is directional (signs/contrast), not point prediction. A mean-only baseline has R²=0 by construction; a model must beat its MAE to add value.
+> Composition has **no reliable out-of-sample predictive power** at this sample size — the value is directional (signs/contrast), not point prediction. A mean-only baseline has R²=0 by construction; a model adds value only if it beats its MAE
+> *or* shows a positive **within-league ρ** (correctly orders a held-out league's teams — the natural
+> skill metric for a ranking/zero-sum target).
 
 ## Which archetype tilts associate with winning (Ridge, standardized)
 

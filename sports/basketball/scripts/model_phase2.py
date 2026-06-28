@@ -49,14 +49,16 @@ def main() -> int:
 
     print("\n[model] leave-one-league-out generalization (vs mean baseline):")
     for name, m in models.items():
-        print(f"   {name:18s} oof_R²={m['oof_r2']:+.3f}  oof_MAE={m['oof_mae']:.3f}")
+        print(f"   {name:18s} oof_R²={m['oof_r2']:+.3f}  oof_MAE={m['oof_mae']:.3f}  "
+              f"within-league ρ={m['oof_spearman']:+.3f}")
     print("\n[model] Ridge standardized coefficients (archetype tilt -> success), top/bottom:")
     for r in coefs[:3] + coefs[-3:]:
         print(f"   {r['archetype']:26s} {r['coef_std']:+.4f}  (sign stable {r['sign_stability']:.0%})")
 
     # ---- report ----
-    best_signal = max(m["oof_r2"] for m in models.values())
-    verdict = ("Composition shows **out-of-sample predictive signal**." if best_signal > 0.02
+    best_r2 = max(m["oof_r2"] for m in models.values())
+    best_rho = max(m["oof_spearman"] for m in models.values() if m["oof_spearman"] == m["oof_spearman"])
+    verdict = ("Composition shows **out-of-sample predictive signal**." if (best_r2 > 0.02 or best_rho > 0.15)
                else "Composition has **no reliable out-of-sample predictive power** at this sample "
                     "size — the value is directional (signs/contrast), not point prediction.")
     md = f"""# Phase 2 — Archetype Composition → 9-cat Success
@@ -67,10 +69,13 @@ def main() -> int:
 
 ## Generalization (leave-one-league-season-out)
 
-{_md_table(["model", "out-of-fold R²", "out-of-fold MAE"],
-           [[n, f"{m['oof_r2']:+.3f}", f"{m['oof_mae']:.3f}"] for n, m in models.items()])}
+{_md_table(["model", "out-of-fold R²", "out-of-fold MAE", "within-league ρ"],
+           [[n, f"{m['oof_r2']:+.3f}", f"{m['oof_mae']:.3f}", f"{m['oof_spearman']:+.3f}"]
+            for n, m in models.items()])}
 
-> {verdict} A mean-only baseline has R²=0 by construction; a model must beat its MAE to add value.
+> {verdict} A mean-only baseline has R²=0 by construction; a model adds value only if it beats its MAE
+> *or* shows a positive **within-league ρ** (correctly orders a held-out league's teams — the natural
+> skill metric for a ranking/zero-sum target).
 
 ## Which archetype tilts associate with winning (Ridge, standardized)
 
@@ -94,7 +99,7 @@ a league; linear/Ridge won't capture **punt** builds (category concentration) �
 feature + the archetype×category contribution matrix are the next refinements.
 """
     ensure_dir(REPORTS_DIR)
-    out_path = REPORTS_DIR / "REPORT_phase2_model.md"
+    out_path = REPORTS_DIR / f"REPORT_phase2_model_{args.target}.md"
     out_path.write_text(md)
     print(f"\n[model] wrote {out_path.relative_to(REPORTS_DIR.parents[1])}")
     return 0

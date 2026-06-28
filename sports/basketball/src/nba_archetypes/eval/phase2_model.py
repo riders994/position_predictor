@@ -27,8 +27,28 @@ COMP_PREFIX = "comp_"
 
 
 def load_table(path=None):
-    """Load the Phase-2 composition table (Yahoo by default)."""
-    return read_parquet(path or DATA_PROCESSED / "phase2_yahoo_composition.parquet")
+    """Load the Phase-2 composition table (Yahoo by default) with derived success targets."""
+    return derive_targets(read_parquet(path or DATA_PROCESSED / "phase2_yahoo_composition.parquet"))
+
+
+def derive_targets(df):
+    """Add the alternative success targets that aren't stored directly.
+
+    - ``reg_win_pct`` — regular-season H2H record ``(W + 0.5T) / games`` (the actual standings driver,
+      less playoff-luck than final rank).
+    - ``rank_score`` — final standings **normalized within league** ``(N - rank)/(N - 1)`` so it's
+      comparable across 10- and 12-team leagues (champion 1.0, last 0.0; higher = better, like the
+      other targets).
+    """
+    df = df.copy()
+    if {"reg_wins", "reg_losses", "reg_ties"}.issubset(df.columns):
+        games = df["reg_wins"] + df["reg_losses"] + df["reg_ties"]
+        df["reg_win_pct"] = np.where(games > 0,
+                                     (df["reg_wins"] + 0.5 * df["reg_ties"]) / games, np.nan)
+    if "final_rank" in df.columns:
+        n = df.groupby("league_key")["final_rank"].transform("max")
+        df["rank_score"] = np.where(n > 1, (n - df["final_rank"]) / (n - 1), np.nan)
+    return df
 
 
 def feature_cols(df):
@@ -56,6 +76,24 @@ def _r2_mae(y, pred):
     return float(r2_score(y, pred)), float(mean_absolute_error(y, pred))
 
 
+def _within_league_spearman(pred, y, groups):
+    """Mean within-league Spearman(predicted, actual) — does the model *order* a league's teams right?
+
+    This is the natural skill metric for a ranking/zero-sum target: it ignores absolute scale and only
+    asks whether, inside each held-out league, higher-scored rosters really finished better.
+    """
+    from scipy.stats import spearmanr
+    groups = np.asarray(groups)
+    vals = []
+    for g in np.unique(groups):
+        m = groups == g
+        if m.sum() > 2 and np.std(pred[m]) > 1e-12:
+            rho = spearmanr(pred[m], y[m]).correlation
+            if np.isfinite(rho):
+                vals.append(rho)
+    return float(np.mean(vals)) if vals else float("nan")
+
+
 def compare_models(df, *, target="cat_win_rate", group="league_key", seed=1729):
     """Leave-one-league-out R²/MAE for a mean baseline vs Ridge/Lasso/GBM (honest generalization)."""
     from sklearn.dummy import DummyRegressor
@@ -64,6 +102,7 @@ def compare_models(df, *, target="cat_win_rate", group="league_key", seed=1729):
     from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
 
+    df = df[df[target].notna()]
     cols = feature_cols(df)
     X = df[cols].to_numpy(dtype=float)
     y = df[target].to_numpy(dtype=float)
@@ -82,7 +121,8 @@ def compare_models(df, *, target="cat_win_rate", group="league_key", seed=1729):
     for name, est in models.items():
         oof = _groupkfold_oof(est, X, y, groups)
         r2, mae = _r2_mae(y, oof)
-        out[name] = {"oof_r2": round(r2, 4), "oof_mae": round(mae, 4)}
+        out[name] = {"oof_r2": round(r2, 4), "oof_mae": round(mae, 4),
+                     "oof_spearman": round(_within_league_spearman(oof, y, groups), 4)}
     return out
 
 
@@ -97,6 +137,7 @@ def fit_coefficients(df, *, target="cat_win_rate", n_boot=2000, group="league_ke
     from sklearn.pipeline import make_pipeline
     from sklearn.preprocessing import StandardScaler
 
+    df = df[df[target].notna()]
     cols = feature_cols(df)
     X = df[cols].to_numpy(dtype=float)
     y = df[target].to_numpy(dtype=float)
