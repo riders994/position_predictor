@@ -1,0 +1,40 @@
+{
+  "name": "yahoo_phase2",
+  "source": "yahoo_fantasy_api",
+  "note": "season-long roster-weeks + category-win-rate labels (Phase-2 augmentation examples)",
+  "league_keys": [
+    "353.l.37110",
+    "375.l.10560",
+    "385.l.5726",
+    "395.l.12682",
+    "402.l.8048",
+    "410.l.11456",
+    "418.l.9715",
+    "428.l.5686"
+  ],
+  "leagues_succeeded": [
+    "353.l.37110",
+    "375.l.10560",
+    "385.l.5726",
+    "395.l.12682",
+    "402.l.8048",
+    "410.l.11456",
+    "418.l.9715",
+    "428.l.5686"
+  ],
+  "leagues_failed": [],
+  "seasons": [
+    2016,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+  ],
+  "n_player_weeks": 29597,
+  "n_team_seasons": 88,
+  "pulled_at": "2026-06-28T13:41:04.866698+00:00",
+  "sha256": "9a8f9dca42dcc6df2092e0f6f4a92a31663375e7ea47ad240549a65d9a7b1ebe"
+}
