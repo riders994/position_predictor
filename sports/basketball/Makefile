@@ -3,7 +3,7 @@
 
 CONFIG ?= config/nba_archetypes.yaml
 
-.PHONY: help setup fetch fetch-large build features archetypes fantasy compose fetch-yahoo compose-yahoo test lint
+.PHONY: help setup fetch fetch-large build features archetypes fantasy compose fetch-yahoo compose-yahoo model-phase2 test lint
 
 help:
 	@echo "Targets:"
@@ -17,6 +17,7 @@ help:
 	@echo "  compose      Phase 2: roster archetype composition + join to success -> data/processed"
 	@echo "  fetch-yahoo  Phase 2 aug: Yahoo season-long rosters + category-win labels (heavy, cached)"
 	@echo "  compose-yahoo Phase 2 aug: Yahoo weeks-weighted composition + join -> data/processed"
+	@echo "  model-phase2 Phase 2: composition -> 9-cat success model -> reports/REPORT_phase2_model.md"
 	@echo "  test / lint  pytest / ruff"
 	@echo "  (predict stage: TODO — see PROJECT_PLAN)"
 
@@ -49,6 +50,9 @@ fetch-yahoo:
 
 compose-yahoo:
 	uv run python scripts/compose_yahoo.py --config $(CONFIG)
+
+model-phase2:
+	uv run python scripts/model_phase2.py --config $(CONFIG)
 
 test:
 	cd ../../ && uv run pytest sports/basketball/tests
