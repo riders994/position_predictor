@@ -50,6 +50,29 @@ fantasy:
     Cameron Thomas: Cam Thomas
     Carlton Carrington: Bub Carrington
 
+# Phase-2 AUGMENTATION: the user's personal Yahoo NBA redraft history — more real 9-cat
+# team-config -> success examples than the 2 Fantrax leagues. Only the "H2H Cat One" seasons of the
+# long-running league (EXACTLY the same 9 cats) are listed; the 2014/2016 "H2H Points" seasons,
+# the pre-2014 middle-school leagues (outside the archetype window), the 4-team side league, and the
+# user's NFL leagues are excluded. NOTE: Yahoo labels seasons by START year (league season 2023 =
+# 2023-24); our archetype membership is keyed by END year (2024), so the join adds +1.
+# Config = roster "configuration" as a season-long average (membership weighted by weeks-rostered);
+# success label = category-win rate over the regular season. See data/yahoo.py.
+fantasy_yahoo:
+  platform: yahoo
+  format: 9cat
+  token_file: ~/activity/notebooks/woj_tokens.json   # yahoo_oauth OAuth2 (auto-refreshes in place)
+  cache_dir: .cache/yahoo                             # per-league weekly-roster + matchup cache (gitignored)
+  league_keys:
+    - "353.l.37110"     # 2015-16 (Lenins)
+    - "375.l.10560"     # 2017-18 (Hoxha)
+    - "385.l.5726"      # 2018-19 (Colangelo)
+    - "395.l.12682"     # 2019-20 (Trumps)
+    - "402.l.8048"      # 2020-21 (Guillem)
+    - "410.l.11456"     # 2021-22 (Maduro)
+    - "418.l.9715"      # 2022-23 (Faligula)
+    - "428.l.5686"      # 2023-24 (Sauron)
+
 # Phase 1 — archetype discovery (soft GMM on the *_z style features; fit on E2+E3 eligible,
 # assigned to all eligible 2013+). k chosen via BIC plateau + the ~11-14 / "13 positions" target;
 # style space is continuous (low silhouette) so soft membership is the point. Names are PROVISIONAL

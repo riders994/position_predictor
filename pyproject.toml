@@ -32,6 +32,8 @@ dependencies = [
     "nba_api>=1.4",             # granular: stats.nba.com play-type / tracking / shot zones
     "fantraxapi>=0.2",          # Phase-2 fantasy team configs from the two public Fantrax leagues
     "max-pf",                   # Phase-2 optimal-lineup ("max points-for") season estimates
+    "yahoo_fantasy_api>=2.12",  # Phase-2 augmentation: personal Yahoo 9-cat redraft history
+    "yahoo-oauth>=2.1",         # OAuth2 for the Yahoo Fantasy API (token at ~/activity/notebooks)
 ]
 
 [project.optional-dependencies]

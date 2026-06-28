@@ -1557,6 +1557,50 @@ the results of the other models?")_
 
 ---
 
+## Entry 049 — Yahoo redraft history as Phase-2 augmentation data
+
+**Date:** 2026-06-28
+
+**Prompt (full text):** _(verbatim, with follow-up clarifications)_
+
+> So these two IDs are for a dynasty league. At ~/activity/notebooks/woj_tokens.json there are
+> credentials for a Yahoo! use that you can use with the yahoo_fantasy_api python package. That has
+> more data
+
+> [clarif.] The two IDs we've been using in previous sessions. I re-did the last command because I
+> inadvertently quit the session. … [dynasty = the Fantrax league; Yahoo = personal redraft history:
+> a middle-school NBA league + a ~10-year end-of-college NBA league + some football]. … Goal = extra
+> Phase-2 examples. Roster snapshot = season-long average. Success label = category-win rate. …
+> For the 24-25 fantrax season … it takes a long time to run a season that isn't cached — skip that
+> season and move on.
+
+**Response notes:**
+- **New Phase-2 data source: the user's Yahoo NBA redraft history** (more team-config→success examples
+  than the 2 Fantrax dynasty leagues). Surveyed 25 Yahoo leagues; **split sport by game-key prefix** —
+  `Game.league_ids()` is NOT sport-filtered (nba/nfl returned identical 25). Usable corpus = the
+  long-running **"H2H Cat One"** league, **exactly 9-cat** (FG%,FT%,3PTM,PTS,REB,AST,ST,BLK,TO):
+  8 seasons 2015-16…2023-24 (`353.l.37110`…`428.l.5686`). Excluded: 2014/2016 = H2H **Points**;
+  2004/2005 = pre-2014 (outside archetype window); 4-team side league; the user's **NFL** leagues
+  ("This League is Roman!"/"DMV"). **Season off-by-one:** Yahoo labels by START year, archetypes by
+  END year → **+1** on the join.
+- **Built the Yahoo Phase-2 path** mirroring Fantrax (`data/yahoo.py` + `scripts/fetch_yahoo.py` +
+  `scripts/compose_yahoo.py` + `make fetch-yahoo`/`compose-yahoo`): OAuth from
+  `~/activity/notebooks/woj_tokens.json`; `fetch_team_weeks` (per team × regular-season week roster,
+  per-league cache + backoff); `tally_category_wins`/`fetch_labels` (per-week `stat_winners` →
+  category-win rate, ties=0.5, + final standings); **`season_long_composition`** = archetype
+  membership **weighted by weeks-on-roster** (reuses `_norm` + `fantasy.name_aliases`).
+- **Validated end-to-end on one league** (2023-24 Sauron's): season=2024 ✓, `cat_win_rate` mean
+  exactly 0.500 (symmetric) ✓, weeks-weighted match rate **96.9%** (unmatched = injury/suspension DNPs
+  like Morant/Simmons/Rob Williams — legit eligibility exclusions), comp shares sum ~1.0, clean join.
+- Added deps `yahoo_fantasy_api` + `yahoo-oauth` (root `pyproject.toml`); **8 new tests** (off-by-one,
+  regular-week filter, cat-win tally incl. ties/playoff-skip, weeks-weighted composition), ruff clean.
+- **Dropped** the 24-25 Fantrax `max_pf` cache idea (`~/activity/basketball_max_pf`) per user — that
+  season stays unlabeled (left-join handles the gap). Branch `basketball-phase2`.
+- **Next (user-run, heavy):** `make fetch-yahoo` (~1800 calls, cached/resumable) → `make compose-yahoo`
+  → fold the ~88 Yahoo team-seasons into the composition-vs-success modeling.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
