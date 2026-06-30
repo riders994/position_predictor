@@ -126,6 +126,45 @@ def compare_models(df, *, target="cat_win_rate", group="league_key", seed=1729):
     return out
 
 
+def representation_shootout(df, *, target="sim_cat_win_rate", group="season", seed=1729):
+    """Compare success **representations** under one honest Ridge + leave-one-group-out protocol.
+
+    The Phase-2 question is *which features carry the composition→success signal*. On the simulated
+    corpus (group = ``season``) we score three feature sets against the same target:
+
+    - **archetype shares** (``comp_*``) — Phase-1's interpretable mix, but discards category info;
+    - **prior coverage** (``cov_pri_*``) — the team's season-N-1 9-cat z-profile, **knowable at draft**;
+    - **actual coverage** (``cov_act_*``) — the season-N z-profile, the post-hoc ceiling.
+
+    Returns ``{name: {oof_r2, oof_mae, n_features}}``. The expected story: shares ≈ 0 (wrong
+    representation), prior coverage small-positive (draft-time projection is the binding constraint),
+    actual coverage strongly positive (category coverage *is* the mechanism).
+    """
+    from sklearn.linear_model import RidgeCV
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    df = df[df[target].notna()]
+    y = df[target].to_numpy(dtype=float)
+    groups = df[group].to_numpy()
+    alphas = np.logspace(-3, 3, 25)
+    reps = {
+        "archetype shares": [c for c in df.columns if c.startswith(COMP_PREFIX)],
+        "prior coverage": [c for c in df.columns if c.startswith("cov_pri_")],
+        "actual coverage": [c for c in df.columns if c.startswith("cov_act_")],
+    }
+    out = {}
+    for name, cols in reps.items():
+        if not cols:
+            continue
+        X = df[cols].to_numpy(dtype=float)
+        est = make_pipeline(StandardScaler(), RidgeCV(alphas=alphas))
+        oof = _groupkfold_oof(est, X, y, groups)
+        r2, mae = _r2_mae(y, oof)
+        out[name] = {"oof_r2": round(r2, 4), "oof_mae": round(mae, 4), "n_features": len(cols)}
+    return out
+
+
 def fit_coefficients(df, *, target="cat_win_rate", n_boot=2000, group="league_key", seed=1729):
     """Standardized Ridge coefficients (the archetype→success tilt) with group-bootstrap sign stability.
 

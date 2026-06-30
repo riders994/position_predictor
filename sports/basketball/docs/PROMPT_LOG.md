@@ -376,6 +376,38 @@ response. Maintained for **reproducibility and decision provenance**.
 
 ---
 
+## Entry 050 — Phase-2 modeling → simulation diagnosis (representation is the bottleneck)
+
+**Date:** 2026-06-28
+
+**Prompt (full text):** _(verbatim, condensed across the arc)_
+
+> [pull it] make fetch-yahoo … make compose-yahoo … start the Phase-2 modeling with the 88 examples …
+> Commit this, then let's try final standings rank. Is there another way to rank? … One other path to
+> consider … bootstrap teams by looking at mock draft articles close to the beginning of each season …
+> [draft prior = Both in parallel] … Reminder that reality includes a mix of drafting behaviors. Some
+> teams auto-draft, some strategize. … I need to restart the computer … hit resume … same results.
+
+**Response notes:**
+- **Full Yahoo pull:** `make fetch-yahoo` (8 leagues, 88 team-seasons, 29,597 player-weeks; one league
+  throttled `Request denied` → resumed from cache) → `make compose-yahoo` (97% weeks-weighted match,
+  mean cat-win-rate 0.500). Manifest committed (`8bf6b93`).
+- **Composition→success model** (`eval/phase2_model.py` + `make model-phase2`): leave-one-league-out CV.
+  **Four-way NULL** — archetype *shares* don't predict success for **any** target (`cat_win_rate`,
+  `reg_win_pct`, `rank_score`): Ridge/Lasso oof R²≈0, GBM overfits, within-league ρ≈0/neg. Added
+  `derive_targets` + within-league Spearman. Commits `a1dab9d`, `63eacc1`.
+- **Draft simulator** (`eval/simulate.py`, validated, UNCOMMITTED): leak-safe prior-season 9-cat value
+  draft + punt strategies + **auto-draft(~30%)/manager mix** (per-team softmax temperature), round-robin
+  H2H scoring from players' *actual* stats, archetypes joined by `athlete_id`. **Representation shootout**
+  (leave-one-season-out oof R² on `sim_cat_win_rate`): archetype shares **−0.007**, prior coverage
+  **+0.018**, **actual coverage +0.358**; `punt_ft` best build (0.544, ~8σ). ⇒ (1) signal is real,
+  (2) **archetype shares are the wrong success representation** (model coverage instead), (3) the real
+  ceiling is **draft-time projection**.
+- **Paused at a 3-option direction decision** (coverage model+optimizer / attack projection / finalize
+  sim+contribution matrix) — see memory `basketball-phase2-RESUME`; user restarting, wants to resume here.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
