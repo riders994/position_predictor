@@ -1633,6 +1633,36 @@ the results of the other models?")_
 
 ---
 
+## Entry 051 — Phase-2 coverage model + roster optimizer (resume the paused decision)
+
+**Date:** 2026-07-01
+
+**Prompt (full text):**
+
+> resume [then, at the direction question:] Coverage model + optimizer
+
+**Response notes:**
+- Resumed from `basketball-phase2-RESUME`; re-presented the sim shootout and re-asked the 3-way
+  direction question. User chose **coverage model + optimizer**. Two commits on `basketball-phase2`.
+- **Commit A — sim finalized + shootout committed** (`2a99a69`): the previously-uncommitted
+  `eval/simulate.py` was finalized. Added `team_coverage()` (per-team 9-cat z-profile, ACTUAL season-N
+  and PRIOR season-N-1/leak-safe) → sim table now carries `cov_act_*`/`cov_pri_*` beside archetype
+  shares. Added `representation_shootout()` to `phase2_model.py` (leave-one-season-out Ridge): archetype
+  shares **+0.009** (null), prior coverage **+0.044**, actual coverage **+0.370** — reproduces the
+  diagnosis (shares are the wrong representation; coverage is the mechanism; draft-time projection is
+  the binding constraint). `strategy_leaderboard()` = punt positive control (`punt_ft` 0.541, z=+10).
+  `scripts/simulate_phase2.py` + `make simulate` + `REPORT_phase2_simulation.md`. 9 tests.
+- **Commit B — roster optimizer** (`eval/optimize.py`): objective = maximize projected coverage via a
+  field-calibrated win map, `mean_c Phi((cov_c-mu_c)/sigma_c)` over *contested* cats (Gaussian-CDF ⇒
+  punt-aware: stops over-investing locked cats). `coverage_picker` plugs into `simulate_draft` via a new
+  `pickers` hook; `optimize_roster` = standalone greedy best build; `evaluate_in_sim` = seat an
+  optimizer team vs the manager/auto field. **Validated in-sim:** optimizer beats field, most on punt
+  builds — `punt_ft` +0.040 lift, top-of-field 22% (≈2.6× the 1/12 random). Balanced lift small by
+  design (projection ceiling). `scripts/optimize_phase2.py` + `make optimize` +
+  `REPORT_phase2_optimizer.md`. 6 tests. 46 basketball tests pass, ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

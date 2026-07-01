@@ -83,27 +83,36 @@ def strategy_weights(name):
     return w
 
 
-def simulate_draft(pool, n_teams, n_rounds, team_strats, team_temps, rng):
+def simulate_draft(pool, n_teams, n_rounds, team_strats, team_temps, rng, pickers=None):
     """Snake draft: each team picks by its strategy's weighting of players' **prior** z-vectors.
 
     ``team_temps`` is the per-team softmax temperature over the top available — **low** = rigid
     best-available (auto-draft follows the ranking), **higher** = a manager reaching/varying. This is
     how the auto-draft-vs-strategize behavior mix enters. Returns ``{team_idx: [athlete_id, ...]}``.
+
+    ``pickers`` optionally maps ``team_idx -> callable(available_bool_array) -> pool-row index``: a team
+    with a custom picker drafts by that policy instead of the softmax heuristic (this is how the
+    coverage **optimizer** plugs into a realistic snake draft against the manager/auto field). The
+    callable is responsible for its own internal state (e.g. running coverage).
     """
     prior = pool[[f"prior_{c}" for c in ZCOLS]].to_numpy(dtype=float)
     ids = pool["athlete_id"].to_numpy()
     available = np.ones(len(pool), dtype=bool)
     weights = [strategy_weights(s) for s in team_strats]
+    pickers = pickers or {}
     picks = {t: [] for t in range(n_teams)}
     order = list(range(n_teams))
     for rnd in range(n_rounds):
         for t in (order if rnd % 2 == 0 else order[::-1]):
-            score = np.where(available, prior @ weights[t], -np.inf)
-            top = np.argsort(score)[::-1][:15]
-            top = top[np.isfinite(score[top])]
-            s = score[top]
-            p = np.exp((s - s.max()) / team_temps[t])
-            choice = top[rng.choice(len(top), p=p / p.sum())]
+            if t in pickers:
+                choice = pickers[t](available)
+            else:
+                score = np.where(available, prior @ weights[t], -np.inf)
+                top = np.argsort(score)[::-1][:15]
+                top = top[np.isfinite(score[top])]
+                s = score[top]
+                p = np.exp((s - s.max()) / team_temps[t])
+                choice = top[rng.choice(len(top), p=p / p.sum())]
             picks[t].append(ids[choice])
             available[choice] = False
     return picks
