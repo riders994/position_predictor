@@ -13,6 +13,9 @@ sports/*/data/processed/*
 # ADP cache is regenerable (re-fetched from FantasyFootballCalculator) — not committed
 sports/*/data/external/adp_*.parquet
 
+# max_pf box-score / API cache (regenerable)
+sports/*/.cache/
+
 # --- Reports (regenerated artifacts) ---
 sports/*/reports/figures/*
 sports/*/reports/results/*

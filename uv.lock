@@ -450,6 +450,12 @@ wheels = [
 ]
 
 [[package]]
+name = "docopt"
+version = "0.6.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a2/55/8f8cab2afd404cf578136ef2cc5dfb50baa1761b68c9da1fb1e4eed343c9/docopt-0.6.2.tar.gz", hash = "sha256:49b3a825280bd66b3aa83585ef59c4a8c82f2c8a522dbe754a8bc8d08c85c491", size = 25901, upload-time = "2014-06-16T11:18:57.406Z" }
+
+[[package]]
 name = "executing"
 version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1341,6 +1347,20 @@ wheels = [
 ]
 
 [[package]]
+name = "max-pf"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "requests" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/07/27/fdf07d715282df9876cad4098df20caa0a2ccf8aa11c81ad988b6667e543/max_pf-2.0.0.tar.gz", hash = "sha256:6230b153577f28cbe1c7eed4469b71785dbc63a74729dbb7a4b5b9f1eca1506e", size = 103789, upload-time = "2026-06-22T22:59:26.863Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4a/b7/f10010568ce1510419787f29f077e8b9fd33037e40552f042e842277bc38/max_pf-2.0.0-py3-none-any.whl", hash = "sha256:2dca32fcc79974517da7928a2bf00e0ffafb5c6e92aaab5cfa6296996952c1b3", size = 78719, upload-time = "2026-06-22T22:59:25.779Z" },
+]
+
+[[package]]
 name = "mistune"
 version = "3.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1357,6 +1377,20 @@ sdist = { url = "https://files.pythonhosted.org/packages/fe/3e/a62c3b824c7dec33c
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/c0/00c9809d8b9346eb238a6bbd5f83e846a4ce4503da94a4c08cb7284c325b/multipledispatch-1.0.0-py3-none-any.whl", hash = "sha256:0c53cd8b077546da4e48869f49b13164bebafd0c2a5afceb6bb6a316e7fb46e4", size = 12818, upload-time = "2023-06-27T16:45:09.418Z" },
 ]
+
+[[package]]
+name = "myql"
+version = "1.2.7"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "oauthlib" },
+    { name = "rauth" },
+    { name = "requests" },
+    { name = "requests-oauthlib" },
+    { name = "six" },
+    { name = "yahoo-oauth" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/49/73/02327197e262eab9cb2a4cdcd2cd1d77a677ec9d8c1bb0b8ebbe80ea0d20/myql-1.2.7.tar.gz", hash = "sha256:3a79e5179ed94ac5894f19441b38092005a970f25015295e2b14675d88ec829d", size = 26020, upload-time = "2015-10-08T11:46:15.215Z" }
 
 [[package]]
 name = "narwhals"
@@ -1609,6 +1643,24 @@ wheels = [
 ]
 
 [[package]]
+name = "oauthlib"
+version = "3.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0b/5f/19930f824ffeb0ad4372da4812c50edbd1434f678c90c2733e1188edfc63/oauthlib-3.3.1.tar.gz", hash = "sha256:0f0f8aa759826a193cf66c12ea1af1637f87b9b4622d46e866952bb022e538c9", size = 185918, upload-time = "2025-06-19T22:48:08.269Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/be/9c/92789c596b8df838baa98fa71844d84283302f7604ed565dafe5a6b5041a/oauthlib-3.3.1-py3-none-any.whl", hash = "sha256:88119c938d2b8fb88561af5f6ee0eec8cc8d552b7bb1f712743136eb7523b7a1", size = 160065, upload-time = "2025-06-19T22:48:06.508Z" },
+]
+
+[[package]]
+name = "objectpath"
+version = "0.6.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ea/51/cd4c88d27f7aabc20a89bbddc1fc64f62fbc820a45c93c6ab8bc45e23f10/objectpath-0.6.1.tar.gz", hash = "sha256:461263136c79292e42431fbb85cdcaac4c6a256f6b1aa5b3ae9316e4965ad819", size = 18793, upload-time = "2018-11-27T15:44:46.676Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/aa/2a/7d32788e3fc2e14c0ba76bca110a5465f75b2bf266a6b6bd802b4f370988/objectpath-0.6.1-py2.py3-none-any.whl", hash = "sha256:7ac2c507e7e5bfbf245701044453edc8e4073ded01d53349237d918124d7ca87", size = 20900, upload-time = "2018-11-27T15:44:45.158Z" },
+]
+
+[[package]]
 name = "packaging"
 version = "26.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1847,6 +1899,7 @@ dependencies = [
     { name = "fantraxapi" },
     { name = "lightgbm" },
     { name = "matplotlib" },
+    { name = "max-pf" },
     { name = "nba-api" },
     { name = "nflreadpy" },
     { name = "numpy" },
@@ -1860,6 +1913,8 @@ dependencies = [
     { name = "sportsdataverse" },
     { name = "statsmodels" },
     { name = "xgboost" },
+    { name = "yahoo-fantasy-api" },
+    { name = "yahoo-oauth" },
 ]
 
 [package.optional-dependencies]
@@ -1882,6 +1937,7 @@ requires-dist = [
     { name = "jupyterlab", marker = "extra == 'notebooks'", specifier = ">=4.2" },
     { name = "lightgbm", specifier = ">=4.3" },
     { name = "matplotlib", specifier = ">=3.9" },
+    { name = "max-pf" },
     { name = "nba-api", specifier = ">=1.4" },
     { name = "nflreadpy", specifier = ">=0.1.5" },
     { name = "numpy", specifier = ">=1.26" },
@@ -1896,6 +1952,8 @@ requires-dist = [
     { name = "sportsdataverse", specifier = ">=0.0.36" },
     { name = "statsmodels", specifier = ">=0.14" },
     { name = "xgboost", specifier = ">=2.1" },
+    { name = "yahoo-fantasy-api", specifier = ">=2.12" },
+    { name = "yahoo-oauth", specifier = ">=2.1" },
 ]
 provides-extras = ["notebooks"]
 
@@ -1970,6 +2028,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cd/05/0a34433a064256a578f1783a10da6df098ceaa4a57bbeaa96a6c0352786b/pure_eval-0.2.3.tar.gz", hash = "sha256:5f4e983f40564c576c7c8635ae88db5956bb2229d7e9237d03b3c0b0190eaf42", size = 19752, upload-time = "2024-07-21T12:58:21.801Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8e/37/efad0257dc6e593a18957422533ff0f87ede7c9c6ea010a2177d738fb82f/pure_eval-0.2.3-py3-none-any.whl", hash = "sha256:1db8e35b67b3d218d818ae653e27f06c3aa420901fa7b081ca98cbedc874e0d0", size = 11842, upload-time = "2024-07-21T12:58:20.04Z" },
+]
+
+[[package]]
+name = "pyaml"
+version = "24.12.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/13/7e/b60f491b4ad461a5bd0cb930cd43940061b38968464085d8ec8242b58c86/pyaml-24.12.1.tar.gz", hash = "sha256:3938c2b47924ed74524f844961a011852f7968fb8cc7b3933276087c5d1e45b3", size = 29288, upload-time = "2024-12-11T20:38:10.603Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/7b/d65a82c8e634b90613a8b969ab8a525194c2eec0de9118e75f77ffb822a2/pyaml-24.12.1-py3-none-any.whl", hash = "sha256:97ed4d31ecc1d7bb93f3d2a66e53548c53d6f572d75d166957abc64a06033b76", size = 25983, upload-time = "2024-12-11T20:38:09.213Z" },
 ]
 
 [[package]]
@@ -2235,6 +2305,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pytz"
+version = "2026.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ff/46/dd499ec9038423421951e4fad73051febaa13d2df82b4064f87af8b8c0c3/pytz-2026.2.tar.gz", hash = "sha256:0e60b47b29f21574376f218fe21abc009894a2321ea16c6754f3cad6eb7cdd6a", size = 320861, upload-time = "2026-05-04T01:35:29.667Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ec/dd/96da98f892250475bdf2328112d7468abdd4acc7b902b6af23f4ed958ea0/pytz-2026.2-py2.py3-none-any.whl", hash = "sha256:04156e608bee23d3792fd45c94ae47fae1036688e75032eea2e3bf0323d1f126", size = 510141, upload-time = "2026-05-04T01:35:27.408Z" },
+]
+
+[[package]]
 name = "pywinpty"
 version = "3.0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -2342,6 +2421,15 @@ wheels = [
 ]
 
 [[package]]
+name = "rauth"
+version = "0.7.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/43/aa/7c8e852275394d65ac5bf3ac9945ecaafe4d083089e09cb0a267efea389a/rauth-0.7.3.tar.gz", hash = "sha256:524cdbc1c28560eacfc9a9d40c59525eb8d00fdf07fbad86107ea24411477b0a", size = 16530, upload-time = "2017-01-22T16:51:41.384Z" }
+
+[[package]]
 name = "referencing"
 version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2368,6 +2456,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ac/c3/e2a2b89f2d3e2179abd6d00ebd70bff6273f37fb3e0cc209f48b39d00cbf/requests-2.34.2.tar.gz", hash = "sha256:f288924cae4e29463698d6d60bc6a4da69c89185ad1e0bcc4104f584e960b9ed", size = 142856, upload-time = "2026-05-14T19:25:27.735Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl", hash = "sha256:2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0", size = 73075, upload-time = "2026-05-14T19:25:26.443Z" },
+]
+
+[[package]]
+name = "requests-oauthlib"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "oauthlib" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/f2/05f29bc3913aea15eb670be136045bf5c5bbf4b99ecb839da9b422bb2c85/requests-oauthlib-2.0.0.tar.gz", hash = "sha256:b3dffaebd884d8cd778494369603a9e7b58d29111bf6b41bdc2dcd87203af4e9", size = 55650, upload-time = "2024-03-22T20:32:29.939Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/5d/63d4ae3b9daea098d5d6f5da83984853c1bbacd5dc826764b249fe119d24/requests_oauthlib-2.0.0-py2.py3-none-any.whl", hash = "sha256:7dd8a5c40426b779b0868c404bdef9768deccf22749cde15852df527e6269b36", size = 24179, upload-time = "2024-03-22T20:32:28.055Z" },
 ]
 
 [[package]]
@@ -2991,4 +3092,30 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/96/9f/d9914a7b8df842832850b1a18e5f47aaa071c217cdd1da2ae9deb291018b/xgboost-3.2.0-py3-none-manylinux_2_28_aarch64.whl", hash = "sha256:852eabc6d3b3702a59bf78dbfdcd1cb9c4d3a3b6e5ed1f8781d8b9512354fdd2", size = 131100954, upload-time = "2026-02-10T11:02:42.704Z" },
     { url = "https://files.pythonhosted.org/packages/79/98/679de17c2caa4fd3b0b4386ecf7377301702cb0afb22930a07c142fcb1d8/xgboost-3.2.0-py3-none-manylinux_2_28_x86_64.whl", hash = "sha256:99b4a6bbcb47212fec5cf5fbe12347215f073c08967431b0122cfbd1ee70312c", size = 131748579, upload-time = "2026-02-10T10:54:40.424Z" },
     { url = "https://files.pythonhosted.org/packages/1f/3d/1661dd114a914a67e3f7ab66fa1382e7599c2a8c340f314ad30a3e2b4d08/xgboost-3.2.0-py3-none-win_amd64.whl", hash = "sha256:0d169736fd836fc13646c7ab787167b3a8110351c2c6bc770c755ee1618f0442", size = 101681668, upload-time = "2026-02-10T10:59:31.202Z" },
+]
+
+[[package]]
+name = "yahoo-fantasy-api"
+version = "2.12.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docopt" },
+    { name = "objectpath" },
+    { name = "pytz" },
+    { name = "yahoo-oauth" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/72/93/85a0c594540dc31c73907d969dc24ec6b4663b7b15ac0e7d2b5bd4092732/yahoo_fantasy_api-2.12.3.tar.gz", hash = "sha256:9b58ec56e023333faec27c9b97c1dcdb95b9fcfe5fbc44890f2304126fcdd432", size = 27352, upload-time = "2026-04-03T17:04:24.984Z" }
+
+[[package]]
+name = "yahoo-oauth"
+version = "2.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "myql" },
+    { name = "pyaml" },
+    { name = "rauth" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4c/d0/e8d15da20b015926e67208eac75718ded18532cd12ce4813ddbcf1186820/yahoo_oauth-2.1.1.tar.gz", hash = "sha256:9d10452ad705e44f2b4adc64ddf01f9e97e1cbc5bf2fac1d9f7d6de2c2ae73d6", size = 5528, upload-time = "2024-12-17T17:30:03.606Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/57/aa73e93b6e75a67e120795a703fe0e4b0cae5d83c18a7fc646aa21f395f6/yahoo_oauth-2.1.1-py3-none-any.whl", hash = "sha256:bacd876298d933c57d230893aaf8f1cb70f3306cc0ffda50c3b511ec3a06a8e2", size = 6499, upload-time = "2024-12-17T17:30:02.568Z" },
 ]

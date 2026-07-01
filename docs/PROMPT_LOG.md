@@ -1437,6 +1437,232 @@ the results of the other models?")_
 
 ---
 
+## Entry 045 — Phase 2 start: optimal-lineup success labels via max_pf
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> For Phase 2, some of these teams didn't set their lineups so win/loss records might not be useful.
+> Use this python package to get estimates of how the season would go if everyone sets their lineup:
+> https://github.com/riders994/basketball_max_pf. Phase 1 is merged.
+>
+> [follow-up] Package is available in pypi at max-pf
+
+**Response notes:**
+- **Why:** actual W/L is contaminated — some managers never set lineups, so realized results
+  under-report roster quality. `max_pf` recomputes each team's optimal-lineup outcome.
+- **Added `max-pf` (2.0.0).** It's purpose-built for **9-cat** fantasy basketball; its 9 categories
+  match ours exactly; it vendors `fantraxapi` and is literally tested against these league IDs (public,
+  no auth). API: `run({"platform":"fantrax","league_id":...}, methodology="hindsight", nash=True) ->
+  list[TeamSeason]`. `TeamSeason` = `team_id, name, periods, actual_pf, m1/m2/m3_pf` — `actual_pf` =
+  category wins realized; `m1/m2/m3_pf` = **optimal-lineup** ceilings under the 3 objectives
+  (catwins/zscore/raw); `nash=True` = the **mutual ceiling** ("if *everyone* optimizes").
+- **Built `data/fantrax.py::fetch_success_labels` + `scripts/fetch_fantasy.py` + `make fantasy`** →
+  `data/processed/fantrax_success.parquet` (`league_id, team, actual_pf, m1/m2/m3_pf, lineup_gap`).
+  The Phase-2 success label = optimal `m1_pf` (not `actual_pf`); `lineup_gap = m1_pf − actual_pf`
+  quantifies points left on the table.
+- **Validated live:** 30 team-seasons across both leagues; `lineup_gap` flags the unset-lineup teams
+  (e.g. ChampagniePapi 6.5→8.0, Clingan On 6.0→8.0 over a 1-week probe). Full-season pull via
+  `make fantasy`.
+- 14 tests (max_pf.run monkeypatched), ruff clean, **146 total**. Branch `basketball-phase2`.
+- **Next:** rosters aren't in `TeamSeason` → build the roster pull (fantraxapi) + name-match fantasy
+  rosters → NBA players → Phase-1 archetype membership = **per-team archetype composition**, then
+  relate composition → the max_pf success labels.
+
+---
+
+## Entry 046 — Harden the success-label fetch (Fantrax rate-limit)
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Your previous work was halted by token limits. Please resume.
+
+**Response notes:**
+- On resume: the full-season `make fantasy` pull had **failed** — Fantrax **rate-limited** the heavy
+  full-season request volume (`"Invalid Request"` raised in max_pf's per-period
+  `get_team_roster_info`). The 1-week path is validated, so this is a data-pull robustness issue, not
+  core logic. (Code increment from Entry 045 was already committed/pushed — nothing lost.)
+- **Hardened `data/fantrax.py`:** extracted `_run_league` with **retry + backoff** (30s × attempt) and
+  a **warm box-score cache** (`cache_dir`, config `fantasy.cache_dir=.cache`, gitignored), plus
+  **per-league isolation** (one league failing no longer aborts the batch; the manifest records
+  `leagues_succeeded`). 1 test passes, ruff clean.
+- Re-running the full-season pull in the background with the warm cache + backoff.
+- **Next (unchanged):** roster pull (fantraxapi) + name-match fantasy rosters → NBA players → Phase-1
+  archetype membership = per-team archetype composition → relate to the max_pf success labels.
+
+---
+
+## Entry 047 — Phase 2: roster composition + M2 grading + name resolution
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Let's keep going with the roster/comp build now. For the max_pf success labels, prioritize
+> M2 > M3 > M1 as the metrics to grade off of. M2 assumes both teams set their lineup, M3 assumes
+> maximal management to set lineup, and M1 is just based on actual player competition.
+>
+> and make sure to look for other name resolution problems between the datasets. Sometimes fonts can
+> be different etc.
+
+**Response notes:**
+- **Grading = M2 > M3 > M1** (corrected the meanings I'd guessed): `m1` = vs opponents' *actual*
+  lineups; `m2` = **both teams optimize** (mutual/Nash ceiling) — the realistic "everyone manages";
+  `m3` = maximal management. Set `primary_pf = m2_pf` and `lineup_gap = m2_pf − actual_pf`.
+- **Built Phase-2 composition** (`eval/compose.py` + `scripts/compose.py` + `make compose`):
+  `fetch_rosters` (fantraxapi `team_roster`, retry/backoff), `team_composition` = name-match each
+  team's roster → ESPN archetype membership for the league's season (`season` inferred from
+  `roster.period_date`) → **soft archetype shares** `comp_<arch>` (mean membership) + hard counts
+  `n_<arch>` + `match_rate`; `build_phase2_table` joins the max_pf success labels.
+- **Name resolution hardened (the "fonts" issue = diacritics):** `_norm` now NFKD-folds accents
+  (Jokić/Dončić/Şengün/Jović → ascii) on *both* sides, plus punctuation/suffix stripping; added a
+  config `fantasy.name_aliases` escape hatch for nicknames and an **unmatched-player diagnostic** that
+  `make compose` prints, so residual mismatches surface against real data.
+- 19 basketball tests (accent folding, alias, composition math, unmatched), ruff clean, **151 total**.
+  Branch `basketball-phase2`.
+- **Pending:** the full-season success pull is still running (~53 min, cache 920 MB, progressing) and
+  holds Fantrax, so the **live roster fetch + actual mismatch report** runs next once it frees up.
+
+---
+
+## Entry 048 — Extend the archetype pipeline to 2026 + re-derive names
+
+**Date:** 2026-06-27
+
+**Prompt (full text):** _(verbatim)_
+
+> Proceed with the 2026 extension and re-derive names
+
+**Response notes:**
+- **Live roster fetch revealed the dominant Phase-2 mismatch was a season gap, not names:** the two
+  leagues are different seasons (`blk3...`=2025, `wserh14...`=2026), but the archetypes only went to
+  2025. (Name resolution itself is solid — 2025 league 93.7%; accent-folding + 3 nickname aliases.)
+- **Extended to 2026** (`data.latest_completed_season` 2025→2026; 2025-26 is complete as of mid-2026).
+  Re-ran fetch (`player_season_stats` 273k→298k rows) → build → features (clustering pool 2631→2981)
+  → discover. Uses ESPN + local compute only, so no conflict with the running Fantrax success pull.
+- **Re-derived the 12 names** (PCA-whitened GMM re-fit reshuffles indices): Off-Ball Wing, 3-and-D
+  Wing, High-Usage Primary, Scoring Combo Guard, Rim-Running Center, Foul-Drawing Iso Scorer, Two-Way
+  Forward, Slashing Non-Shooter, Lead Playmaker, Interior Big, Connector Wing, and a tiny (n≈12)
+  **Non-Shooting Center** `fg3_pct`-artifact cluster (flagged as a consolidation candidate). Re-fit
+  healthy: 40% blends, **YoY stability 0.61→0.63**. Membership now covers **2014–2026**.
+- **Both leagues now compose** (cached rosters): overall **88%** (2025 93.7%, 2026 83.5%). The lower
+  2026 rate is the injury-heavy 2025-26 (Tatum/Lillard/Murray/Beal/VanVleet missed the season) + rookies
+  — legitimate eligibility exclusions, not name bugs.
+- 151 tests, ruff clean. Branch `basketball-phase2`.
+- **Next:** finish the success pull, then `make compose` (join composition → M2 success) → the
+  composition-vs-success modeling.
+
+---
+
+## Entry 049 — Yahoo redraft history as Phase-2 augmentation data
+
+**Date:** 2026-06-28
+
+**Prompt (full text):** _(verbatim, with follow-up clarifications)_
+
+> So these two IDs are for a dynasty league. At ~/activity/notebooks/woj_tokens.json there are
+> credentials for a Yahoo! use that you can use with the yahoo_fantasy_api python package. That has
+> more data
+
+> [clarif.] The two IDs we've been using in previous sessions. I re-did the last command because I
+> inadvertently quit the session. … [dynasty = the Fantrax league; Yahoo = personal redraft history:
+> a middle-school NBA league + a ~10-year end-of-college NBA league + some football]. … Goal = extra
+> Phase-2 examples. Roster snapshot = season-long average. Success label = category-win rate. …
+> For the 24-25 fantrax season … it takes a long time to run a season that isn't cached — skip that
+> season and move on.
+
+**Response notes:**
+- **New Phase-2 data source: the user's Yahoo NBA redraft history** (more team-config→success examples
+  than the 2 Fantrax dynasty leagues). Surveyed 25 Yahoo leagues; **split sport by game-key prefix** —
+  `Game.league_ids()` is NOT sport-filtered (nba/nfl returned identical 25). Usable corpus = the
+  long-running **"H2H Cat One"** league, **exactly 9-cat** (FG%,FT%,3PTM,PTS,REB,AST,ST,BLK,TO):
+  8 seasons 2015-16…2023-24 (`353.l.37110`…`428.l.5686`). Excluded: 2014/2016 = H2H **Points**;
+  2004/2005 = pre-2014 (outside archetype window); 4-team side league; the user's **NFL** leagues
+  ("This League is Roman!"/"DMV"). **Season off-by-one:** Yahoo labels by START year, archetypes by
+  END year → **+1** on the join.
+- **Built the Yahoo Phase-2 path** mirroring Fantrax (`data/yahoo.py` + `scripts/fetch_yahoo.py` +
+  `scripts/compose_yahoo.py` + `make fetch-yahoo`/`compose-yahoo`): OAuth from
+  `~/activity/notebooks/woj_tokens.json`; `fetch_team_weeks` (per team × regular-season week roster,
+  per-league cache + backoff); `tally_category_wins`/`fetch_labels` (per-week `stat_winners` →
+  category-win rate, ties=0.5, + final standings); **`season_long_composition`** = archetype
+  membership **weighted by weeks-on-roster** (reuses `_norm` + `fantasy.name_aliases`).
+- **Validated end-to-end on one league** (2023-24 Sauron's): season=2024 ✓, `cat_win_rate` mean
+  exactly 0.500 (symmetric) ✓, weeks-weighted match rate **96.9%** (unmatched = injury/suspension DNPs
+  like Morant/Simmons/Rob Williams — legit eligibility exclusions), comp shares sum ~1.0, clean join.
+- Added deps `yahoo_fantasy_api` + `yahoo-oauth` (root `pyproject.toml`); **8 new tests** (off-by-one,
+  regular-week filter, cat-win tally incl. ties/playoff-skip, weeks-weighted composition), ruff clean.
+- **Dropped** the 24-25 Fantrax `max_pf` cache idea (`~/activity/basketball_max_pf`) per user — that
+  season stays unlabeled (left-join handles the gap). Branch `basketball-phase2`.
+- **Next (user-run, heavy):** `make fetch-yahoo` (~1800 calls, cached/resumable) → `make compose-yahoo`
+  → fold the ~88 Yahoo team-seasons into the composition-vs-success modeling.
+
+---
+
+## Entry 050 — Phase-2 modeling → simulation diagnosis (representation is the bottleneck)
+
+**Date:** 2026-06-28
+
+**Prompt (full text):** _(verbatim, condensed across the arc)_
+
+> [pull it] make fetch-yahoo … make compose-yahoo … start the Phase-2 modeling with the 88 examples …
+> Commit this, then let's try final standings rank. Is there another way to rank? … One other path to
+> consider … bootstrap teams by looking at mock draft articles close to the beginning of each season …
+> [draft prior = Both in parallel] … Reminder that reality includes a mix of drafting behaviors. Some
+> teams auto-draft, some strategize. … I need to restart the computer … hit resume … same results.
+
+**Response notes:**
+- **Full Yahoo pull:** `make fetch-yahoo` (8 leagues, 88 team-seasons, 29,597 player-weeks; one league
+  throttled `Request denied` → resumed from cache) → `make compose-yahoo` (97% weeks-weighted match,
+  mean cat-win-rate 0.500). Manifest committed (`8bf6b93`).
+- **Composition→success model** (`eval/phase2_model.py` + `make model-phase2`): leave-one-league-out CV.
+  **Four-way NULL** — archetype *shares* don't predict success for **any** target (`cat_win_rate`,
+  `reg_win_pct`, `rank_score`): Ridge/Lasso oof R²≈0, GBM overfits, within-league ρ≈0/neg. Added
+  `derive_targets` + within-league Spearman. Commits `a1dab9d`, `63eacc1`.
+- **Draft simulator** (`eval/simulate.py`, validated, UNCOMMITTED): leak-safe prior-season 9-cat value
+  draft + punt strategies + **auto-draft(~30%)/manager mix** (per-team softmax temperature), round-robin
+  H2H scoring from players' *actual* stats, archetypes joined by `athlete_id`. **Representation shootout**
+  (leave-one-season-out oof R² on `sim_cat_win_rate`): archetype shares **−0.007**, prior coverage
+  **+0.018**, **actual coverage +0.358**; `punt_ft` best build (0.544, ~8σ). ⇒ (1) signal is real,
+  (2) **archetype shares are the wrong success representation** (model coverage instead), (3) the real
+  ceiling is **draft-time projection**.
+- **Paused at a 3-option direction decision** (coverage model+optimizer / attack projection / finalize
+  sim+contribution matrix) — see memory `basketball-phase2-RESUME`; user restarting, wants to resume here.
+
+---
+
+## Entry 051 — Phase-2 coverage model + roster optimizer (resume the paused decision)
+
+**Date:** 2026-07-01
+
+**Prompt (full text):**
+
+> resume [then, at the direction question:] Coverage model + optimizer
+
+**Response notes:**
+- Resumed from `basketball-phase2-RESUME`; re-presented the sim shootout and re-asked the 3-way
+  direction question. User chose **coverage model + optimizer**. Two commits on `basketball-phase2`.
+- **Commit A — sim finalized + shootout committed** (`2a99a69`): the previously-uncommitted
+  `eval/simulate.py` was finalized. Added `team_coverage()` (per-team 9-cat z-profile, ACTUAL season-N
+  and PRIOR season-N-1/leak-safe) → sim table now carries `cov_act_*`/`cov_pri_*` beside archetype
+  shares. Added `representation_shootout()` to `phase2_model.py` (leave-one-season-out Ridge): archetype
+  shares **+0.009** (null), prior coverage **+0.044**, actual coverage **+0.370** — reproduces the
+  diagnosis (shares are the wrong representation; coverage is the mechanism; draft-time projection is
+  the binding constraint). `strategy_leaderboard()` = punt positive control (`punt_ft` 0.541, z=+10).
+  `scripts/simulate_phase2.py` + `make simulate` + `REPORT_phase2_simulation.md`. 9 tests.
+- **Commit B — roster optimizer** (`eval/optimize.py`): objective = maximize projected coverage via a
+  field-calibrated win map, `mean_c Phi((cov_c-mu_c)/sigma_c)` over *contested* cats (Gaussian-CDF ⇒
+  punt-aware: stops over-investing locked cats). `coverage_picker` plugs into `simulate_draft` via a new
+  `pickers` hook; `optimize_roster` = standalone greedy best build; `evaluate_in_sim` = seat an
+  optimizer team vs the manager/auto field. **Validated in-sim:** optimizer beats field, most on punt
+  builds — `punt_ft` +0.040 lift, top-of-field 22% (≈2.6× the 1/12 random). Balanced lift small by
+  design (projection ceiling). `scripts/optimize_phase2.py` + `make optimize` +
+  `REPORT_phase2_optimizer.md`. 6 tests. 46 basketball tests pass, ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

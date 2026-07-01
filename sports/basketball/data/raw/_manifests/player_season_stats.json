@@ -14,11 +14,12 @@
     2022,
     2023,
     2024,
-    2025
+    2025,
+    2026
   ],
-  "pulled_at": "2026-06-27T15:51:20.837825+00:00",
-  "n_rows": 272763,
+  "pulled_at": "2026-06-27T19:31:25.960832+00:00",
+  "n_rows": 297769,
   "n_cols": 15,
   "cache_path": "/home/weezy/activity/position_predictor/sports/basketball/data/raw/player_season_stats.parquet",
-  "sha256": "a74aa01c6bf3602eb7e34883fe4a1d808e07e36fa5db90199dbda57086508118"
+  "sha256": "92ddcac55742d68d8069f35f6a6a77078de1da6bd5cf38a268fcf9f95f0ab8eb"
 }

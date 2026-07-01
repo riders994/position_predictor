@@ -9,7 +9,7 @@ data:
   source: sportsdataverse           # base layer (hoopR data releases); + nba_api + Fantrax later
   # Season = season-ENDING year (2014 = the 2013-14 season). Floor = 2013-14 SportVU era (§2.2).
   earliest_season: 2014
-  latest_completed_season: 2025     # 2024-25 (2025-26 not yet started)
+  latest_completed_season: 2026     # 2025-26 complete as of mid-2026 (needed for the 2026 league)
   raw_dir: data/raw
   cache_format: parquet
 
@@ -39,9 +39,39 @@ eras:
 fantasy:
   platform: fantrax
   format: 9cat
+  cache_dir: .cache               # max_pf box-score cache (gitignored); warm across retries
   league_ids:
-    - blk3bn3clw9njuhc
-    - wserh14rmbbpqtcg
+    - blk3bn3clw9njuhc            # season 2025 (2024-25)
+    - wserh14rmbbpqtcg            # season 2026 (2025-26)
+  # Residual Fantrax->ESPN name mismatches that survive accent/punct normalization (nicknames).
+  # Found via the `make compose` unmatched diagnostic; accents are handled in _norm, not here.
+  name_aliases:
+    Nicolas Claxton: Nic Claxton
+    Cameron Thomas: Cam Thomas
+    Carlton Carrington: Bub Carrington
+
+# Phase-2 AUGMENTATION: the user's personal Yahoo NBA redraft history — more real 9-cat
+# team-config -> success examples than the 2 Fantrax leagues. Only the "H2H Cat One" seasons of the
+# long-running league (EXACTLY the same 9 cats) are listed; the 2014/2016 "H2H Points" seasons,
+# the pre-2014 middle-school leagues (outside the archetype window), the 4-team side league, and the
+# user's NFL leagues are excluded. NOTE: Yahoo labels seasons by START year (league season 2023 =
+# 2023-24); our archetype membership is keyed by END year (2024), so the join adds +1.
+# Config = roster "configuration" as a season-long average (membership weighted by weeks-rostered);
+# success label = category-win rate over the regular season. See data/yahoo.py.
+fantasy_yahoo:
+  platform: yahoo
+  format: 9cat
+  token_file: ~/activity/notebooks/woj_tokens.json   # yahoo_oauth OAuth2 (auto-refreshes in place)
+  cache_dir: .cache/yahoo                             # per-league weekly-roster + matchup cache (gitignored)
+  league_keys:
+    - "353.l.37110"     # 2015-16 (Lenins)
+    - "375.l.10560"     # 2017-18 (Hoxha)
+    - "385.l.5726"      # 2018-19 (Colangelo)
+    - "395.l.12682"     # 2019-20 (Trumps)
+    - "402.l.8048"      # 2020-21 (Guillem)
+    - "410.l.11456"     # 2021-22 (Maduro)
+    - "418.l.9715"      # 2022-23 (Faligula)
+    - "428.l.5686"      # 2023-24 (Sauron)
 
 # Phase 1 — archetype discovery (soft GMM on the *_z style features; fit on E2+E3 eligible,
 # assigned to all eligible 2013+). k chosen via BIC plateau + the ~11-14 / "13 positions" target;
@@ -56,19 +86,19 @@ archetypes:
   # raw full-cov GMM overconfident (median top_prob ~1.0). Whitening to ~90% variance (8 PCs) gives
   # genuinely SOFT membership (~47% of players are blends) AND raises YoY stability 0.55 -> 0.61.
   pca_variance: 0.90
-  names:                            # by GMM component index (seed=1729, PCA-whitened); see reports/REPORT_archetypes.md
-    0: Foul-Drawing Iso Scorer
-    1: Lead Playmaker
-    2: Scoring Combo Guard
-    3: Connector Wing
-    4: Volume Wing Scorer
-    5: Two-Way Forward
-    6: 3-and-D Wing
-    7: Balanced Wing
-    8: Interior Big
-    9: High-Usage Primary
-    10: Rebounding Big-Forward
-    11: Rim-Running Center
+  names:                            # by GMM component index (seed=1729, PCA-whitened, 2014-2026); see reports/REPORT_archetypes.md
+    0: Off-Ball Wing
+    1: 3-and-D Wing
+    2: High-Usage Primary
+    3: Scoring Combo Guard
+    4: Rim-Running Center
+    5: Foul-Drawing Iso Scorer
+    6: Two-Way Forward
+    7: Slashing Non-Shooter
+    8: Lead Playmaker
+    9: Interior Big
+    10: Connector Wing
+    11: Non-Shooting Center      # tiny (n~12) fg3_pct-artifact cluster of reserve bigs — consolidation candidate
 
 reproducibility:
   random_seed: 1729

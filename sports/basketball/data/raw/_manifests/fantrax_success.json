@@ -1,0 +1,20 @@
+{
+  "name": "fantrax_success",
+  "source": "max_pf",
+  "note": "optimal-lineup 9-cat points-for (success labels) per fantasy team",
+  "league_ids": [
+    "blk3bn3clw9njuhc",
+    "wserh14rmbbpqtcg"
+  ],
+  "leagues_succeeded": [
+    "wserh14rmbbpqtcg"
+  ],
+  "methodology": "hindsight",
+  "nash": true,
+  "weeks": "full_season",
+  "pulled_at": "2026-06-28T06:15:34.954681+00:00",
+  "n_rows": 16,
+  "n_cols": 10,
+  "cache_path": "/home/weezy/activity/position_predictor/sports/basketball/data/processed/fantrax_success.parquet",
+  "sha256": "f59eb4461e904ffe0dcf5fbb868db4a48b54097d7450e5f539dba24f2daff144"
+}
