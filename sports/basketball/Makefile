@@ -3,7 +3,7 @@
 
 CONFIG ?= config/nba_archetypes.yaml
 
-.PHONY: help setup fetch fetch-large build features archetypes fantasy compose fetch-yahoo compose-yahoo model-phase2 simulate optimize predict test lint
+.PHONY: help setup fetch fetch-large build features archetypes fantasy compose fetch-yahoo compose-yahoo model-phase2 simulate optimize fetch-bio predict test lint
 
 help:
 	@echo "Targets:"
@@ -20,6 +20,7 @@ help:
 	@echo "  model-phase2 Phase 2: composition -> 9-cat success model -> reports/REPORT_phase2_model.md"
 	@echo "  simulate     Phase 2: draft sim + representation shootout -> reports/REPORT_phase2_simulation.md"
 	@echo "  optimize     Phase 2: coverage roster optimizer + in-sim validation -> reports/REPORT_phase2_optimizer.md"
+	@echo "  fetch-bio    Phase 3: nba_api birthdates -> per-season age (Model B input, cached)"
 	@echo "  predict      Phase 3: next-season archetype predictor (N->N+1) -> reports/REPORT_phase3_predict.md"
 	@echo "  test / lint  pytest / ruff"
 	@echo "  (predict stage: TODO — see PROJECT_PLAN)"
@@ -62,6 +63,9 @@ simulate:
 
 optimize:
 	uv run python scripts/optimize_phase2.py --config $(CONFIG)
+
+fetch-bio:
+	uv run python scripts/fetch_bio.py --config $(CONFIG)
 
 predict:
 	uv run python scripts/predict_archetypes.py --config $(CONFIG)

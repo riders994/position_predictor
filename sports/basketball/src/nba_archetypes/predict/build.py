@@ -21,9 +21,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from ..utils.io import DATA_PROCESSED, read_parquet, write_parquet
+from ..utils.io import DATA_INTERIM, DATA_PROCESSED, read_parquet, write_parquet
 
 IDENTITY = ["athlete_id", "season", "player_name"]
+AGES_PATH = DATA_INTERIM / "nba_player_ages.parquet"        # optional true-age source (Model B)
 
 
 def _prob_cols(membership):
@@ -47,6 +48,9 @@ def build_predict_table(membership=None, features=None, *, zcols=None, write=Tru
     feat = features[["athlete_id", "season", *zcols]].copy()
     df = membership.merge(feat, on=["athlete_id", "season"], how="left").sort_values(
         ["athlete_id", "season"]).reset_index(drop=True)
+    if AGES_PATH.exists():                                   # Model B: attach true age if fetched
+        df = df.merge(read_parquet(AGES_PATH)[["athlete_id", "season", "age"]],
+                      on=["athlete_id", "season"], how="left")
 
     g = df.groupby("athlete_id", sort=False)
     # trajectory: one-year style deltas (leak-safe: uses N and N-1 only)

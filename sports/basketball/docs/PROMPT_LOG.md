@@ -438,6 +438,41 @@ response. Maintained for **reproducibility and decision provenance**.
 
 ---
 
+## Entry 052 — Phase 3: next-season archetype predictor (YOE vs true-age, two models)
+
+**Date:** 2026-07-01
+
+**Prompt (full text):**
+
+> Let's start phase 3 [branch base: "I merged phase 2, go off primary"; age sourcing: "Do two separate
+> models. One with YOE instead of age, one where ages are fetched with nba_api"] … One thing to consider
+> for archetypes. Are we giving more weight to players taken at the top of the draft? [decision: "Leave
+> Phase 3 as-is"]
+
+**Response notes:**
+- Branched `basketball-phase3` off freshly-merged primary (Phase 2 = PR #20). Phase 3 = leak-safe
+  **N→N+1** archetype prediction, returning players only; deliverable feeds projected archetypes into
+  the Phase-2 optimizer.
+- **Commit A (`123bca5`) — Model A (YOE):** `predict/build.py` (N→N+1 table: soft membership `p0..p11`,
+  `top_prob`/`entropy`, 19 style z, one-year trajectory deltas, archetype tenure, YOE proxy =
+  season−first-seen; target = arch + soft vector in N+1) + `predict/model.py` (persistence + marginal
+  baselines, walk-forward multiclass GBM, top-1/macroF1/log-loss/Brier). `make predict`, 4 tests.
+- **Age data:** `data/bio.py` + `make fetch-bio` — map ESPN athlete_id→nba_api id by normalized name
+  (99.4% unambiguous), fetch birthdates (cached; 967 matched), derive per-season age. **Coverage 99.6%
+  across all seasons** (vs ~50% from ESPN DOB alone). 4 monkeypatched tests.
+- **Finding (both models):** persistence is a very strong argmax baseline (0.638) that **neither model
+  beats on top-1** (YOE 0.605, age 0.608) — archetypes are sticky. But both **halve log-loss** (~1.32 vs
+  2.28) → far better-calibrated soft membership, which is what Phase 2 consumes. **True age ≈ YOE
+  proxy** (acc +0.003), and neither age nor trajectory cracks the top features ⇒ the plan's "age is the
+  key signal" hypothesis is **not supported**; current membership+style dominate.
+- **Draft-weighting question:** confirmed the whole pipeline is **equal-weighted** per player-season
+  (only a 15-mpg/20-gp gate). Per user, left Phase 3 equal-weighted but **noted** the top-of-draft
+  consideration in the report (Phase 2 is already value-centric via the draft prior).
+- Commit B: unified `REPORT_phase3_predict.md` (A vs B vs baselines), `data/bio.py`, `scripts/fetch_bio.py`.
+  54 basketball tests pass, ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
