@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 
+import numpy as np
+
 from ..utils.io import DATA_INTERIM, DATA_PROCESSED, ensure_dir, read_parquet, write_parquet
 
 # feature -> block (drives the block map; mirrors football's block→columns contract)
@@ -63,6 +65,13 @@ def build_features(config, *, write: bool = True):
     out["oreb_rate"] = _div(df["oreb_pg"], (df["oreb_pg"] + df["dreb_pg"]))  # off-reb tendency
     # carried-through shooting splits / ratios already on df: fg_pct, fg3_pct, ft_pct,
     # scoring_eff, shooting_eff, ast_tov
+
+    # fg3_pct is unreliable for tiny 3-pt samples — a big who hits 1 of 2 gets an extreme z that used
+    # to spawn a degenerate "non-shooting center" cluster (fg3_pct_z ~ +4). Neutralize it below a
+    # season 3PA-volume floor (-> NaN -> 0 z at fit); shooting *volume* is still captured by
+    # fg3a_rate / fg3a36, so genuine non-shooters remain distinguishable.
+    min_3pa = float(config.get("features.min_3pa_for_fg3_pct", 30))
+    out.loc[(df["fg3a_pg"] * df["gp"]).fillna(0) < min_3pa, "fg3_pct"] = np.nan
 
     feat_cols = [c for blk in BLOCKS.values() for c in blk]
 

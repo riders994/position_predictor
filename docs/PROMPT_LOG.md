@@ -1698,6 +1698,78 @@ the results of the other models?")_
 
 ---
 
+## Entry 053 — Phase-1 archetype refit: fg3_pct gating + k=13 (fix artifact + cluster 2)
+
+**Date:** 2026-07-01
+
+**Prompt (full text):**
+
+> Let's go back to the archetype model, I'm not interested in predicting 9-cat production … [validate]
+> Re-examine / validate … yes, prototype the fg3_pct attempt-gating and re-fit … Let's try tuning the
+> threshold … including 0.5 3PA/G … fix cluster 2 … k=13 + gate (real split) … I merged phase 3, can
+> you fix up the branching properly?
+
+**Response notes:**
+- **Validated the current k=12 taxonomy** (read-only): 4 coherent archetypes (Rim-Running Center, 3-and-D
+  Wing, Foul-Drawing Iso, Slashing Non-Shooter) but two real defects — (1) a degenerate n≈15
+  "Non-Shooting Center" cluster driven by `fg3_pct` noise (bigs who hit 1 of ~1 threes → `fg3_pct_z`
+  +4.3, stay-rate 0.00), and (2) "High-Usage Primary" conflating Jokić/LeBron with Ish Smith/Elfrid
+  Payton via ast+tov. Plus over-splitting in guard/wing space.
+- **fg3_pct attempt-gating:** neutralize `fg3_pct` (→ NaN → 0 z) below a season-3PA floor; volume is
+  still captured by `fg3a_rate`/`fg3a36`. Threshold tuning: **30 total 3PA** beat 25/50 and both
+  per-game options (0.5 3PA/G was *worst* on stability — reliability is about sample size, not rate).
+  Kills the artifact (max |fg3_pct_z| 4.3→1.1), stability held ~0.62.
+- **Cluster 2 fix:** adding a "usage" feature is futile (it's a linear combo already in the PCA span);
+  the lever is **k**. k=13 cleanly separates ball-dominant engines (Jokić/SGA/Giannis/Luka/Embiid) from
+  low-usage distributors (Simmons/Payton/Draymond) into disjoint clusters; k=14 over-splits. Cost:
+  YoY stability 0.63→0.57 (accepted — genuine granularity).
+- **Productionized:** `features/build.py` gate + `features.min_3pa_for_fg3_pct: 30` and `archetypes.k: 13`
+  in config; re-ran features→discover; **re-derived all 13 names** (verified mapping: Jokić→High-Usage
+  Engine, Simmons→Non-Scoring Playmaker, Gobert/DeAndre Jordan→Rim-Running Center, no artifact). Report
+  regenerated. 54 tests pass, ruff clean. Branch `basketball-archetype-refit`.
+- **Branching:** branched off primary before Phase 3 merged; after the user merged Phase 3 (PR #21),
+  re-based the branch onto updated primary (stash → reset --hard origin/primary → pop; no own-commits so
+  clean). Branch now carries the full Phase 1-3 stack as base.
+- **Cascade (follow-up):** the new taxonomy changes membership → Phase 2 (`compose`/`simulate`) and
+  Phase 3 (`predict`) artifacts should be regenerated against it.
+
+---
+
+## Entry 054 — Round-by-round archetype weights: negative result → ship β as draft intel
+
+**Date:** 2026-07-01
+
+**Prompt (full text):**
+
+> Where are we with soft vs hard archetypes … close the consolidation item with the rationale … Now
+> let's move on to the round by round archetype selection weights … [prescriptive] … but what if those
+> archetype shares are weighted depending on how good the player is? … show me the learned per-archetype
+> exposure coefficients first … yes, build the round-by-round weights … [result: they lose] Ship β as
+> draft intel only
+
+**Response notes:**
+- **Soft vs hard:** documented that soft membership is the representation of record and the planned
+  soft→hard consolidation is decided-against (continuous space, ~half blends); closed the item in
+  discover.py + PROJECT_PLAN §3/§8 (Entry 053 commit + a docs commit).
+- **User's key insight tested:** equal-weighted archetype shares were the Phase-2 null; weighting by
+  player value helps **only if you keep magnitude** — value-weighted *shares* (normalized) stayed ~0.05,
+  but value-weighted **exposure** (`Σ value·p`, un-normalized) hit oof R² **0.30** (actual), near coverage
+  (0.37). So archetype composition *does* carry success signal once value-weighted and un-normalized.
+- **Learned per-archetype exposure coefficients** (draft-time/prior): PRIORITIZE High-Usage Engine
+  (+0.020) & Wing Shot-Creator (+0.016); solid mid-tier; **trap** = Lead Scoring Guard (draft coef ~0,
+  actual +0.023, top-bot Δexp −2.45 — empty scoring); **avoid** = Low-Usage Wing (−0.005, stable).
+- **Round-by-round weights built and evaluated — NEGATIVE RESULT.** A picker scoring
+  `projected_value × (dynamic_weight·archetype)` with diminishing returns **lost to the field** (lift
+  −0.02, worst of three); static weighting only broke even; even pure-value lost (field is 70% punters).
+  Balancing across archetypes sacrifices the value/coverage **concentration** (punt builds) that wins
+  9-cat. The draft **engine** stays the coverage optimizer.
+- **Shipped (per user): β as draft intel only.** `eval/archetype_value.py` (value-weighted exposure +
+  bootstrap-stable coefficients + PRIORITIZE/trap/avoid labels), `scripts/archetype_value.py` +
+  `make archetype-value` + `REPORT_archetype_value.md`. 4 tests, 58 basketball tests pass, ruff clean.
+  Branch `basketball-archetype-refit` (stacked on the k=13 refit).
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

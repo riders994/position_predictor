@@ -77,8 +77,14 @@ fantasy_yahoo:
 # assigned to all eligible 2013+). k chosen via BIC plateau + the ~11-14 / "13 positions" target;
 # style space is continuous (low silhouette) so soft membership is the point. Names are PROVISIONAL
 # (tied to seed=1729, k=12) — formalized in the soft->hard consolidation after EDA.
+features:
+  # fg3_pct is z-scored only for players with a reliable 3-pt sample; below this season-3PA floor it is
+  # neutralized (NaN -> 0 z) so small-sample percentages don't distort archetypes. See features/build.py.
+  min_3pa_for_fg3_pct: 30
+
 archetypes:
-  k: 12
+  k: 13                             # 13 separates the ball-dominant scorers (engines) from low-usage
+                                    # distributors that k=12 merged; see REPORT_archetypes.md
   k_range: [8, 16]
   covariance_type: full
   n_init: 5
@@ -86,19 +92,20 @@ archetypes:
   # raw full-cov GMM overconfident (median top_prob ~1.0). Whitening to ~90% variance (8 PCs) gives
   # genuinely SOFT membership (~47% of players are blends) AND raises YoY stability 0.55 -> 0.61.
   pca_variance: 0.90
-  names:                            # by GMM component index (seed=1729, PCA-whitened, 2014-2026); see reports/REPORT_archetypes.md
-    0: Off-Ball Wing
-    1: 3-and-D Wing
-    2: High-Usage Primary
-    3: Scoring Combo Guard
-    4: Rim-Running Center
-    5: Foul-Drawing Iso Scorer
-    6: Two-Way Forward
-    7: Slashing Non-Shooter
-    8: Lead Playmaker
-    9: Interior Big
-    10: Connector Wing
-    11: Non-Shooting Center      # tiny (n~12) fg3_pct-artifact cluster of reserve bigs — consolidation candidate
+  names:                            # by GMM component index (seed=1729, PCA-whitened, fg3-gated k=13, 2014-2026); see reports/REPORT_archetypes.md
+    0: Rim-Running Center            # DeAndre Jordan, Gobert, R. Williams — FG%/OREB+, no 3s
+    1: Lead Scoring Guard            # Trae, Ja, Lillard, Booker, Harden — high-volume scoring guards
+    2: Stretch Forward               # Horford, Dean Wade, Kessler Edwards — floor-spacing forwards/bigs
+    3: Low-Usage Wing                # Pete Nance, Ryan Dunn, Johnny Davis — replacement-level role wings
+    4: Foul-Drawing Iso Scorer       # Butler, Zion, DeRozan — FTA/mid-range, low 3s
+    5: High-Usage Engine             # Jokic, SGA, Giannis, Luka, Embiid — elite ball-dominant hubs
+    6: Perimeter Stopper             # Covington, Thybulle, Okogie — steals, low usage (off-ball D)
+    7: Movement Shooter              # Kennard, Kispert, Hardaway — high 3PA rate + efficiency, low TOV
+    8: Rebounding Forward            # Robinson-Earl, Jalen Smith, PJ Tucker — OREB+, low playmaking
+    9: Lead Playmaker                # Tyus Jones, Haliburton, McConnell — efficient AST:TO floor generals
+    10: Non-Scoring Playmaker        # Ben Simmons, Payton, Draymond — on-ball distributors, no scoring
+    11: Wing Shot-Creator            # Mitchell, Paul George, Edwards, Kawhi — perimeter shot creation
+    12: Rim-Protecting Big           # Turner, JJJ, Wembanyama, Chet, Porzingis — DREB/BLK+, some stretch
 
 reproducibility:
   random_seed: 1729
