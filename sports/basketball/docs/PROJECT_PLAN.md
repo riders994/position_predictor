@@ -87,8 +87,12 @@ Cache + manifests, config-driven stages, committed reports/docs — same discipl
 - **Method:** **soft clustering (Gaussian mixture)** → per-player-season **membership vector**
   ("70% stretch-big / 30% rim-runner"). Soft first because players are blends and it feeds Phase 3's
   target naturally. `k` chosen empirically (BIC + silhouette + interpretability) targeting **~11–14**.
-- **Soft → hard:** after EDA, **consolidate the soft clusters into a hard archetype set** (the
-  human-named taxonomy). Keep soft membership available for Phase 2 blends / Phase 3 target.
+- **Soft → hard: EVALUATED AND DECIDED AGAINST (2026-07).** The plan was to consolidate the soft
+  clusters into a discrete hard taxonomy after EDA. The EDA settled it the other way: the style space is
+  continuous (silhouette 0.04–0.07; ~half of player-seasons are blends), and every consumer already uses
+  the soft vector (Phase 2 soft shares; Phase 3 soft features + calibrated soft target). Collapsing to
+  hard buckets would discard information the pipeline uses. **Soft membership is the representation of
+  record; the hard `arch`/name is interpretive shorthand only.**
 - **Validation:** cross-season **stability** (consistent definitions year-to-year — a hard
   requirement because Phase 3's target is derived from these labels), and basketball sensibility
   (named, interpretable archetypes: e.g. 3-and-D wing, stretch big, rim-runner, primary initiator,
@@ -163,9 +167,12 @@ simulated fields seeded by real settings).
 Phase 1 ships as a validated soft-GMM taxonomy (k=12, PCA-whitened, 61% YoY stability). These are
 known levers to revisit later; none block Phases 2/3:
 
-- **Soft→hard consolidation of the low-signal middle.** The catch-all *Balanced Wing* + the churniest
-  archetypes (*Connector Wing* 0.45, *Two-Way Forward* / *Rebounding Big-Forward* ~0.51 YoY) are
-  consolidation candidates — merge into a cleaner, more stable hard taxonomy after deeper EDA.
+- ~~**Soft→hard consolidation of the low-signal middle.**~~ **CLOSED (2026-07) — decided against.** The
+  style space is continuous (silhouette 0.04–0.07; ~half of player-seasons are blends) and both
+  consumers already run on the soft vector (Phase 2 soft shares; Phase 3 soft features + calibrated soft
+  target), so a discrete hard taxonomy would discard signal the pipeline uses. Churn in the low-signal
+  middle is expected drift across soft boundaries, not a defect to merge away. Soft membership is the
+  representation of record; hard labels stay as interpretive shorthand. (See §3.)
 - **Shot-zone enrichment** (`load_nba_shots`, large). Detailed rim/mid/3 + zone distribution would
   sharpen the bigs/finishers and shooter splits beyond the current coarse `fg3a_rate` / `ft_rate`.
 - **nba_api play-type / tracking** enrichment (Synergy, passing/defensive matchups) — the richest

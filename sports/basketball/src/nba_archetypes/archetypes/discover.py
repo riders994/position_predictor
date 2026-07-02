@@ -3,9 +3,11 @@
 Fits a GMM on the ``*_z`` style features for **eligible E2+E3** player-seasons (the modern game),
 then **assigns** soft membership to *all* eligible seasons (incl. E1) so earlier years carry
 archetypes for Phases 2/3 (PROJECT_PLAN §2.2). Style space is continuous (low silhouette), so the
-output is soft membership (a probability vector per player-season), not just a hard label; a hard
-``arch`` (argmax) + provisional names are provided for interpretation. Names are consolidated in the
-soft->hard EDA step.
+output is **soft membership** (a probability vector per player-season) — the representation of record,
+consumed directly by Phase 2 (soft shares) and Phase 3 (soft features + calibrated soft target). A hard
+``arch`` (argmax) + names are an interpretive view only. The originally-planned soft→hard *consolidation*
+into a discrete taxonomy was evaluated and **decided against**: the space is genuinely continuous (~half
+of player-seasons are blends), so collapsing to hard buckets would discard signal the pipeline uses.
 """
 from __future__ import annotations
 
@@ -148,8 +150,9 @@ def render_report(result: ArchetypeResult, zcols, fit_assigned) -> str:
     L.append("_Soft Gaussian-mixture on **PCA-whitened** z-scored play-STYLE features (per-36 rates "
              "+ shot profile + tendencies), fit on eligible **E2+E3** (modern game) and assigned to "
              "all eligible 2013+ seasons. Whitening decorrelates the collinear style features so "
-             "membership is genuinely **soft**. The hard label is argmax; **names are provisional** "
-             "(seed-tied) pending soft→hard consolidation._")
+             "membership is genuinely **soft** — and soft membership is what Phases 2/3 consume. The "
+             "hard label is argmax over the vector, an interpretive shorthand only; a discrete soft→hard "
+             "consolidation was **evaluated and decided against** (continuous space, ~half blends)._")
     L.append("")
     sf, st = result.softness, result.stability
     L.append(f"Fit pool: **{int(result.profiles['size'].sum())}** player-seasons · "
@@ -175,7 +178,8 @@ def render_report(result: ArchetypeResult, zcols, fit_assigned) -> str:
     L.append("")
     L.append("Share of players who keep an archetype the next season — validation, and the "
              "must-beat baseline for the Phase-3 predictor. Distinctive roles are stickiest; the "
-             "low-signal middle churns most (a soft→hard consolidation candidate).")
+             "low-signal middle churns most — expected for a continuous style space (players drift "
+             "across soft boundaries), not a defect to consolidate away.")
     L.append("")
     per = st["per_archetype"]
     if per:
@@ -189,6 +193,10 @@ def render_report(result: ArchetypeResult, zcols, fit_assigned) -> str:
              "probability vector `p0..pK-1` + `entropy` (blend-iness) per player-season — the soft "
              "input for Phase 2 (composition) and Phase 3 (the predictor target).")
     L.append("- PCA-whitening decorrelates the collinear style features → genuinely soft membership "
-             "and higher YoY stability than a raw full-cov GMM. Next: soft→hard consolidation of the "
-             "low-signal middle archetypes + finalize names.")
+             "and higher YoY stability than a raw full-cov GMM.")
+    L.append("- **Soft→hard consolidation: evaluated and decided against.** The style space is "
+             "continuous (low silhouette, ~half of player-seasons are blends) and every consumer "
+             "already uses the soft vector (Phase 2 soft shares; Phase 3 soft features + calibrated "
+             "soft output), so collapsing to a discrete hard taxonomy would discard information the "
+             "pipeline uses. Hard labels/names remain only as interpretive shorthand.")
     return "\n".join(L) + "\n"

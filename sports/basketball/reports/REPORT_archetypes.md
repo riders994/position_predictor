@@ -1,6 +1,6 @@
 # NBA Archetypes (Phase 1) — k=13 soft GMM (PCA-whitened)
 
-_Soft Gaussian-mixture on **PCA-whitened** z-scored play-STYLE features (per-36 rates + shot profile + tendencies), fit on eligible **E2+E3** (modern game) and assigned to all eligible 2013+ seasons. Whitening decorrelates the collinear style features so membership is genuinely **soft**. The hard label is argmax; **names are provisional** (seed-tied) pending soft→hard consolidation._
+_Soft Gaussian-mixture on **PCA-whitened** z-scored play-STYLE features (per-36 rates + shot profile + tendencies), fit on eligible **E2+E3** (modern game) and assigned to all eligible 2013+ seasons. Whitening decorrelates the collinear style features so membership is genuinely **soft** — and soft membership is what Phases 2/3 consume. The hard label is argmax over the vector, an interpretive shorthand only; a discrete soft→hard consolidation was **evaluated and decided against** (continuous space, ~half blends)._
 
 Fit pool: **2981** player-seasons · BIC 66522. Assigned (all eligible): **4239**.
 Softness: median top_prob **0.773**, **54%** of player-seasons are blends (top_prob < 0.8).
@@ -26,7 +26,7 @@ Stability: **57%** keep their archetype year-over-year (N=3044 consecutive pairs
 
 ## Cross-season stability (YoY persistence)
 
-Share of players who keep an archetype the next season — validation, and the must-beat baseline for the Phase-3 predictor. Distinctive roles are stickiest; the low-signal middle churns most (a soft→hard consolidation candidate).
+Share of players who keep an archetype the next season — validation, and the must-beat baseline for the Phase-3 predictor. Distinctive roles are stickiest; the low-signal middle churns most — expected for a continuous style space (players drift across soft boundaries), not a defect to consolidate away.
 
 | archetype | YoY persistence |
 |---|---|
@@ -46,4 +46,5 @@ Share of players who keep an archetype the next season — validation, and the m
 
 ## Notes
 - Membership table (`data/processed/nba_archetype_membership.parquet`) carries the full probability vector `p0..pK-1` + `entropy` (blend-iness) per player-season — the soft input for Phase 2 (composition) and Phase 3 (the predictor target).
-- PCA-whitening decorrelates the collinear style features → genuinely soft membership and higher YoY stability than a raw full-cov GMM. Next: soft→hard consolidation of the low-signal middle archetypes + finalize names.
+- PCA-whitening decorrelates the collinear style features → genuinely soft membership and higher YoY stability than a raw full-cov GMM.
+- **Soft→hard consolidation: evaluated and decided against.** The style space is continuous (low silhouette, ~half of player-seasons are blends) and every consumer already uses the soft vector (Phase 2 soft shares; Phase 3 soft features + calibrated soft output), so collapsing to a discrete hard taxonomy would discard information the pipeline uses. Hard labels/names remain only as interpretive shorthand.
