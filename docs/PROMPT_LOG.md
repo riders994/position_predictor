@@ -1735,6 +1735,41 @@ the results of the other models?")_
 
 ---
 
+## Entry 054 — Round-by-round archetype weights: negative result → ship β as draft intel
+
+**Date:** 2026-07-01
+
+**Prompt (full text):**
+
+> Where are we with soft vs hard archetypes … close the consolidation item with the rationale … Now
+> let's move on to the round by round archetype selection weights … [prescriptive] … but what if those
+> archetype shares are weighted depending on how good the player is? … show me the learned per-archetype
+> exposure coefficients first … yes, build the round-by-round weights … [result: they lose] Ship β as
+> draft intel only
+
+**Response notes:**
+- **Soft vs hard:** documented that soft membership is the representation of record and the planned
+  soft→hard consolidation is decided-against (continuous space, ~half blends); closed the item in
+  discover.py + PROJECT_PLAN §3/§8 (Entry 053 commit + a docs commit).
+- **User's key insight tested:** equal-weighted archetype shares were the Phase-2 null; weighting by
+  player value helps **only if you keep magnitude** — value-weighted *shares* (normalized) stayed ~0.05,
+  but value-weighted **exposure** (`Σ value·p`, un-normalized) hit oof R² **0.30** (actual), near coverage
+  (0.37). So archetype composition *does* carry success signal once value-weighted and un-normalized.
+- **Learned per-archetype exposure coefficients** (draft-time/prior): PRIORITIZE High-Usage Engine
+  (+0.020) & Wing Shot-Creator (+0.016); solid mid-tier; **trap** = Lead Scoring Guard (draft coef ~0,
+  actual +0.023, top-bot Δexp −2.45 — empty scoring); **avoid** = Low-Usage Wing (−0.005, stable).
+- **Round-by-round weights built and evaluated — NEGATIVE RESULT.** A picker scoring
+  `projected_value × (dynamic_weight·archetype)` with diminishing returns **lost to the field** (lift
+  −0.02, worst of three); static weighting only broke even; even pure-value lost (field is 70% punters).
+  Balancing across archetypes sacrifices the value/coverage **concentration** (punt builds) that wins
+  9-cat. The draft **engine** stays the coverage optimizer.
+- **Shipped (per user): β as draft intel only.** `eval/archetype_value.py` (value-weighted exposure +
+  bootstrap-stable coefficients + PRIORITIZE/trap/avoid labels), `scripts/archetype_value.py` +
+  `make archetype-value` + `REPORT_archetype_value.md`. 4 tests, 58 basketball tests pass, ruff clean.
+  Branch `basketball-archetype-refit` (stacked on the k=13 refit).
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
