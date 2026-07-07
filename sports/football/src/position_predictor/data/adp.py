@@ -103,9 +103,8 @@ def build_adp_benchmark(config, season: int, name_id_map: dict, *, write: bool =
     from ..eval.keeper import _norm
     from ..utils.io import DATA_EXTERNAL, ensure_dir
 
-    sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position").upper()
-    stem = f"{sport}_{position}".lower()
+    stem = config.stem()
 
     source = "FFC"
     try:

@@ -38,8 +38,8 @@ def test_replacement_levels_flex_allocation_and_first_non_starter():
     repl, starters = replacement_levels(_proj(), teams=2, fmt="1qb", roster=ROSTER)
     # QB: round(2*1)=2 starters -> replacement = 3rd QB (26).
     # Dedicated RB=2, WR=2; 2 flex slots go to best-remaining: WR17 then RB16 -> RB3, WR3.
-    # ROSTER has no TE slot -> 0 TE starters (starters always reports every modeled position).
-    assert starters == {"QB": 2, "RB": 3, "WR": 3, "TE": 0}
+    # ROSTER has no TE/K/DST slot -> 0 starters for all three (starters reports every position).
+    assert starters == {"QB": 2, "RB": 3, "WR": 3, "TE": 0, "K": 0, "DST": 0}
     assert repl["QB"] == 26      # pool[2]
     assert repl["RB"] == 14      # pool[3]
     assert repl["WR"] == 15      # pool[3]

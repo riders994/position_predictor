@@ -1,0 +1,43 @@
+{
+  "sport": "football",
+  "position": "QB",
+  "version": "v1",
+  "test_label_seasons": [
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "windows": [
+    10,
+    20,
+    30
+  ],
+  "chosen_cutoff_games": 1,
+  "headline": {
+    "best_model": "random_forest",
+    "best_combine": "recency_weighted",
+    "window_years": 30,
+    "spearman_mean": 0.48047619047619056,
+    "precision_at_12_mean": 1.0,
+    "mae_mean": 6.773637065590957
+  },
+  "data_volume": {
+    "n_feature_rows": 306,
+    "n_labeled_rows": 297,
+    "n_features": 18,
+    "season_min": 1999,
+    "season_max": 2026,
+    "n_seasons": 27,
+    "per_era_rows": {
+      "capital_only": 12,
+      "capital_plus_combine": 285
+    }
+  },
+  "compute": {
+    "total_fit_seconds": 6.899439334170893,
+    "wall_seconds": 8.64382062497316,
+    "mean_fit_seconds_per_model": 0.1596635046201603
+  }
+}

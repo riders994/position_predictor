@@ -145,7 +145,7 @@ def derive_cutoff(config, *, write: bool = True):
     games_grid = config.get("eligibility.candidate_games_played", [4, 6, 8, 10, 12])
     snap_grid = config.get("eligibility.candidate_snap_share", [0.30, 0.40, 0.50])
 
-    season_df = read_parquet(DATA_INTERIM / f"{sport}_{position}_player_seasons.parquet".lower())
+    season_df = read_parquet(DATA_INTERIM / f"{config.stem()}_player_seasons.parquet")
     weekly = read_parquet(DATA_RAW / "weekly.parquet")
     weekly = weekly[weekly["player_id"].isin(set(season_df["player_id"]))]  # eligible RBs only
 
@@ -171,7 +171,7 @@ def derive_cutoff(config, *, write: bool = True):
         return result
 
     results_dir = ensure_dir(REPORTS_DIR / "results")
-    stem = f"eligibility_{sport}_{position}".lower()
+    stem = f"eligibility_{config.stem()}"
     with open(results_dir / f"{stem}.json", "w") as fh:
         json.dump(result, fh, indent=2)
     coverage.assign(metric="coverage").to_csv(results_dir / f"{stem}_coverage.csv", index=False)

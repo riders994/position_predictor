@@ -85,9 +85,8 @@ def _position_report(cfg, season: int):
     from ..data.adp import build_adp_benchmark
     from ..utils.io import DATA_EXTERNAL, DATA_PROCESSED, read_parquet
 
-    sport = cfg.get("experiment.sport", "sport")
     position = cfg.require("experiment.position").upper()
-    stem = f"{sport}_{position}".lower()
+    stem = cfg.stem()
     g_star = int(cfg.get("eligibility.chosen_games_played", 4))
     k_tiers = tuple(cfg.get("metrics.precision_at_k_tiers", [12, 24, 36]))
 

@@ -278,7 +278,7 @@ def run_eda(config, *, write: bool = True):
     position = config.require("experiment.position")
     eras = load_eras(config)
 
-    stem = f"{sport}_{position}".lower()
+    stem = config.stem()
     df = read_parquet(DATA_PROCESSED / f"{stem}_features.parquet")
     block_columns = json.load(
         open(DATA_PROCESSED / f"{stem}_feature_blocks.json"))

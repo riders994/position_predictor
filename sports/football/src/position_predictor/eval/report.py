@@ -34,7 +34,14 @@ def _fmt(x, nd=3):
 def _read(results_dir, stem, name):
     import pandas as pd
     path = results_dir / f"experiment_{stem}_{name}.csv"
-    return pd.read_csv(path) if path.exists() else pd.DataFrame()
+    if not path.exists():
+        return pd.DataFrame()
+    try:
+        return pd.read_csv(path)
+    except pd.errors.EmptyDataError:
+        # A position with no rows for this table (e.g. K has no NGS block, so
+        # ngs_ablation.csv is written empty) — same as the file not existing.
+        return pd.DataFrame()
 
 
 def build_report(config, *, write: bool = True):
@@ -47,7 +54,7 @@ def build_report(config, *, write: bool = True):
     sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position")
     g_star = int(config.get("eligibility.chosen_games_played", 4))
-    stem = f"{sport}_{position}".lower()
+    stem = config.stem()
     results_dir = REPORTS_DIR / "results"
 
     agg = _read(results_dir, stem, "ranking_aggregate")

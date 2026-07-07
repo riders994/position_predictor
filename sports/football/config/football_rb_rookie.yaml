@@ -1,0 +1,92 @@
+# Experiment config — NFL RB Rookie (v1)
+# A structurally different model from football_rb.yaml: predicts a rookie's OWN draft-year
+# production from draft-day-known information (draft capital, combine testing, landing-spot
+# context) — not a next-season roll-forward, since a true incoming rookie has no prior NFL
+# stats to roll forward from. See data/rookie_build.py + features/build.py's is_rookie branch.
+
+experiment:
+  sport: football
+  position: RB
+  cohort: rookie                     # distinguishes this from config/football_rb.yaml (same position)
+  name: football_rb_rookie_v1
+  version: v1
+
+data:
+  source: nflverse
+  earliest_season: 1999
+  latest_completed_season: 2025
+  raw_dir: data/raw
+  cache_format: parquet
+  exclude_seasons: [2020]             # COVID — same exclusion as every other config
+
+target:
+  scoring: RTSPORTS                  # inherited via data.build.aggregate_player_seasons reuse
+  metric: ppg
+  predict_horizon: 0                 # SAME-season prediction, not N -> N+1 (no prior season exists)
+
+features:
+  quantitative_only: true
+
+eligibility:
+  # No games-played eligibility concept for a draft-day cohort (every drafted player gets a row,
+  # zero-filled if they never played) — candidate_games_played: [1] is a no-op filter, present
+  # only because eval/experiment.py reads eligible_next__g{N} columns unconditionally.
+  candidate_games_played: [1]
+  selection_method: reliability_stabilization
+  reliability_target: 0.70
+  reliability_k_max: 1
+  report_full_grid: false
+  chosen_games_played: 1
+  chosen_snap_share: null
+
+scope:
+  players: rookie_draft_class        # every drafted player at this position, not "returning"
+
+validation:
+  scheme: walk_forward
+  test_block_seasons: 5
+  history_windows_years: [10, 20, 30]
+
+models:
+  # persistence/smoothed_history/mean_reversion/linear all key off `ppg`, which in THIS table is
+  # the label itself (no prior season exists to carry forward) — running them would trivially
+  # leak the target, not act as a real baseline floor. Left empty on purpose (eval/experiment.py's
+  # `models.baselines` key now actually filters BASELINES — see that module).
+  baselines: []
+  candidates: [ridge, lasso, elasticnet, random_forest, lightgbm, xgboost]
+  stretch: [lambdamart, quantile_gbm]
+
+# Single draft-capital-only era pre-2000 (no combine coverage), + combine 2000+ — mirrors the
+# snap/NGS era-boundary pattern the veteran configs use, just with combine coverage as the
+# boundary instead.
+eras:
+  - name: capital_only
+    start_season: 1999
+    end_season: 1999
+    feature_blocks: [production, landing_context]
+  - name: capital_plus_combine
+    start_season: 2000
+    end_season: null
+    feature_blocks: [production, landing_context, combine]
+
+era_modeling:
+  strategy: separate
+  route_by: feature_season
+  combine: val_weighted
+  combine_alternatives: [mean, recency_weighted]
+
+benchmark:
+  use_market_data: false             # market ECR benchmark stays with the veteran config for
+                                     # this position; not wired up separately for the rookie cohort
+  as_feature: false
+  sources: []
+
+metrics:
+  regression: [mae, rmse, r2]
+  ranking: [spearman, kendall, ndcg_at_k, precision_at_k]
+  precision_at_k_tiers: [12, 24]
+
+reproducibility:
+  random_seed: 1729
+  results_dir: reports/results
+  figures_dir: reports/figures

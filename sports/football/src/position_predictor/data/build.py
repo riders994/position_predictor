@@ -40,6 +40,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..utils.io import DATA_INTERIM, DATA_RAW, read_parquet, write_parquet
+from .scoring import compute_points
 from .snaps import load_player_season_snaps
 
 # Per-game box-score columns summed to a season total when present. Kept defensive:
@@ -73,6 +74,12 @@ SEASON_SUM_COLS = [
     "passing_first_downs",
     "passing_epa",
     "passing_2pt_conversions",
+    # --- kicking (K) box-score totals; additive, present 1999+ ---
+    "fg_att", "fg_made", "fg_missed",
+    "fg_made_0_19", "fg_made_20_29", "fg_made_30_39", "fg_made_40_49", "fg_made_50_59", "fg_made_60_",
+    "fg_missed_0_19", "fg_missed_20_29", "fg_missed_30_39", "fg_missed_40_49", "fg_missed_50_59",
+    "fg_missed_60_",
+    "pat_att", "pat_made", "pat_missed",
 ]
 
 # Identity columns carried from the weekly frame (last non-null per player-season).
@@ -96,11 +103,18 @@ class BuildResult:
     path: str
 
 
-def aggregate_player_seasons(weekly, *, regular_season_only: bool = True):
+def aggregate_player_seasons(weekly, *, regular_season_only: bool = True, scoring: str = "PPR"):
     """Aggregate per-game weekly rows into one row per ``(player_id, season)`` (all positions).
 
     Position filtering happens later via :func:`resolve_fantasy_eligibility`, so this keeps
     every player and carries ``position`` / ``position_group`` forward for that step.
+
+    ``scoring`` selects the fantasy-point formula: ``"PPR"`` (default) uses nflverse's
+    standard ``fantasy_points_ppr`` as-is; any key in
+    :data:`position_predictor.data.scoring.SCORING_FORMULAS` (e.g. ``"RTSPORTS"``)
+    recomputes points per game from box-score columns with that league's exact rules
+    before aggregating — every downstream feature/target derives from ``ppr_points``
+    generically, so no other code needs to change.
     """
     import numpy as np
     import pandas as pd
@@ -112,7 +126,16 @@ def aggregate_player_seasons(weekly, *, regular_season_only: bool = True):
     if df.empty:
         return pd.DataFrame(columns=["player_id", "season", "games", "ppr_points", "ppg"])
 
+    custom = compute_points(df, scoring)
+    custom_col = None
+    if custom is not None:
+        custom_col, series = custom
+        df = df.copy()
+        df[custom_col] = series
+
     sum_cols = [c for c in SEASON_SUM_COLS if c in df.columns]
+    if custom_col and custom_col not in sum_cols:
+        sum_cols.append(custom_col)
     grouped = df.groupby(["player_id", "season"], as_index=False)
     out = grouped[sum_cols].sum(numeric_only=True)
 
@@ -130,7 +153,10 @@ def aggregate_player_seasons(weekly, *, regular_season_only: bool = True):
         )
         out = out.merge(ident, on=["player_id", "season"], how="left")
 
-    out["ppr_points"] = out["fantasy_points_ppr"] if "fantasy_points_ppr" in out.columns else np.nan
+    if custom_col and custom_col in out.columns:
+        out["ppr_points"] = out[custom_col]
+    else:
+        out["ppr_points"] = out["fantasy_points_ppr"] if "fantasy_points_ppr" in out.columns else np.nan
     out["touches"] = out.get("carries", 0) + out.get("receptions", 0)
     out["ppg"] = np.where(out["games"] > 0, out["ppr_points"] / out["games"], np.nan)
     return out
@@ -140,8 +166,11 @@ def resolve_fantasy_eligibility(season_df, sleeper, target_position: str):
     """Flag rows fantasy-eligible at ``target_position`` and record the source.
 
     Primary signal: Sleeper ``fantasy_positions`` (career-level, joined on the gsis
-    ``player_id``). Fallback: nflverse ``position_group`` (FB already folded into RB) for any
-    player Sleeper doesn't cover. Adds ``is_eligible`` (bool) and ``eligibility_source``
+    ``player_id``). Fallback: nflverse ``position_group`` (FB already folded into RB) OR the raw
+    ``position`` column, for any player Sleeper doesn't cover. The raw-``position`` fallback
+    matters for K: nflverse's ``position_group`` for kickers is ``"SPEC"``, not ``"K"``, so
+    ``position_group`` alone would wrongly exclude pre-Sleeper-era kickers; raw ``position`` is
+    literally ``"K"`` and catches them. Adds ``is_eligible`` (bool) and ``eligibility_source``
     (``"sleeper"`` | ``"nflverse_fallback"``). Does not filter — callers decide.
     """
     import pandas as pd
@@ -155,8 +184,11 @@ def resolve_fantasy_eligibility(season_df, sleeper, target_position: str):
                 continue
             sleeper_has[gsis] = target_position in str(fp).split(",")
 
-    grp = df["position_group"] if "position_group" in df.columns else df.get("position")
-    fallback_elig = (grp == target_position) if grp is not None else False
+    grp_match = (df["position_group"] == target_position) if "position_group" in df.columns \
+        else pd.Series(False, index=df.index)
+    pos_match = (df["position"] == target_position) if "position" in df.columns \
+        else pd.Series(False, index=df.index)
+    fallback_elig = grp_match | pos_match
 
     sleeper_elig = df["player_id"].map(sleeper_has)
     df["eligibility_source"] = sleeper_elig.notna().map(
@@ -339,13 +371,14 @@ def build_dataset(config, *, position: str | None = None, horizon: int | None = 
     games_grid = config.get("eligibility.candidate_games_played", [4, 6, 8, 10, 12])
     snap_grid = config.get("eligibility.candidate_snap_share", [0.30, 0.40, 0.50])
     latest_season = config.get("data.latest_completed_season")
+    scoring = config.get("target.scoring", "PPR")
 
     weekly = read_parquet(DATA_RAW / "weekly.parquet")
     rosters = _maybe_read("rosters.parquet")
     sleeper = _maybe_read("sleeper_players.parquet")
     snaps = load_player_season_snaps()
 
-    df = aggregate_player_seasons(weekly)
+    df = aggregate_player_seasons(weekly, scoring=scoring)
     df = resolve_fantasy_eligibility(df, sleeper, position)
     df = df[df["is_eligible"]].drop(columns="is_eligible").reset_index(drop=True)
     df = attach_roster_attributes(df, rosters)
@@ -366,8 +399,7 @@ def build_dataset(config, *, position: str | None = None, horizon: int | None = 
     if not write:
         return df
 
-    sport = config.get("experiment.sport", "sport")
-    out_path = DATA_INTERIM / f"{sport}_{position}_player_seasons.parquet".lower()
+    out_path = DATA_INTERIM / f"{config.stem()}_player_seasons.parquet"
     write_parquet(df, out_path)
     seasons = sorted(int(s) for s in df["season"].unique())
     result = BuildResult(

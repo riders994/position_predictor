@@ -34,9 +34,8 @@ def project_position(config, *, model=None, combine=None, feature_season=None,
     from ..models.era_ensemble import EraEnsemble
     from ..utils.io import DATA_PROCESSED, REPORTS_DIR, ensure_dir, read_parquet
 
-    sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position")
-    stem = f"{sport}_{position}".lower()
+    stem = config.stem()
     seed = int(config.get("reproducibility.random_seed", 1729))
     horizon = int(config.get("target.predict_horizon", 1))
     model = model or config.get("projection.model", "ridge")

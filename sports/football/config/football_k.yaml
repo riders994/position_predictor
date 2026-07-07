@@ -1,0 +1,97 @@
+# Experiment config — NFL Kicker (v1)
+# Generalized from football_qb.yaml (PROJECT_PLAN §9): same shared pipeline, K-specific config.
+# Kickers score off distance-tiered FG makes + PATs (target.scoring: RTSPORTS — see
+# data/scoring.py). No snap-share or Next Gen Stats coverage exists for kickers, so this config
+# uses a single era (no snap/NGS schema boundaries to split on) and skips those feature blocks.
+
+experiment:
+  sport: football
+  position: K
+  name: football_k_v1
+  version: v1                        # human-meaningful model version, stamped into the report header
+
+data:
+  source: nflverse                 # via nflreadpy
+  earliest_season: 1999
+  latest_completed_season: 2025
+  raw_dir: data/raw
+  cache_format: parquet
+  # COVID 2020 removed from supervised use (label + feature season), players kept — see
+  # data/build.apply_season_exclusion + football_rb.yaml note. Costs the 2021 label fold.
+  exclude_seasons: [2020]
+
+target:
+  scoring: RTSPORTS                # RT Sports league (data/scoring.py): distance-tiered FG
+                                    # (3/4/5/6 pts by yardage band) + 1 pt/PAT, no miss penalty.
+  metric: ppg                      # next-season points-per-game (primary ranking target)
+  predict_horizon: 1               # season N -> N+1
+
+features:
+  quantitative_only: true
+  offseason_workload_col: fg_att    # K competition currency = prior-season FG attempts (§5)
+
+availability_model:
+  enabled: true
+  label: games_played_next
+  model: gbm_count
+  derive_clears_cutoff: true
+  baseline: prior_games_played
+  wear_proxy_windows: [1, 3]
+
+eligibility:
+  # Cutoff is DERIVED analytically (Stage 5) — these are the candidate grid for robustness.
+  candidate_games_played: [4, 6, 8, 10, 12]
+  candidate_snap_share: [0.30, 0.40, 0.50]   # not a meaningful concept for K; reported, not primary
+  selection_method: reliability_stabilization
+  reliability_target: 0.70
+  reliability_k_max: 8
+  report_full_grid: true
+  chosen_games_played: 1      # Stage 5 (K): split-half PPG reliability never clears ~0.00 at ANY
+                              #   k (1-8) — kicker RTSPORTS scoring (distance-tiered bonuses) is
+                              #   essentially not game-to-game reliable at all, not just "noisier
+                              #   than RB/WR" like QB/TE. This is an honest finding about the
+                              #   position, not a bug — see reports/results/eligibility_football_k.
+  chosen_snap_share: null     # snap share isn't meaningful for K; games-based is the primary rule
+
+scope:
+  players: returning_only          # >= 1 prior NFL season; rookies excluded in v1
+
+validation:
+  scheme: walk_forward             # train <= N, predict N+1 ; no random K-fold
+  test_block_seasons: 5
+  history_windows_years: [10, 20, 30]
+
+models:
+  baselines: [persistence, smoothed_history, mean_reversion, linear]
+  candidates: [ridge, lasso, elasticnet, random_forest, lightgbm, xgboost]
+  stretch: [lambdamart, quantile_gbm]
+
+# Single era (PROJECT_PLAN §6.3 boundaries are driven by snap/NGS coverage, neither of which
+# applies to K) — one model trained across the full 1999+ history, no era composition needed.
+eras:
+  - name: boxscore
+    start_season: 1999
+    end_season: null      # open-ended (current)
+    feature_blocks: [production, volume, efficiency, player_attrs, trajectory,
+                     regression_mean, availability, offseason]
+
+era_modeling:
+  strategy: separate
+  route_by: feature_season
+  combine: val_weighted
+  combine_alternatives: [mean, recency_weighted]
+
+benchmark:
+  use_market_data: true
+  as_feature: false                # benchmark only, NOT a feature (compare, don't blend)
+  sources: [adp, ecr]
+
+metrics:
+  regression: [mae, rmse, r2]
+  ranking: [spearman, kendall, ndcg_at_k, precision_at_k]
+  precision_at_k_tiers: [12, 24]   # K1 / K2 boards — shallow, mostly-streaming position
+
+reproducibility:
+  random_seed: 1729
+  results_dir: reports/results
+  figures_dir: reports/figures

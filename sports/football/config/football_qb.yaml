@@ -1,7 +1,7 @@
 # Experiment config — NFL Quarterback (v1)
 # Generalized from football_rb.yaml (PROJECT_PLAN §9): same shared pipeline, QB-specific config.
-# QBs score off PASSING (nflverse fantasy_points_ppr already uses 4-pt passing TDs) + rushing
-# for mobile QBs, so the production/volume/efficiency/NGS blocks are passing-oriented.
+# QBs score off PASSING (see target.scoring — this league's 6-pt passing TD) + rushing for
+# mobile QBs, so the production/volume/efficiency/NGS blocks are passing-oriented.
 
 experiment:
   sport: football
@@ -20,7 +20,8 @@ data:
   exclude_seasons: [2020]
 
 target:
-  scoring: PPR                     # passing/rushing scoring; PPR only matters for pass-catchers
+  scoring: RTSPORTS                 # user's RT Sports league (data/scoring.py): 6-pt pass TD
+                                    # (not the nflverse-standard 4), +5 yd bonuses. Was PPR.
   metric: ppg                      # next-season points-per-game (primary ranking target)
   predict_horizon: 1               # season N -> N+1
 

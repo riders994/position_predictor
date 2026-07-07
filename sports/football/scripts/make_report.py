@@ -27,9 +27,7 @@ def main() -> int:
     cfg = Config.load(args.config)
     print(f"[report] {cfg}")
     text = build_report(cfg, write=True)
-    sport = cfg.get("experiment.sport", "sport")
-    position = cfg.require("experiment.position")
-    stem = f"{sport}_{position}".lower()
+    stem = cfg.stem()
     print(text)
     print(f"\n[report] wrote reports/REPORT_{stem}.md + reports/figures/report_{stem}_*.png")
     return 0

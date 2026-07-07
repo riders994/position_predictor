@@ -4,9 +4,9 @@
   "note": "Cross-source player ID crosswalk.",
   "seasons": [],
   "min_season": null,
-  "pulled_at": "2026-06-23T16:55:23.094155+00:00",
-  "n_rows": 12462,
+  "pulled_at": "2026-07-06T19:10:26.279671+00:00",
+  "n_rows": 12467,
   "n_cols": 35,
-  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/ids.parquet",
-  "sha256": "cac25f44861e8f9e175415ce6c36ca13b20c5dc85db0641327c97806ea443d8a"
+  "cache_path": "/Users/daryushnadimi/Desktop/Claude_Projects/Fantasy_Football_2026/position_predictor/sports/football/data/raw/ids.parquet",
+  "sha256": "1542dba3dfc22cfd6d7a6b844989eb102fad62655b687b4ec67a8625d9b5bd72"
 }

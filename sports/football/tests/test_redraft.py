@@ -78,9 +78,11 @@ def test_estimate_rookie_count_no_market_returns_zero():
 # -- run_redraft --------------------------------------------------------------------------
 
 def test_run_redraft_full_n_without_rookie_adjustment(stub_pipeline):
+    # Explicit top_n so this orchestration test doesn't depend on DEFAULT_TOP_N's actual values.
     res = redraft.run_redraft(
         [_config("QB"), _config("RB"), _config("WR")],
-        draft_season=DRAFT_SEASON, refresh=False, rookie_context=(None, {}, "no market"))
+        draft_season=DRAFT_SEASON, refresh=False, top_n={"QB": 20, "RB": 50, "WR": 75},
+        rookie_context=(None, {}, "no market"))
     assert res.ready
     counts = res.board.groupby("position").size().to_dict()
     assert counts == {"QB": 20, "RB": 50, "WR": 75}
@@ -90,7 +92,7 @@ def test_run_redraft_full_n_without_rookie_adjustment(stub_pipeline):
 def test_run_redraft_trims_by_rookie_count(stub_pipeline, monkeypatch):
     monkeypatch.setattr(redraft, "estimate_rookie_count", lambda *a, **k: 3)
     res = redraft.run_redraft(
-        [_config("QB")], draft_season=DRAFT_SEASON, refresh=False,
+        [_config("QB")], draft_season=DRAFT_SEASON, refresh=False, top_n={"QB": 20},
         rookie_context=(pd.DataFrame(), {"QB": {"x"}}, ""))
     counts = res.board.groupby("position").size().to_dict()
     assert counts == {"QB": 17}                       # 20 − 3 rookies

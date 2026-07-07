@@ -20,7 +20,8 @@ data:
   exclude_seasons: [2020]
 
 target:
-  scoring: PPR                     # 1 pt / reception (PPR especially rewards WR volume)
+  scoring: RTSPORTS                 # user's RT Sports league (data/scoring.py): 6-pt pass TD,
+                                    # +5 yardage bonuses, no fumble penalty. Was PPR.
   metric: ppg                      # next-season points-per-game (primary ranking target)
   predict_horizon: 1               # season N -> N+1
 

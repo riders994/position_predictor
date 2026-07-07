@@ -19,15 +19,19 @@ from __future__ import annotations
 
 # Quantitative-only (PROJECT_PLAN §5): no qualitative inputs anywhere in this module.
 
-PROCESSED_NAME = "{sport}_{position}_features.parquet"
-BLOCKMAP_NAME = "{sport}_{position}_feature_blocks.json"
-
 
 def _div(df, num, den):
-    """Column-safe division returning NaN where the denominator is 0/NaN/missing."""
+    """Column-safe division returning NaN where the denominator is 0/NaN/missing.
+
+    Returns a proper float64-NaN column (not bare ``None``) when either input column is
+    entirely absent, so a block that unconditionally computes a ratio for a position missing
+    one of its inputs (e.g. K has no ``total_tds``) still produces a numeric column models can
+    consume, not an ``object``-dtype column of ``None`` that trips up lightgbm/xgboost.
+    """
     import numpy as np
+    import pandas as pd
     if num not in df.columns or den not in df.columns:
-        return None
+        return pd.Series(np.nan, index=df.index)
     d = df[den].where(df[den] != 0)
     return df[num] / d if d is not None else np.nan
 
@@ -149,15 +153,157 @@ def add_efficiency(df):
     return out, [c for c in cols if c in out.columns]
 
 
+# ------------------------------------------------------ rookie blocks (draft-day cohort)
+
+def add_draft_capital(df):
+    """Draft round/pick/age — historically one of the single best predictors of rookie output."""
+    out = df.copy()
+    if "round" in out.columns:
+        out["is_day1_pick"] = (out["round"] == 1).astype(int)
+        out["is_day2_pick"] = out["round"].isin([2, 3]).astype(int)
+        out["is_day3_pick"] = (out["round"] >= 4).astype(int)
+    cols = ["round", "pick", "age", "is_day1_pick", "is_day2_pick", "is_day3_pick"]
+    return out, [c for c in cols if c in out.columns]
+
+
+def add_combine(df):
+    """Combine athletic testing — optional/sparse (not every prospect tests); ``has_combine``
+    exposes coverage explicitly, same pattern as the existing ``has_ngs_*`` flags."""
+    out = df.copy()
+    out["has_combine"] = out["forty"].notna().astype(int) if "forty" in out.columns else 0
+    cols = ["forty", "bench", "vertical", "broad_jump", "cone", "shuttle", "has_combine"]
+    return out, [c for c in cols if c in out.columns]
+
+
+def add_landing_context(df, team):
+    """Landing-spot context: incumbent same-position competition + the drafting team's offensive
+    context (pace, pass rate), both from the season BEFORE the rookie's draft season — the
+    team's *own* draft-season context isn't knowable at draft time (the season hasn't been
+    played yet), so this uses the same "known when the pick is made" basis as
+    ``room_prior_workload``. ``team`` is :func:`team_season_context`'s output — the same
+    team-season aggregate ``add_team_context`` (the veteran-model equivalent) already reuses.
+    """
+    out = df.copy()
+    if team is not None and "draft_team" in out.columns:
+        from ..data.team_build import canonicalize_team
+        # team_season_context's recent_team is straight from weekly (uncanonicalized); rookie_
+        # build.py already canonicalizes draft_team (OAK->LV/SD->LAC/STL->LA + PFR-code fixes),
+        # so this side needs the same normalization or historical relocated-team rows miss.
+        team_c = team.assign(recent_team=team["recent_team"].map(canonicalize_team))
+        out["_prior"] = out["season"] - 1
+        out = out.merge(
+            team_c.rename(columns={"recent_team": "draft_team", "season": "_prior"}),
+            on=["draft_team", "_prior"], how="left").drop(columns="_prior")
+        out["team_pass_rate"] = _div(out, "team_pass_att", "team_plays")
+        out["team_plays_pg"] = _div(out, "team_plays", "team_games")
+    out["workload_per_incumbent"] = _div(out, "room_prior_workload", "room_size")
+    cols = ["room_prior_workload", "room_size", "workload_per_incumbent",
+            "team_pass_rate", "team_plays_pg"]
+    return out, [c for c in cols if c in out.columns]
+
+
+# --------------------------------------------------------- kicking blocks (K)
+
+def add_kicking_production(df):
+    """Prior-season kicking production levels + within-season positional finish (K)."""
+    out = df.copy()
+    out["finish_ppr_rank"] = out.groupby("season")["ppr_points"].rank(
+        ascending=False, method="min")
+    out["finish_ppg_rank"] = out.groupby("season")["ppg"].rank(ascending=False, method="min")
+    cols = ["ppg", "ppr_points", "fg_made", "fg_att", "fg_made_40_49", "fg_made_50_59",
+            "fg_made_60_", "pat_made", "pat_att", "finish_ppr_rank", "finish_ppg_rank"]
+    return out, [c for c in cols if c in out.columns]
+
+
+def add_kicking_volume(df):
+    """Per-game kick volume + distance mix (season-N opportunity for K).
+
+    ``long_att`` (40+ yd attempts, made + missed) is a real opportunity signal independent of
+    accuracy: kickers on offenses that stall in FG range attempt more of them, and a coach's
+    trust in a kicker's leg shows up as more long tries — both persist year to year.
+    """
+    out = df.copy()
+    for base in ["fg_att", "fg_made", "pat_att", "pat_made"]:
+        out[f"{base}_pg"] = _div(out, base, "games")
+    long_bands = [("fg_made_40_49", "fg_missed_40_49"), ("fg_made_50_59", "fg_missed_50_59"),
+                  ("fg_made_60_", "fg_missed_60_")]
+    out["long_att"] = sum(out.get(m, 0) + out.get(s, 0) for m, s in long_bands)
+    out["long_att_share"] = _div(out, "long_att", "fg_att")
+    cols = ["fg_att_pg", "fg_made_pg", "pat_att_pg", "pat_made_pg", "long_att", "long_att_share"]
+    return out, [c for c in cols if c in out.columns]
+
+
+def add_kicking_efficiency(df):
+    """FG/PAT accuracy overall and by distance band (all available 1999+).
+
+    Runs after :func:`add_kicking_volume` so ``long_att`` is already on ``df``.
+    """
+    out = df.copy()
+    out["fg_pct"] = _div(out, "fg_made", "fg_att")
+    out["pat_pct"] = _div(out, "pat_made", "pat_att")
+    long_made = (out.get("fg_made_40_49", 0) + out.get("fg_made_50_59", 0)
+                + out.get("fg_made_60_", 0))
+    out["long_fg_pct"] = long_made / out["long_att"].where(out["long_att"] != 0)
+    short_att = (out.get("fg_made_0_19", 0) + out.get("fg_missed_0_19", 0)
+                + out.get("fg_made_20_29", 0) + out.get("fg_missed_20_29", 0)
+                + out.get("fg_made_30_39", 0) + out.get("fg_missed_30_39", 0))
+    short_made = (out.get("fg_made_0_19", 0) + out.get("fg_made_20_29", 0)
+                 + out.get("fg_made_30_39", 0))
+    out["short_fg_pct"] = short_made / short_att.where(short_att != 0)
+    out["ppr_per_att"] = _div(out, "ppr_points", "fg_att")
+    cols = ["fg_pct", "pat_pct", "long_fg_pct", "short_fg_pct", "ppr_per_att"]
+    return out, [c for c in cols if c in out.columns]
+
+
+# ----------------------------------------------------------- DST blocks (team-level)
+
+def add_dst_production(df):
+    """Prior-season DST production levels + within-season positional finish (team-level)."""
+    out = df.copy()
+    out["finish_ppr_rank"] = out.groupby("season")["ppr_points"].rank(
+        ascending=False, method="min")
+    out["finish_ppg_rank"] = out.groupby("season")["ppg"].rank(ascending=False, method="min")
+    cols = ["ppg", "ppr_points", "def_sacks", "def_interceptions", "fumble_recovery_opp",
+            "fumble_recovery_tds", "def_tds", "def_safeties", "points_allowed",
+            "blocked_fg_defense", "blocked_xp_defense", "finish_ppr_rank", "finish_ppg_rank"]
+    return out, [c for c in cols if c in out.columns]
+
+
+def add_dst_volume(df):
+    """Per-game takeaway/points-allowed rates (season-N opportunity/quality for DST)."""
+    out = df.copy()
+    for base in ["def_sacks", "def_interceptions", "fumble_recovery_opp", "points_allowed"]:
+        out[f"{base}_pg"] = _div(out, base, "games")
+    out["takeaways"] = out.get("def_interceptions", 0) + out.get("fumble_recovery_opp", 0)
+    out["takeaways_pg"] = _div(out, "takeaways", "games")
+    cols = ["def_sacks_pg", "def_interceptions_pg", "fumble_recovery_opp_pg",
+            "points_allowed_pg", "takeaways", "takeaways_pg"]
+    return out, [c for c in cols if c in out.columns]
+
+
+def add_dst_efficiency(df):
+    """Within-season relative defensive strength (runs after :func:`add_dst_volume`).
+
+    Raw points-allowed is schedule-dependent (a bad-offense slate deflates it); the gap to that
+    season's **league-average** points-allowed/game is a cleaner, more persistent read on a
+    defense's actual quality.
+    """
+    out = df.copy()
+    league_avg = out.groupby("season")["points_allowed_pg"].transform("mean")
+    out["points_allowed_vs_league"] = out["points_allowed_pg"] - league_avg
+    cols = ["points_allowed_vs_league"]
+    return out, [c for c in cols if c in out.columns]
+
+
 # --------------------------------------------------------- passing blocks (QB)
 
 def add_passing_production(df):
     """Prior-season passing production levels + within-season positional finish (QB).
 
-    QB fantasy production is already captured by ``ppr_points`` / ``ppg`` (nflverse
-    ``fantasy_points_ppr`` uses the standard 4-pt passing-TD scoring); this block adds the
-    passing volume/scoring levels and the same leakage-free positional finish ranks the
-    skill-position :func:`add_production` produces.
+    QB fantasy production is already captured by ``ppr_points`` / ``ppg`` (whichever
+    ``target.scoring`` formula the config selects — see ``data/scoring.py``); this block
+    adds the passing volume/scoring levels and the same leakage-free positional finish
+    ranks the skill-position :func:`add_production` produces.
     """
     out = df.copy()
     out["total_tds"] = out.get("passing_tds", 0) + out.get("rushing_tds", 0)
@@ -498,10 +644,10 @@ def build_features(config, *, write: bool = True):
     from ..utils.io import (DATA_INTERIM, DATA_PROCESSED, DATA_RAW, ensure_dir,
                             read_parquet, write_parquet)
 
-    sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position")
+    stem = config.stem()
 
-    interim = DATA_INTERIM / f"{sport}_{position}_player_seasons.parquet".lower()
+    interim = DATA_INTERIM / f"{stem}_player_seasons.parquet"
     df = read_parquet(interim)
 
     def _raw(name):
@@ -517,18 +663,35 @@ def build_features(config, *, write: bool = True):
     draft_picks = _raw("draft_picks.parquet")
     horizon = int(config.get("target.predict_horizon", 1))
     workload_col = config.get("features.offseason_workload_col", "touches")
-    is_qb = str(position).upper() == "QB"
+    is_rookie = config.get("experiment.cohort") == "rookie"
+    is_qb = str(position).upper() == "QB" and not is_rookie
+    is_k = str(position).upper() == "K"
+    is_dst = str(position).upper() == "DST"
 
     block_columns: dict[str, list[str]] = {}
 
-    # Position-specific production / usage / efficiency blocks. QBs score off passing (+ rushing
-    # for mobile QBs); skill positions score off rushing/receiving. Shared blocks below are
-    # column-defensive and apply to both.
-    if is_qb:
+    # Position-specific production / usage / efficiency blocks. Rookies score off draft-day-known
+    # info (capital/combine/landing spot — no NFL production exists yet); QBs score off passing
+    # (+ rushing for mobile QBs); K scores off kicking; DST scores off the team defense/ST unit;
+    # skill positions score off rushing/receiving. Shared blocks below are column-defensive and
+    # apply across all of them.
+    if is_rookie:
+        df, block_columns["production"] = add_draft_capital(df)
+        df, block_columns["combine"] = add_combine(df)
+        df, block_columns["landing_context"] = add_landing_context(df, team)
+    elif is_qb:
         df, block_columns["production"] = add_passing_production(df)
         df, block_columns["volume"] = add_passing_volume(df)
         df, block_columns["rushing"] = add_qb_rushing(df)
         df, block_columns["efficiency"] = add_passing_efficiency(df)
+    elif is_k:
+        df, block_columns["production"] = add_kicking_production(df)
+        df, block_columns["volume"] = add_kicking_volume(df)
+        df, block_columns["efficiency"] = add_kicking_efficiency(df)
+    elif is_dst:
+        df, block_columns["production"] = add_dst_production(df)
+        df, block_columns["volume"] = add_dst_volume(df)
+        df, block_columns["efficiency"] = add_dst_efficiency(df)
     else:
         df, block_columns["production"] = add_production(df)
         df, block_columns["volume"] = add_volume(df)
@@ -536,19 +699,29 @@ def build_features(config, *, write: bool = True):
             df, block_columns["team_context"] = add_team_context(df, team)
         df, block_columns["efficiency"] = add_efficiency(df)
 
-    df, block_columns["player_attrs"] = add_player_attrs(df)
-    df, block_columns["availability"] = add_availability(df)
-    df, block_columns["snap_usage"] = add_snap_usage(df)
-    df, block_columns["trajectory"] = add_trajectory(df)
-    df, block_columns["regression_mean"] = add_regression_mean(df)
+    # player_attrs/availability/snap_usage/NGS/offseason are all individual-player *history*
+    # concepts with no team-level (DST) or draft-day-cohort (rookie) analogue. trajectory/
+    # regression_mean need multiple seasons per player too — meaningless for a rookie, which has
+    # exactly one row ever, but genuinely useful for DST (defense performance is famously
+    # mean-reverting year to year).
+    if not is_dst and not is_rookie:
+        df, block_columns["player_attrs"] = add_player_attrs(df)
+        df, block_columns["availability"] = add_availability(df)
+        if not is_k:  # no meaningful snap-share concept for kickers
+            df, block_columns["snap_usage"] = add_snap_usage(df)
+    if not is_rookie:
+        df, block_columns["trajectory"] = add_trajectory(df)
+        df, block_columns["regression_mean"] = add_regression_mean(df)
     if is_qb:
         df, block_columns["ngs_passing"] = add_ngs_passing(df, ngs_pass)
-    else:
+    elif not is_k and not is_dst and not is_rookie:  # no NGS for kickers, DST, or rookies
         df, block_columns["ngs_efficiency"] = add_ngs_efficiency(df, ngs_rush, ngs_rec)
-    df, offseason_cols = add_offseason(df, rosters, draft_picks, position=position,
-                                       workload_col=workload_col, horizon=horizon)
-    if offseason_cols:
-        block_columns["offseason"] = offseason_cols
+    if not is_dst and not is_rookie:  # no roster/draft-capital concept for a team-level entity;
+                                     # a rookie's OWN draft capital is its own block, above
+        df, offseason_cols = add_offseason(df, rosters, draft_picks, position=position,
+                                           workload_col=workload_col, horizon=horizon)
+        if offseason_cols:
+            block_columns["offseason"] = offseason_cols
 
     df = df.sort_values(["season", "player_id"]).reset_index(drop=True)
 
@@ -561,8 +734,8 @@ def build_features(config, *, write: bool = True):
     if not write:
         return df, block_columns
 
-    out_path = DATA_PROCESSED / PROCESSED_NAME.format(sport=sport, position=position).lower()
-    map_path = DATA_PROCESSED / BLOCKMAP_NAME.format(sport=sport, position=position).lower()
+    out_path = DATA_PROCESSED / f"{stem}_features.parquet"
+    map_path = DATA_PROCESSED / f"{stem}_feature_blocks.json"
     write_parquet(df, out_path)
     ensure_dir(DATA_PROCESSED)
     with open(map_path, "w") as fh:

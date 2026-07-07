@@ -22,17 +22,19 @@ end-of-season ranking.
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Scoring format | **PPR** (1 pt / reception) | User's league format; receiving volume matters most here. |
+| Scoring format | **RT Sports custom** (`target.scoring: RTSPORTS`, `data/scoring.py`) — 1-pt PPR, **6-pt** pass/rush/rec TD, -2/INT thrown, +2/2pt conversion, +5 yardage bonuses (100+ rush/rec yds, 300+ pass yds), no fumble-lost penalty for offense | The user's actual league by-laws (confirmed 2026-07-06), not generic PPR — see §12/§9 for the migration. Was PPR through TE v1. |
 | Target metric | **Next-season points-per-game (PPG)** → derived rank | Removes raw injury/availability noise from the *prediction* target; rank is computed from predicted PPG. |
 | Ranking eligibility | Players who clear a **games-played / snap-share cutoff** | A high-PPG / low-games player still has value if they clear the bar. The cutoff is **derived analytically** (its own pipeline step), never hardcoded. |
-| Player scope | **Returning players only** (≥1 prior NFL season) | Clean feature set from NFL history. Rookies (CFB/draft data) are **out of scope — not pursued**. |
+| Player scope | **Returning players only** (≥1 prior NFL season) for the core veteran models | Clean feature set from NFL history. A **separate, structurally different rookie cohort model** (draft-day-known info → draft-year outcome) was added 2026-07-06 for QB/RB/WR/TE — see §9/§12; it does not change this row's veteran methodology. |
 | Data source | **nflverse via `nflreadpy`** | Free, reproducible, deep (pbp, weekly, seasonal, rosters, snaps, draft, combine). Replaced the deprecated `nfl_data_py` in 2026 (see §2.1). |
 | History | **Comparative 10 / 20 / 30-year training windows** | Measure recency bias per position rather than assume one window. |
 | Market data (ADP/ECR) | **Benchmark only**, not a feature | Clean test of whether our stats-derived features add signal over the crowd. |
 
 ### 1.2 Non-goals (v1)
 
-- Rookies / incoming players (no prior NFL season).
+- ~~Rookies / incoming players (no prior NFL season)~~ — **reversed 2026-07-06**: a dedicated
+  rookie-cohort model now covers this for QB/RB/WR/TE (§9, §12). The veteran (returning-players)
+  methodology above is unaffected; the rookie model is a separate config/build path.
 - In-season / weekly prediction (this is a preseason, full-season-ahead model).
 - Other positions and sports — but the architecture is built so they slot in (§9).
 
@@ -60,6 +62,9 @@ end-of-season ranking.
 | `load_pbp` | Play-by-play → EPA, success rate, route/usage proxies, red-zone/goal-line | 1999– |
 | `load_draft_picks` / `load_combine` | Draft capital, athletic profile | 1980s– |
 | `load_ff_playerids` | Cross-source player ID crosswalk | — |
+| `load_team_stats(summary_level="week")` | Per-team-game box score (sacks, INTs, fumble/blocked-kick counts) — feeds DST only | 1999– |
+| `load_schedules` | Game results (home/away score) → points allowed — feeds DST only | 1999– |
+| `load_teams` | Team abbreviation → full name — feeds DST only | — |
 
 **Data-availability caveats (the comparative windows must respect these):**
 - Snap counts begin **2012** → the snap-share component of the eligibility cutoff and any snap features only exist for 2012+.
@@ -371,6 +376,76 @@ out-of-fold gain, like RB/WR). TE was also wired into the multi-position serving
 board, postseason grading, keeper as a dedicated 1-TE slot — not flex-eligible). This validates the
 "add a position = new config" claim for any position sharing an existing scoring family.
 
+**League scoring migrated to RT Sports custom (2026-07-06), replacing generic PPR.** The user's
+actual league by-laws were confirmed and turned out to diverge materially from standard PPR: a
+**6-pt passing TD** (not nflverse's standard 4 — the single largest deviation, ~50% inflation on
+QBs' biggest scoring category), +5 yardage bonuses (100+ rush/rec yds, 300+ pass yds), no
+fumble-lost penalty for offensive players, and kickoff/punt-return TDs. `data/scoring.py`'s
+`compute_rtsports_points` recomputes points per player-game from raw box-score columns (column-
+additive across positions, no position branch needed); every position config sets
+`target.scoring: RTSPORTS`, and `data/build.aggregate_player_seasons` dispatches to it instead of
+nflverse's `fantasy_points_ppr`. No leakage/methodology change — this only swaps *what* counts as
+a point, the whole pipeline (walk-forward CV, eras, eligibility, benchmark) is unaffected and was
+re-run under the new target.
+
+**DST and K added (2026-07-06) — all 6 starter positions now modeled.** DST is fantasy's only
+**team-level** entity: `data/team_build.py` builds a team-season table (keyed on canonical team
+abbreviation as `player_id`, not a player), joining `team_stats` (sacks/INTs/fumbles/def TDs),
+`schedules` (opponent score → points allowed, not in `team_stats` at all), and a self-join for
+defensive blocked-kicks (`team_stats` only tracks blocks *suffered* by the team's own kicker, not
+blocks *made* by its defense). Team relocations (OAK→LV 2020, SD→LAC 2017, STL→LA 2016) are
+canonicalized to one continuous franchise history. `compute_dst_points` (`data/scoring.py`) scores
+sacks/INTs/fumbles/safeties/return-TDs/blocked-kicks + points-allowed tiers; **two categories are
+documented gaps, not modeled** — blocked punts (`team_stats` has no punting fields; would need
+`pbp`, out of scope) and blocked-kick-return TDs (indistinguishable from INT-return TDs in
+nflverse's `def_tds`); INT-return TD itself is an approximation (`def_tds − fumble_recovery_tds`).
+DST has no player-identity market benchmark (FantasyPros ECR joins on `gsis_id`) — the report
+degrades gracefully with no vs-market section. K reuses the player-level pipeline with a new
+kicking feature family (`add_kicking_production/volume/efficiency` — FG/PAT volume, accuracy
+overall and by distance band); no snap-share or NGS concept applies to a kicker. Both are new
+`config/football_{dst,k}.yaml`, wired into `redraft`/`keeper`/`postseason`/`progress` alongside
+QB/RB/WR/TE. **Model quality is honestly weaker for DST/K than the skill positions** (Spearman ρ
+≈0.33 DST, ≈0.41 K, vs ≈0.57–0.82 QB/RB/WR/TE) — RT Sports' bonus-heavy scoring adds real
+game-to-game variance, and K showed **~zero split-half PPG reliability at any games cutoff** in
+the eligibility analysis (kicker fantasy scoring is close to pure noise under this format); this
+is reported as an honest finding, not treated as a bug to chase.
+
+**Rookie cohort model added (2026-07-06), reversing the earlier "dropped" decision.** The original
+decision (§1.2, §12) dropped rookies because the veteran pipeline predicts season *N+1* from
+season *N* NFL stats — a true incoming rookie has zero prior games and simply has no row. That
+methodology is unchanged; what's new is a **structurally different model** for QB/RB/WR/TE
+(`data/rookie_build.py`, `config/football_{qb,rb,wr,te}_rookie.yaml`, `experiment.cohort: rookie`):
+predicts a rookie's **own draft-year production** from **draft-day-known information only** — draft
+capital (round/pick, historically the single best predictor), combine athletic testing
+(optional/sparse, ~60% coverage, `has_combine` flag), and landing-spot context (incumbent
+same-position team workload + team pace, from the season *before* the draft, since the draft
+season's own stats aren't knowable yet). Rookie feature seasons are a single row per player (no
+trajectory/regression-to-mean, no availability history) and the label is same-season, not
+next-season — `models.baselines: []` in these configs on purpose, since the standard persistence/
+smoothed-history baselines key off `ppg`, which here *is* the label (running them would trivially
+leak). No K rookie model (rookie kickers are almost always UDFA) or DST rookie concept (a team,
+not a draftable individual). `eval/redraft.py`'s `run_redraft` fits the rookie config walk-forward
+safe (trained only on strictly earlier draft classes) and **merges its projections into the
+veteran board, re-ranked together by `proj_ppg`** — a rookie slots in at the value-correct spot,
+not a separate list or a market-estimated gap (K/DST keep the older market-count-subtraction
+mechanism, since neither has a rookie model). Confirmed against the real 2026 draft class: Jeremiyah
+Love (RB) ranked #10 at the position, Jadarian Price #16 — both ahead of veteran RBs, matching
+real draft-capital-driven expectations; QB/TE rookies rank low enough that none crack the
+top-32/top-30 boards, an honest result (those two positions rarely produce rookie-year value), not
+a gap. Model quality: Spearman ρ ≈0.62 WR / 0.60 TE / 0.53 RB / 0.48 QB — meaningfully useful given
+there's no production history to lean on at all. Two real correctness bugs were found and fixed
+while building this: `draft_picks.parquet`'s team codes use PFR conventions (GNB/KAN/LAR/LVR/
+NOR/NWE/SDG/SFO/TAM) that differ from nflverse's convention used everywhere else, which would have
+silently broken every landing-context join; and `features/build._div()` returned bare `None` (not
+NaN) when a referenced column was entirely absent, corrupting the column to `object` dtype and
+crashing lightgbm/xgboost — harmless before because every existing position always had every
+referenced column, exposed by K's/rookie's smaller feature sets.
+
+**Redraft board widened to the full 264-pick league universe (2026-07-06).** `DEFAULT_TOP_N` in
+`eval/redraft.py` = QB32/RB110/WR130/TE30/K24/DST32, sized so each position's returned count is
+capped by the real eligible-player universe rather than an arbitrary top-N truncation (the user's
+league is 12-team/22-round = 264 picks).
+
 **Handcuff-selection tool added (2026-06-27, serving use-case #5).** Ranks RB **backups to draft**
 by *contingent upside* = (starter − backup projected PPG) × the starter's projected **miss share**.
 `eval/handcuff.py` + `scripts/handcuff.py` + `make handcuff [SEASON=]` → `reports/handcuff_<season>.{md,csv}`.
@@ -537,6 +612,21 @@ Resolved (2026-06-17 → 06-23, since RB v3):
 - **Serving tools shipped:** project, keeper-league, redraft-league, postseason-grading (merged) +
   handcuff-selection (2026-06-27, branch `handcuff-tool`).
 
+Resolved (2026-07-06):
+- **Scoring migrated PPR → RT Sports custom** (§1.1, §9) after the user's actual league by-laws
+  were confirmed. All positions re-scored and re-run under `target.scoring: RTSPORTS`.
+- **DST and K shipped** (§9) — all 6 starter positions now modeled. DST is the project's first
+  team-level (not player-level) entity; K reuses the player pipeline with a new kicking feature
+  family. Both integrated into redraft/keeper/postseason/progress.
+- **Rookie cohort model shipped for QB/RB/WR/TE** (§9), reversing the §1.2/§12 "dropped" decision.
+  This is a structurally distinct model (draft-day info → draft-year outcome), not a change to the
+  veteran returning-players methodology; validated against the real 2026 draft class.
+- **Redraft board widened to the full 264-pick league universe** (§9): `DEFAULT_TOP_N`
+  QB32/RB110/WR130/TE30/K24/DST32.
+- **Known gap surfaced, not yet fixed:** `eval/keeper.py`'s `FLEX_POS = ("RB", "WR")` is
+  hardcoded RB/WR-only, but this league's FLEX slot is RB/WR/**TE**-eligible per the by-laws.
+  Minor impact (TE rarely beats RB/WR for flex value) — tracked in §13.
+
 **The football project is functionally complete.** All remaining work is optional improvement /
 enrichment only — tracked in §13.
 
@@ -544,17 +634,19 @@ enrichment only — tracked in §13.
 
 ## 13. Roadmap (optional improvements — project is feature-complete without these)
 
-Status as of 2026-06-27. Nothing here is *required*: all four positions (RB/WR/QB/TE) and
-the five serving tools (project, keeper, redraft, postseason, handcuff) ship today. This section is
-the single source of truth for what is open vs
-closed; the dated decisions live in §12.
+Status as of 2026-07-06. Nothing here is *required*: all six positions (RB/WR/QB/TE/K/DST), the
+QB/RB/WR/TE rookie cohort, and the five serving tools (project, keeper, redraft, postseason,
+handcuff) ship today. This section is the single source of truth for what is open vs closed; the
+dated decisions live in §12.
 
 ### Open · in-scope · actionable
-- [ ] **Join `combine` athletic-testing data as features.** Already fetched/cached (the `combine`
-  dataset) but never joined into the feature build (`data_dictionary.md`) — the cheapest untapped,
-  in-scope item.
+- [ ] **Join `combine` athletic-testing data as features for the veteran models.** Already
+  fetched/cached and now used by the rookie cohort model (§9), but still not joined into the
+  veteran RB/WR/QB/TE/K feature build (`data_dictionary.md`) — the cheapest untapped item there.
 - [ ] **Promote snap-share to a *primary* eligibility dimension** (currently a secondary /
   sensitivity dim only, §4.2).
+- [ ] **Fix `eval/keeper.py`'s `FLEX_POS = ("RB", "WR")`** to include TE, matching the actual
+  league's RB/WR/TE-eligible FLEX slot (found 2026-07-06, §12; minor impact but a real mismatch).
 
 ### Deferred · needs new data plumbing · lower priority
 - [ ] **PFR-scraped advanced-stats enrichment block** — needs a scraper; long-deferred (§12).
@@ -571,8 +663,13 @@ closed; the dated decisions live in §12.
   formulation is proposed.
 - [x] **Receiving-NGS-for-RB & air-yards receiving features** — tested & **rejected** (no ranking
   gain; redundant with opportunity volume; §12).
-- [x] **Rookie / incoming-player model** — dropped; returning-players-only by design (§1.2, §12).
+- [x] **Rookie / incoming-player model** — **reversed and shipped (2026-07-06).** Originally
+  dropped (§1.2) since the veteran pipeline has no row for a zero-prior-game player; a separate
+  draft-day-info → draft-year-outcome model now covers QB/RB/WR/TE without changing the veteran
+  methodology. See §9, §12.
 - [x] **TE position** — **shipped (TE v1, 2026-06-26).** Originally skipped; later added to complete
   the tooling layer. Pure-config add (shares WR's receiving pipeline); g\*=5, lasso ρ=0.744. See §12.
+- [x] **DST and K positions** — **shipped (2026-07-06).** Originally not mentioned in v1 scope
+  (RB/WR/QB/TE only); added to complete all 6 league starter slots. See §9, §12.
 - [x] **Blending ECR/ADP into the model** — by design the market stays a *benchmark to compare
   against*, never a feature.

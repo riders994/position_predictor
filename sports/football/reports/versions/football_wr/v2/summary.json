@@ -17,13 +17,13 @@
   "chosen_cutoff_games": 7,
   "headline": {
     "best_model": "elasticnet",
-    "best_combine": "val_weighted",
+    "best_combine": "mean",
     "window_years": 30,
-    "spearman_mean": 0.8027484531622708,
+    "spearman_mean": 0.8043199958303946,
     "precision_at_12_mean": 0.5666666666666667,
-    "mae_mean": 2.4671146810396896,
+    "mae_mean": 2.6486367615746063,
     "best_baseline": "linear",
-    "best_baseline_spearman_mean": 0.7820617211282938
+    "best_baseline_spearman_mean": 0.7857125799035383
   },
   "data_volume": {
     "n_feature_rows": 5400,
@@ -39,8 +39,8 @@
     }
   },
   "compute": {
-    "total_fit_seconds": 70.34815404998517,
-    "wall_seconds": 122.54214895100085,
-    "mean_fit_seconds_per_model": 1.2201701863881074
+    "total_fit_seconds": 45.814178330940194,
+    "wall_seconds": 65.06411845801631,
+    "mean_fit_seconds_per_model": 0.9550829050583869
   }
 }

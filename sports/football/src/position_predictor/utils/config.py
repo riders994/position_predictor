@@ -53,6 +53,19 @@ class Config:
         end = int(self.require("data.latest_completed_season"))
         return list(range(start, end + 1))
 
+    def stem(self) -> str:
+        """Cache-file stem: ``{sport}_{position}``, or ``{sport}_{position}_{cohort}`` when
+        ``experiment.cohort`` isn't the default ``"returning"`` (e.g. a rookie config shares its
+        ``position`` with the veteran config for that same position — QB/RB/WR/TE — so without
+        this the two would collide on the same interim/processed filenames)."""
+        sport = self.get("experiment.sport", "sport")
+        position = self.require("experiment.position")
+        cohort = self.get("experiment.cohort", "returning")
+        base = f"{sport}_{position}"
+        if cohort and cohort != "returning":
+            base = f"{base}_{cohort}"
+        return base.lower()
+
     def __repr__(self) -> str:
         name = self.get("experiment.name", "?")
         return f"Config(name={name!r}, path={self.path})"

@@ -1,0 +1,85 @@
+# Experiment config — NFL Defense/Special Teams (v1)
+# DST is a TEAM-level entity, not a player — see data/team_build.py + features/build.py's
+# is_dst branch. Scoring (target.scoring: RTSPORTS) computed from team_stats + schedules by
+# data/scoring.py's compute_dst_points; two rare categories (blocked punts, blocked-kick-return
+# TD) are documented gaps, not modeled — nflverse has no field for either. Int-return-TD is an
+# approximation (def_tds - fumble_recovery_tds), also documented in compute_dst_points.
+
+experiment:
+  sport: football
+  position: DST
+  name: football_dst_v1
+  version: v1
+
+data:
+  source: nflverse                 # via nflreadpy (team_stats + schedules, not weekly)
+  earliest_season: 1999
+  latest_completed_season: 2025
+  raw_dir: data/raw
+  cache_format: parquet
+  # COVID 2020 removed from supervised use (label + feature season) — see football_rb.yaml note.
+  exclude_seasons: [2020]
+
+target:
+  scoring: RTSPORTS                # see data/scoring.py: compute_dst_points
+  metric: ppg
+  predict_horizon: 1
+
+features:
+  quantitative_only: true
+  # No offseason_workload_col — the offseason block (roster competition / draft capital) is a
+  # player-level concept skipped entirely for DST (features/build.py's is_dst branch).
+
+eligibility:
+  # DST has no games-played *eligibility* concept — a team plays every scheduled game, there's
+  # no partial-season "backup DST." candidate_games_played is [1] (no real filtering); this key
+  # only exists because eval/experiment.py reads eligible_next__g{N} columns unconditionally
+  # (see data/team_build.py's build_dataset, which reuses data/build.label_eligibility_grid).
+  candidate_games_played: [1]
+  selection_method: reliability_stabilization
+  reliability_target: 0.70
+  reliability_k_max: 1
+  report_full_grid: false
+  chosen_games_played: 1
+  chosen_snap_share: null
+
+scope:
+  players: returning_only          # vestigial for DST (every team "returns" every season)
+
+validation:
+  scheme: walk_forward
+  test_block_seasons: 5
+  history_windows_years: [10, 20, 30]
+
+models:
+  baselines: [persistence, smoothed_history, mean_reversion, linear]
+  candidates: [ridge, lasso, elasticnet, random_forest, lightgbm, xgboost]
+  stretch: [lambdamart, quantile_gbm]
+
+# Single era — no snap/NGS coverage boundaries apply to a team-level entity.
+eras:
+  - name: boxscore
+    start_season: 1999
+    end_season: null
+    feature_blocks: [production, volume, efficiency, trajectory, regression_mean]
+
+era_modeling:
+  strategy: separate
+  route_by: feature_season
+  combine: val_weighted
+  combine_alternatives: [mean, recency_weighted]
+
+benchmark:
+  use_market_data: true
+  as_feature: false
+  sources: [adp, ecr]
+
+metrics:
+  regression: [mae, rmse, r2]
+  ranking: [spearman, kendall, ndcg_at_k, precision_at_k]
+  precision_at_k_tiers: [12, 20]   # DST1 / startable-DST tier (12-team league; ~12-20 rostered)
+
+reproducibility:
+  random_seed: 1729
+  results_dir: reports/results
+  figures_dir: reports/figures

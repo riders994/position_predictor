@@ -148,6 +148,14 @@ def _registry() -> dict[str, Dataset]:
                 note="Combine athletic testing (numeric)."),
         Dataset("ids", L("load_ff_playerids"), needs_years=False,
                 note="Cross-source player ID crosswalk."),
+        Dataset("team_stats", L("load_team_stats", summary_level="week"), min_season=1999,
+                note="Per-team-game box score (sacks, INTs, fumble/blocked-kick counts) for DST "
+                     "scoring — team_build.py, not the player pipeline."),
+        Dataset("schedules", L("load_schedules"), min_season=1999,
+                note="Game results (home/away score) -> points allowed, the only source for "
+                     "DST's points-allowed scoring tiers."),
+        Dataset("teams", L("load_teams"), needs_years=False,
+                note="Team abbreviation -> full name, for the DST board's display name."),
         Dataset("sleeper_players", _load_sleeper, needs_years=False,
                 source="sleeper/v1/players/nfl",
                 note="Sleeper fantasy_positions eligibility (current snapshot; gsis_id join)."),

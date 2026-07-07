@@ -7,8 +7,9 @@ the keepers by surplus (= pick paid − projected board slot).
 Usage:
     uv run python scripts/keeper.py --input my_keepers.csv --teams 12 --format sf
 
-Input CSV columns: ``player,pick`` (optional ``position``). Covers RB/WR/QB; TE/K/DST and
-unmatched names are listed as unscored.
+Input CSV columns: ``player,pick`` (optional ``position``). Covers RB/WR/QB/TE/K/DST (for DST,
+give the team name/abbreviation as ``player``, e.g. "Eagles" or "PHI"); unmatched names are
+listed as unscored.
 """
 from __future__ import annotations
 
@@ -25,7 +26,8 @@ from position_predictor.eval.projection import project_positions  # noqa: E402
 from position_predictor.utils.config import Config  # noqa: E402
 
 DEFAULT_CONFIGS = ["config/football_rb.yaml", "config/football_wr.yaml",
-                   "config/football_qb.yaml", "config/football_te.yaml"]
+                   "config/football_qb.yaml", "config/football_te.yaml",
+                   "config/football_k.yaml", "config/football_dst.yaml"]
 
 
 def main() -> int:
@@ -71,7 +73,7 @@ def main() -> int:
         print(f"\n[keeper] wrote {args.out}")
 
     if not unmatched.empty:
-        print("\nUnscored (no model projection — TE/K/DST or name not matched):")
+        print("\nUnscored (no model projection — name/team not matched):")
         print(unmatched[["player", "pick"]].to_string(index=False))
     return 0
 

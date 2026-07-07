@@ -1,0 +1,81 @@
+# Experiment config — NFL WR Rookie (v1)
+# Generalized from football_rb_rookie.yaml — same shape, WR-specific config. See that file's
+# comments for the full rationale (structurally different from football_wr.yaml: predicts a
+# rookie's OWN draft-year production from draft-day-known information, not a next-season roll
+# forward).
+
+experiment:
+  sport: football
+  position: WR
+  cohort: rookie
+  name: football_wr_rookie_v1
+  version: v1
+
+data:
+  source: nflverse
+  earliest_season: 1999
+  latest_completed_season: 2025
+  raw_dir: data/raw
+  cache_format: parquet
+  exclude_seasons: [2020]
+
+target:
+  scoring: RTSPORTS
+  metric: ppg
+  predict_horizon: 0
+
+features:
+  quantitative_only: true
+
+eligibility:
+  candidate_games_played: [1]
+  selection_method: reliability_stabilization
+  reliability_target: 0.70
+  reliability_k_max: 1
+  report_full_grid: false
+  chosen_games_played: 1
+  chosen_snap_share: null
+
+scope:
+  players: rookie_draft_class
+
+validation:
+  scheme: walk_forward
+  test_block_seasons: 5
+  history_windows_years: [10, 20, 30]
+
+models:
+  baselines: []
+  candidates: [ridge, lasso, elasticnet, random_forest, lightgbm, xgboost]
+  stretch: [lambdamart, quantile_gbm]
+
+eras:
+  - name: capital_only
+    start_season: 1999
+    end_season: 1999
+    feature_blocks: [production, landing_context]
+  - name: capital_plus_combine
+    start_season: 2000
+    end_season: null
+    feature_blocks: [production, landing_context, combine]
+
+era_modeling:
+  strategy: separate
+  route_by: feature_season
+  combine: val_weighted
+  combine_alternatives: [mean, recency_weighted]
+
+benchmark:
+  use_market_data: false
+  as_feature: false
+  sources: []
+
+metrics:
+  regression: [mae, rmse, r2]
+  ranking: [spearman, kendall, ndcg_at_k, precision_at_k]
+  precision_at_k_tiers: [12, 24]
+
+reproducibility:
+  random_seed: 1729
+  results_dir: reports/results
+  figures_dir: reports/figures

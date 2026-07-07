@@ -15,9 +15,9 @@
     2025
   ],
   "min_season": 2016,
-  "pulled_at": "2026-06-23T17:18:08.993938+00:00",
+  "pulled_at": "2026-07-06T15:50:46.224317+00:00",
   "n_rows": 5933,
   "n_cols": 29,
-  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/ngs_passing.parquet",
-  "sha256": "322a9210002d82f028954718e15af5deb85224ecb98c0855affead61f2a1db9f"
+  "cache_path": "/Users/daryushnadimi/Desktop/Claude_Projects/Fantasy_Football_2026/position_predictor/sports/football/data/raw/ngs_passing.parquet",
+  "sha256": "8f4371472cd651fbf35b0bfae8d2cfafbf59d0dc6f6de87747352dcb48f18e8b"
 }

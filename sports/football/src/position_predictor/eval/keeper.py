@@ -11,18 +11,20 @@ subtract it from each projection, and rank everyone by VORP → a projected draf
 ranks the keepers: a player you keep at pick 100 who projects as a top-30 board slot is a +70
 steal. This is model-only — ECR stays a benchmark, never blended in.
 
-Scope: QB/RB/WR/TE (the modeled positions). K/DST and unmatched names are reported as *unscored*.
+Scope: QB/RB/WR/TE/K/DST (the modeled positions). Unmatched names are reported as *unscored*.
+DST's ``player_id``/``player_name`` are a team abbreviation/full name, not a real player — see
+``data/team_build.py`` — but the board/VORP math here is identical either way.
 """
 from __future__ import annotations
 
 import re
 
-# Per-team started slots. QB depth is set by league format. TE gets a dedicated slot (standard 1-TE
-# leagues) and its own replacement level, but is NOT flex-eligible here — flex is filled from RB/WR.
+# Per-team started slots. QB depth is set by league format. TE/K/DST get a dedicated slot each
+# and their own replacement level, but are NOT flex-eligible here — flex is filled from RB/WR.
 QB_SLOTS_PER_TEAM = {"1qb": 1.0, "sf": 1.7, "2qb": 2.0}
-DEFAULT_ROSTER = {"RB": 2, "WR": 2, "TE": 1, "FLEX": 1}   # excludes QB (set by format)
+DEFAULT_ROSTER = {"RB": 2, "WR": 2, "TE": 1, "K": 1, "DST": 1, "FLEX": 1}  # excludes QB (format)
 FLEX_POS = ("RB", "WR")
-MODELED_POS = ("QB", "RB", "WR", "TE")
+MODELED_POS = ("QB", "RB", "WR", "TE", "K", "DST")
 
 
 def replacement_levels(proj, *, teams, fmt, roster=None):
@@ -39,7 +41,8 @@ def replacement_levels(proj, *, teams, fmt, roster=None):
              for p in MODELED_POS}
     starters = {"QB": round(teams * QB_SLOTS_PER_TEAM[fmt]),
                 "RB": teams * roster["RB"], "WR": teams * roster["WR"],
-                "TE": teams * roster.get("TE", 0)}
+                "TE": teams * roster.get("TE", 0), "K": teams * roster.get("K", 0),
+                "DST": teams * roster.get("DST", 0)}
     # Flex (RB/WR-eligible here): hand each slot to whichever position's next-best player is higher.
     idx = {p: starters[p] for p in FLEX_POS}
     for _ in range(teams * roster.get("FLEX", 0)):
@@ -102,7 +105,7 @@ def resolve_players(board, picks):
             row = by_norm[near[0]] if near else None
         if row is None:
             unmatched.append({"player": p["player"], "pick": p.get("pick"),
-                              "reason": "no projection (TE/K/DST or name not matched)"})
+                              "reason": "no projection (name/team not matched)"})
             continue
         rec = row.to_dict()
         rec["pick"] = p["pick"]

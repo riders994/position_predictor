@@ -1,0 +1,43 @@
+{
+  "sport": "football",
+  "position": "WR",
+  "version": "v1",
+  "test_label_seasons": [
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "windows": [
+    10,
+    20,
+    30
+  ],
+  "chosen_cutoff_games": 1,
+  "headline": {
+    "best_model": "ridge",
+    "best_combine": "recency_weighted",
+    "window_years": 30,
+    "spearman_mean": 0.6210049565747149,
+    "precision_at_12_mean": 0.6833333333333333,
+    "mae_mean": 2.846779963326572
+  },
+  "data_volume": {
+    "n_feature_rows": 821,
+    "n_labeled_rows": 788,
+    "n_features": 18,
+    "season_min": 1999,
+    "season_max": 2026,
+    "n_seasons": 27,
+    "per_era_rows": {
+      "capital_only": 25,
+      "capital_plus_combine": 763
+    }
+  },
+  "compute": {
+    "total_fit_seconds": 9.525332917750347,
+    "wall_seconds": 11.743656000006013,
+    "mean_fit_seconds_per_model": 0.21540347921028216
+  }
+}

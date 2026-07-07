@@ -192,9 +192,7 @@ def _board_with_risk(config, *, draft_season, signal, seed):
     from .projection import project_position
     from ..utils.io import DATA_PROCESSED, read_parquet
 
-    sport = config.get("experiment.sport", "football")
-    position = config.require("experiment.position")
-    stem = f"{sport}_{position}".lower()
+    stem = config.stem()
     seed = int(seed if seed is not None else config.get("reproducibility.random_seed", 1729))
     horizon = int(config.get("target.predict_horizon", 1))
     cutoff = int(config.get("eligibility.chosen_games_played", 4))

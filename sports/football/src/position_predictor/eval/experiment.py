@@ -52,8 +52,11 @@ def _eval_row(elig_df, pred, k_tiers):
     return {**m, **r}
 
 
-def _test_label_seasons(df, k):
-    label_seasons = sorted(int(s) + 1 for s in df.loc[df[TARGET].notna(), "season"].unique())
+def _test_label_seasons(df, k, horizon=1):
+    """Label seasons = feature season + ``horizon`` (0 for a same-season cohort — e.g. the rookie
+    model, which predicts a draft-year outcome from draft-day-known info, not a next-season roll
+    forward)."""
+    label_seasons = sorted(int(s) + horizon for s in df.loc[df[TARGET].notna(), "season"].unique())
     return label_seasons[-k:]
 
 
@@ -85,6 +88,12 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
     candidates = models or config.get("models.candidates",
                                       ["ridge", "lasso", "elasticnet", "random_forest",
                                        "lightgbm", "xgboost"])
+    # Every existing config already lists all 4 real baseline names here, so wiring this up is a
+    # no-op for them — it exists so a cohort with no meaningful "prior season" (the rookie model:
+    # persistence/smoothed_history/mean_reversion/linear all key off `ppg`, which in that table
+    # *is* the label itself) can cleanly opt out via `models.baselines: []` instead of scoring
+    # baselines that would trivially leak the target.
+    baseline_names = set(config.get("models.baselines", list(BASELINES)))
     combiners = combiners or [config.get("era_modeling.combine", "val_weighted"),
                               *config.get("era_modeling.combine_alternatives", [])]
     if fast:  # quick smoke configuration
@@ -93,13 +102,13 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
         windows = windows[:2]
 
     eras = load_eras(config)
-    stem = f"{sport}_{position}".lower()
+    stem = config.stem()
     df = read_parquet(DATA_PROCESSED / f"{stem}_features.parquet").rename(
         columns={"target_ppg_next": TARGET})
     block_columns = json.load(open(DATA_PROCESSED / f"{stem}_feature_blocks.json"))
     df = _attach_market(df, stem, horizon)  # adds 'market_ecr' (NaN where unranked / missing)
 
-    test_labels = _test_label_seasons(df, k_block)
+    test_labels = _test_label_seasons(df, k_block, horizon)
     test_feat_seasons = [s - horizon for s in test_labels]
     base_key = {"sport": sport, "position": position}
 
@@ -135,6 +144,8 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
 
         # ---- baselines (era-agnostic; refit on this window) ----
         for name, fn in BASELINES.items():
+            if name not in baseline_names:
+                continue
             def _predict(test_rows, _fn=fn, _train=train):
                 return _fn(_train, test_rows, target_col=TARGET, seed=seed)
             rank_rows += _score_over_folds(
@@ -322,11 +333,16 @@ def _availability_over_folds(train, df, eras, block_columns, test_labels, horizo
         if len(test) < 5:
             continue
         pred = est.predict(test[cols])
-        base = test["games"].to_numpy(dtype=float)  # prior-season games baseline
         m = availability_metrics(test[GAMES_TARGET], pred, cutoff=g_star)
-        b = availability_metrics(test[GAMES_TARGET], base, cutoff=g_star)
         rows.append({**key, "test_season": int(label), "model": "gbm_poisson", **m})
-        rows.append({**key, "test_season": int(label), "model": "baseline_prior_games", **b})
+        if horizon > 0:
+            # "games" (this season) vs GAMES_TARGET (next season) are genuinely different
+            # quantities for the normal N -> N+1 cohorts, so this is a real persistence baseline.
+            # For a horizon=0 same-season cohort (the rookie model) they're literally the same
+            # column — comparing the target to itself, not a baseline.
+            base = test["games"].to_numpy(dtype=float)  # prior-season games baseline
+            b = availability_metrics(test[GAMES_TARGET], base, cutoff=g_star)
+            rows.append({**key, "test_season": int(label), "model": "baseline_prior_games", **b})
     return rows
 
 

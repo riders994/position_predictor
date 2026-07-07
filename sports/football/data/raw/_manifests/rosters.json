@@ -32,9 +32,9 @@
     2025
   ],
   "min_season": 1999,
-  "pulled_at": "2026-06-23T17:18:06.244153+00:00",
+  "pulled_at": "2026-07-06T15:50:35.887207+00:00",
   "n_rows": 66480,
   "n_cols": 36,
-  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/rosters.parquet",
-  "sha256": "af91191cafd04b8e657d3771a6aee07be3ec17f00bdc3ed34d72cbf5e59ffc08"
+  "cache_path": "/Users/daryushnadimi/Desktop/Claude_Projects/Fantasy_Football_2026/position_predictor/sports/football/data/raw/rosters.parquet",
+  "sha256": "b330d18dc495994947e1261db7ce26a4c38fad6742608ab0e960c0b14aaa0e7d"
 }

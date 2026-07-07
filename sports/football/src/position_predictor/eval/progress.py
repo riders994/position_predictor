@@ -65,7 +65,7 @@ def build_progress(config, *, write: bool = True):
 
     sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position")
-    stem = f"{sport}_{position}".lower()
+    stem = config.stem()
     versions_dir = REPORTS_DIR / "versions" / stem
     if not versions_dir.exists():
         return None

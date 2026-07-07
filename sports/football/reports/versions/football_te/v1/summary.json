@@ -18,12 +18,12 @@
   "headline": {
     "best_model": "lasso",
     "best_combine": "val_weighted",
-    "window_years": 30,
-    "spearman_mean": 0.743993086233808,
-    "precision_at_12_mean": 0.5666666666666667,
-    "mae_mean": 1.8303726810197538,
+    "window_years": 20,
+    "spearman_mean": 0.743847534309418,
+    "precision_at_12_mean": 0.5833333333333334,
+    "mae_mean": 1.8850892949925462,
     "best_baseline": "linear",
-    "best_baseline_spearman_mean": 0.7260693327455681
+    "best_baseline_spearman_mean": 0.727286391358856
   },
   "data_volume": {
     "n_feature_rows": 3027,
@@ -39,8 +39,8 @@
     }
   },
   "compute": {
-    "total_fit_seconds": 38.141778166000165,
-    "wall_seconds": 66.84886137299998,
-    "mean_fit_seconds_per_model": 0.7417069964444573
+    "total_fit_seconds": 32.66084816813236,
+    "wall_seconds": 48.10612629103707,
+    "mean_fit_seconds_per_model": 0.6664394098916091
   }
 }

@@ -32,9 +32,7 @@ def main() -> int:
     if text is None:
         print("[progress] no version snapshots found under reports/versions/ — nothing to do.")
         return 0
-    sport = cfg.get("experiment.sport", "sport")
-    position = cfg.require("experiment.position")
-    stem = f"{sport}_{position}".lower()
+    stem = cfg.stem()
     print(text)
     print(f"\n[progress] wrote reports/versions/{stem}/PROGRESS_{stem}.md")
     return 0
