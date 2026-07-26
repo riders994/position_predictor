@@ -1925,6 +1925,60 @@ the results of the other models?")_
   (cfb_player_id is not usable), §4.2 what stage 3 established, §5.1 N ladder → ever_breakout 38 /
   late 9.
 
+## Entry 058 — QB breakout stage 4: CFBD extension + a comparability test before splicing
+
+**Date:** 2026-07-26
+
+**Prompt (full text):**
+
+> Here's a CFBD api key: [redacted — stored at `~/.config/cfbd/api_key`, chmod 600, outside the repo]
+
+**Response notes:**
+- **Key handling first.** Written to `~/.config/cfbd/api_key` (0600), outside the repository.
+  `data/cfbd.py:api_key()` reads `CFBD_API_KEY` first, then that file, and exits with instructions
+  if neither exists. Verified by grep that the key string appears nowhere in the tree — not in
+  code, reports, manifests or commit messages.
+- **This closes the one outstanding data gap.** cfbfastR-data stops at 2021, so the college layer
+  could describe history but not score a current prospect — the thing the project exists to do.
+  CFBD covers 2013-present. Fetched **3,511 QB-seasons (2013-2025, ≥50 attempts)** →
+  `data/raw/cfbd_qb_seasons.parquet`.
+- **Endpoint dead end, recorded so it isn't retried:** CFBD `/plays` carries `ppa` but **no player
+  name or id fields** — the player appears only inside free-text `playText`. So play-level
+  aggregation the way cfbfastR allows is not possible here; the layer is built from
+  `/stats/player/season` + `/ppa/players/season` instead, and **games played is absent rather than
+  guessed**. PPA player-season aggregates begin 2013; passing stats are thin before that.
+- **The point of the stage is the comparability test, not the fetch.** Concatenating two
+  differently-derived series would put a source discontinuity at the 2021/2022 boundary that a
+  model would read as signal. So the two sources were joined on the 1,774-row 2013-2021 overlap
+  and measured:
+  - **Volume agrees**: attempts / yards / TDs correlate **0.98-0.99** — the same events counted twice.
+  - **Rushing attempts differ by ~16 per season**, and that gap correlates **0.78 with cfbfastR's
+    sack count**. CFBD follows the NCAA convention of charging sacks as rushing attempts; our
+    cfbfastR layer deliberately does not. The discrepancy *is* the convention, not an error.
+  - **Efficiency does not agree**: `ppa_pass` vs `pass_epa_per_db` correlates only **0.735**, on a
+    scale whose level shift exceeds the target's own mean.
+- **Calibration reported with the error it carries.** `fit_calibration` returns
+  `noise_ratio = resid_sd / target_sd` — the share of between-player spread the mapping *fails* to
+  reproduce. rush_share **0.216**, td_rate 0.273, YPA 0.279, completion_pct 0.429, int_rate 0.649,
+  **PPA→EPA 0.679**. rush_share is the clean case: slope 1.01, intercept −0.043 (exactly the sack
+  correction), r² 0.95.
+- **Consequence — a two-tier feature design, which is a real modelling constraint:**
+  - **Portable** (native and near-identical in both): completion %, YPA, TD rate, rush share, volume.
+    A model on these can be **fit on history and pointed at this year's class**.
+  - **cfbfastR-only**: EPA per dropback, success rate, adjusted yards per dropback — better
+    features, 2004-2021 only, so a **historical instrument**. Stage 6 fits both and reports what
+    portability costs; if the gap is large, that is itself the finding.
+  - Calibrated values are written as `*_est` with `efficiency_is_estimated=1` so an estimate can
+    never be mistaken downstream for a measurement.
+- **Incidental finding worth keeping:** cfbfastR averages only **8.8 games per QB-season** — its
+  play-by-play has game gaps, so its *totals* understate while its *rates* are fine. Reinforces the
+  existing preference for `final_*` over `career_*` features.
+- **Bug fixed:** `/stats/player/season` omits a stat type entirely when a player has none of it, so
+  a whole column could be missing for a season and derived columns raised `KeyError: 'pass_yds'`.
+  The frame is now reindexed to a guaranteed schema.
+- 10 new tests (**256 total**), ruff clean. Plan gains §2.5 (extension, calibration table, two-tier
+  design); stages table renumbered (the cancelled HS scrape is now 3b) with CFBD as stage 4.
+
 ---
 
 <!-- Template for new entries:

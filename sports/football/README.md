@@ -78,6 +78,7 @@ covariate.
 make -C sports/football fetch                                     # once, shared caches
 uv run python sports/football/scripts/qb_breakout_cohort.py       # cohort + labels
 uv run python sports/football/scripts/qb_breakout_college.py      # college layer + join
+uv run python sports/football/scripts/qb_breakout_cfbd.py         # CFBD extension (needs a key)
 uv run python sports/football/scripts/qb_breakout_recruiting.py   # HS layer (optional)
 ```
 
@@ -95,6 +96,17 @@ yardage to rushing, which understates mobile QBs badly. 3,419 QB-seasons, 88% ma
 cohort for 2005+ entrants, unbiased across outcomes. **9 late breakouts carry a college profile**
 (vs 6 for high school), and `ever_breakout` has 38 — the actual modelling sample.
 
+cfbfastR stops publishing after 2021, which is fine for fitting but means the layer cannot score
+*this year's* prospects. [CFBD](https://collegefootballdata.com) closes that gap (2013-present,
+free API key in `CFBD_API_KEY` or `~/.config/cfbd/api_key` — never in the repo), and the two
+sources were compared on their overlap rather than assumed interchangeable. Volume splices
+cleanly (r ≈ 0.99); **efficiency does not** — CFBD's PPA against cfbfastR's EPA per dropback
+correlates only 0.735, and a calibrated version would carry two-thirds of the between-player
+spread as error. So the features split into a **portable tier** (completion %, YPA, TD rate, rush
+share, volume) that can score current prospects, and a **cfbfastR-only tier** (EPA, success rate)
+that is a historical instrument. Stage 6 fits both and reports what portability costs.
+
 Write-ups: [`reports/REPORT_qb_breakout_cohort.md`](reports/REPORT_qb_breakout_cohort.md),
-[`reports/REPORT_qb_breakout_college.md`](reports/REPORT_qb_breakout_college.md);
+[`reports/REPORT_qb_breakout_college.md`](reports/REPORT_qb_breakout_college.md),
+[`reports/REPORT_qb_breakout_cfbd.md`](reports/REPORT_qb_breakout_cfbd.md);
 design: [`docs/QB_BREAKOUT_PLAN.md`](docs/QB_BREAKOUT_PLAN.md).

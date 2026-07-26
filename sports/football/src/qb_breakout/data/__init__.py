@@ -4,6 +4,13 @@
 measured but demoted to an optional covariate (see ``docs/QB_BREAKOUT_PLAN.md`` §2.3).
 """
 
+from .cfbd import (
+    FIRST_PPA_SEASON,
+    apply_calibration,
+    build_cfbd_qb_seasons,
+    compare_to_cfbfastr,
+    fit_calibration,
+)
 from .college import (
     FIRST_PBP_SEASON,
     LAST_PBP_SEASON,
@@ -23,6 +30,12 @@ from .recruiting import (
 )
 
 __all__ = [
+    # college — current-season extension (CFBD, needs a free API key)
+    "FIRST_PPA_SEASON",
+    "build_cfbd_qb_seasons",
+    "compare_to_cfbfastr",
+    "fit_calibration",
+    "apply_calibration",
     # college (primary)
     "FIRST_PBP_SEASON",
     "LAST_PBP_SEASON",

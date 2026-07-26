@@ -59,7 +59,8 @@ bridge to college data.
 
 | Layer | Status | Source | Key | Coverage |
 |---|---|---|---|---|
-| **College — production** | **primary** | **cfbfastR-data** parquet (public GitHub) | name + school | **2004–2021** |
+| **College — production** | **primary (fitting)** | **cfbfastR-data** parquet (public GitHub) | name + school | **2004–2021** |
+| College — current seasons | **scoring extension** | **CFBD** `/stats/player/season` + `/ppa/players/season` (free key) | name + school | **2013–current** |
 | College — roster/bio | available | `sportsdataverse.cfb.load_cfb_rosters` | `athlete_id` | 2003– |
 | High school — recruiting | built, **demoted** (§2.3) | ESPN recruiting API (no key) | name + class year | 2006– |
 | High school — box scores | **cancelled** (§2.3) | — | — | — |
@@ -81,8 +82,48 @@ Two boundaries on the college source, both found by building it and both real:
 - **Ceiling 2021.** cfbfastR-data publishes no further, and `sportsdataverse` reads the same repo,
   so this is the source's limit rather than a fetch bug. It costs **nothing for fitting** (a QB
   whose last college season is 2022+ enters the NFL in 2023+ and is right-censored anyway), but it
-  does mean this layer **cannot score today's prospects**. Closing that gap needs a free CFBD API
-  key or an ESPN-based loader — the one outstanding data decision.
+  did mean the layer could not score today's prospects. **Resolved in stage 4** by adding CFBD
+  (§2.5), which covers the current season.
+
+### 2.5 CFBD: the current-season extension, and what may not be spliced
+
+CFBD covers through the present season and closes the scoring gap. It is *not* interchangeable
+with cfbfastR, and that was measured on the 2013–2021 overlap (1,774 joined QB-seasons) rather
+than assumed — full evidence in `REPORT_qb_breakout_cfbd.md`.
+
+**Volume agrees** (attempts/yards/TD correlate 0.99). Two systematic offsets both have
+explanations: CFBD charges sacks as rushing attempts per NCAA convention (the ~16-attempt gap
+correlates 0.78 with cfbfastR's sack count), and **cfbfastR runs low on totals** because its
+play-by-play has game gaps — it averages 8.8 games per QB-season. Where both exist, CFBD's
+official season totals are the more accurate; cfbfastR's per-play *rates* are unaffected.
+
+**Efficiency does not agree.** Regressing each CFBD feature onto its cfbfastR counterpart and
+reading `noise_ratio` — the share of between-player spread the mapping fails to reproduce:
+
+| Feature | R² | noise ratio | Portable? |
+|---|---|---|---|
+| `rush_share` | 0.95 | 0.22 | yes — the −0.043 intercept *is* the sack correction |
+| `td_rate` | 0.93 | 0.27 | yes |
+| `yards_per_attempt` | 0.92 | 0.28 | yes |
+| `completion_pct` | 0.82 | 0.43 | yes, lossy |
+| `int_rate` | 0.58 | 0.65 | **no** — rare events, too noisy |
+| **PPA → EPA per dropback** | **0.54** | **0.68** | **no** |
+
+This forces a **two-tier feature set**, which is a real design constraint rather than bookkeeping:
+
+- **Portable tier** — completion %, yards per attempt, TD rate, rush share, volume. Computed
+  natively from both sources, so a model built on these can be **fit on history and used to score
+  current prospects**.
+- **cfbfastR-only tier** — EPA per dropback, success rate, adjusted yards per dropback. Better
+  features, 2004–2021 only. A model using them is a **historical instrument**: it can explain what
+  late breakouts looked like but cannot be pointed at this year's class.
+
+Stage 6 fits both and reports what the portable model gives up. If the gap is small the project
+gains a forward-looking tool; if it is large, that is itself a finding — the signal lives in
+precisely the measure that cannot be carried forward. Calibrated values are written `*_est` with
+`efficiency_is_estimated=1` so an estimate is never mistaken for a measurement.
+
+**Credentials.** `CFBD_API_KEY`, else `~/.config/cfbd/api_key`. Never stored in the repo.
 
 ### 2.3 High school: built, measured, set aside
 
@@ -194,11 +235,12 @@ score at all.
 | 1 | Cohort + labels + descriptive analysis | `qb_breakout_careers.parquet`, `REPORT_qb_breakout_cohort.md` | **done** |
 | 2 | High-school recruiting layer | `espn_recruits_qb.parquet`, `REPORT_qb_breakout_recruiting.md` | **done** |
 | 3 | College production layer | `cfb_qb_seasons.parquet`, `REPORT_qb_breakout_college.md` | **done** |
-| ~~4~~ | ~~Best-effort HS box-score scrape~~ | — | **cancelled** (§2.3) |
-| 5 | Archetypes (clustering on college features) | archetype assignments + profiles | planned |
+| ~~3b~~ | ~~Best-effort HS box-score scrape~~ | — | **cancelled** (§2.3) |
+| 4 | CFBD current-season extension + comparability test | `cfbd_qb_seasons.parquet`, `REPORT_qb_breakout_cfbd.md` | **done** |
+| 5 | Archetypes (clustering on college features) | archetype assignments + profiles | **next** |
 | 6 | Pre-NFL-only model — `ever_breakout` primary, lateness descriptive | model + honest validation | planned |
 
-**Stage 4 was cancelled and the project is now college-only** (§2.4). The recruiting layer's
+**The HS box-score scrape (stage 3b) was cancelled and the project is now college-only** (§2.4). The recruiting layer's
 floor at NFL entry ~2010 cuts off the entire 2001–2005 cluster of late breakouts; college
 play-by-play reaches back to entry ~2005 and nearly doubles the positives. A high-school scrape
 would have been sparser still on precisely the era it could least afford to lose.
