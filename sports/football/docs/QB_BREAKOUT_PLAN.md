@@ -85,46 +85,6 @@ Two boundaries on the college source, both found by building it and both real:
   did mean the layer could not score today's prospects. **Resolved in stage 4** by adding CFBD
   (§2.5), which covers the current season.
 
-### 2.5 CFBD: the current-season extension, and what may not be spliced
-
-CFBD covers through the present season and closes the scoring gap. It is *not* interchangeable
-with cfbfastR, and that was measured on the 2013–2021 overlap (1,774 joined QB-seasons) rather
-than assumed — full evidence in `REPORT_qb_breakout_cfbd.md`.
-
-**Volume agrees** (attempts/yards/TD correlate 0.99). Two systematic offsets both have
-explanations: CFBD charges sacks as rushing attempts per NCAA convention (the ~16-attempt gap
-correlates 0.78 with cfbfastR's sack count), and **cfbfastR runs low on totals** because its
-play-by-play has game gaps — it averages 8.8 games per QB-season. Where both exist, CFBD's
-official season totals are the more accurate; cfbfastR's per-play *rates* are unaffected.
-
-**Efficiency does not agree.** Regressing each CFBD feature onto its cfbfastR counterpart and
-reading `noise_ratio` — the share of between-player spread the mapping fails to reproduce:
-
-| Feature | R² | noise ratio | Portable? |
-|---|---|---|---|
-| `rush_share` | 0.95 | 0.22 | yes — the −0.043 intercept *is* the sack correction |
-| `td_rate` | 0.93 | 0.27 | yes |
-| `yards_per_attempt` | 0.92 | 0.28 | yes |
-| `completion_pct` | 0.82 | 0.43 | yes, lossy |
-| `int_rate` | 0.58 | 0.65 | **no** — rare events, too noisy |
-| **PPA → EPA per dropback** | **0.54** | **0.68** | **no** |
-
-This forces a **two-tier feature set**, which is a real design constraint rather than bookkeeping:
-
-- **Portable tier** — completion %, yards per attempt, TD rate, rush share, volume. Computed
-  natively from both sources, so a model built on these can be **fit on history and used to score
-  current prospects**.
-- **cfbfastR-only tier** — EPA per dropback, success rate, adjusted yards per dropback. Better
-  features, 2004–2021 only. A model using them is a **historical instrument**: it can explain what
-  late breakouts looked like but cannot be pointed at this year's class.
-
-Stage 6 fits both and reports what the portable model gives up. If the gap is small the project
-gains a forward-looking tool; if it is large, that is itself a finding — the signal lives in
-precisely the measure that cannot be carried forward. Calibrated values are written `*_est` with
-`efficiency_is_estimated=1` so an estimate is never mistaken for a measurement.
-
-**Credentials.** `CFBD_API_KEY`, else `~/.config/cfbd/api_key`. Never stored in the repo.
-
 ### 2.3 High school: built, measured, set aside
 
 The recruiting layer was built and works — 22,175 QB prospects, 87–93% match from 2010 on, and
@@ -169,6 +129,85 @@ varies by outcome would reshape the cohort invisibly. Both joins were checked fo
 both came back essentially flat across outcomes (§2.3, §4.2).
 
 ---
+
+### 2.5 CFBD: the current-season extension, and what may not be spliced
+
+CFBD covers through the present season and closes the scoring gap. It is *not* interchangeable
+with cfbfastR, and that was measured on the 2013–2021 overlap (1,774 joined QB-seasons) rather
+than assumed — full evidence in `REPORT_qb_breakout_cfbd.md`.
+
+**Volume agrees** (attempts/yards/TD correlate 0.99). Two systematic offsets both have
+explanations: CFBD charges sacks as rushing attempts per NCAA convention (the ~16-attempt gap
+correlates 0.78 with cfbfastR's sack count), and **cfbfastR runs low on totals** because its
+play-by-play has game gaps — it averages 8.8 games per QB-season. Where both exist, CFBD's
+official season totals are the more accurate; cfbfastR's per-play *rates* are unaffected.
+
+**Efficiency does not agree.** Regressing each CFBD feature onto its cfbfastR counterpart and
+reading `noise_ratio` — the share of between-player spread the mapping fails to reproduce:
+
+| Feature | R² | noise ratio | Portable? |
+|---|---|---|---|
+| `rush_share` | 0.95 | 0.22 | yes — the −0.043 intercept *is* the sack correction |
+| `td_rate` | 0.93 | 0.27 | yes |
+| `yards_per_attempt` | 0.92 | 0.28 | yes |
+| `int_rate` | 0.94 | 0.25 | yes — *after* §2.6; 0.65 before it |
+| `completion_pct` | 0.82 | 0.43 | yes, lossy |
+| **PPA → EPA per dropback** | **0.54** | **0.68** | **no** |
+
+`int_rate` is the instructive row. It first measured 0.65 and was written off as too noisy to
+carry; the real cause was §2.6 — cfbfastR records no interceptions at all in 2013, so a fifth of
+the overlap was regressing real CFBD values against fabricated zeros. Once those rows are nulled
+the same calibration is one of the tightest in the table. **A disagreement between two sources is
+a hypothesis about one of them, not a verdict on both.**
+
+This forces a **two-tier feature set**, which is a real design constraint rather than bookkeeping:
+
+- **Portable tier** — completion %, yards per attempt, TD rate, INT rate, rush share, volume.
+  Computed natively from both sources, so a model built on these can be **fit on history and used
+  to score current prospects**. Caveat: portable across *sources* is not the same as available
+  across *seasons* — cfbfastR only records interceptions in 2005 and 2014+ (§2.6), so `int_rate`
+  is missing for most pre-2014 college careers.
+- **cfbfastR-only tier** — EPA per dropback, success rate, adjusted yards per dropback. Better
+  features, 2004–2021 only. A model using them is a **historical instrument**: it can explain what
+  late breakouts looked like but cannot be pointed at this year's class.
+
+Stage 6 fits both and reports what the portable model gives up. If the gap is small the project
+gains a forward-looking tool; if it is large, that is itself a finding — the signal lives in
+precisely the measure that cannot be carried forward. Calibrated values are written `*_est` with
+`efficiency_is_estimated=1` so an estimate is never mistaken for a measurement.
+
+**Credentials.** `CFBD_API_KEY`, else `~/.config/cfbd/api_key`. Never stored in the repo.
+
+### 2.6 Missing flags that look like zeros
+
+cfbfastR does not populate every play flag in every season, and an unpopulated flag **aggregates
+to a clean zero rather than to a null**. That is the most dangerous shape a data defect can take:
+it is invisible, it is not missing, and in this case it reads as elite ball security.
+
+Measured season-level prevalence over 2004–2021, against real college rates of 2.5–3.3% (INT) and
+6–7% of dropbacks (sack):
+
+| Flag | Seasons where it is not recorded | Observed rate there |
+|---|---|---|
+| `int` | 2004, **2006–2013** | 0.000–0.004 |
+| `sack` | **2013** | 0.001 |
+
+Untreated, every QB who played 2006–2013 carries a fabricated interception rate of zero — which
+covers Cam Newton, Russell Wilson, Andy Dalton, Nick Foles, Kirk Cousins and Ryan Tannehill, and
+would have made "never turns it over" the single loudest false archetype in stage 5. The 2013 sack
+hole is narrower but worse per row: sack plays are missing from the play-by-play entirely that
+year, so dropbacks collapse to attempts and every dropback-denominated rate is inflated.
+
+`college.py` checks a **minimum plausible prevalence per season at build time** (`FLAG_FLOORS`)
+and nulls the affected columns when a flag fails, rather than hard-coding the year list — the
+upstream repo could backfill, and the same failure could appear in a season not yet published.
+`season_flag_quality()` reports the evidence, and each season carries `int_recorded` /
+`sacks_recorded`. Career interception totals are nulled unless *every* season in the career
+recorded them, since a total summed across a hole is not a total.
+
+**This was found by sanity-checking a season-level aggregate against known real-world rates**, not
+by any test — the code was correct and the data was not. Any new play-derived column deserves the
+same check before it is modelled on.
 
 ## 3. Label construction
 
@@ -237,8 +276,8 @@ score at all.
 | 3 | College production layer | `cfb_qb_seasons.parquet`, `REPORT_qb_breakout_college.md` | **done** |
 | ~~3b~~ | ~~Best-effort HS box-score scrape~~ | — | **cancelled** (§2.3) |
 | 4 | CFBD current-season extension + comparability test | `cfbd_qb_seasons.parquet`, `REPORT_qb_breakout_cfbd.md` | **done** |
-| 5 | Archetypes (clustering on college features) | archetype assignments + profiles | **next** |
-| 6 | Pre-NFL-only model — `ever_breakout` primary, lateness descriptive | model + honest validation | planned |
+| 5 | Archetypes (clustering on college style) | `qb_breakout_archetypes.parquet`, `REPORT_qb_breakout_archetypes.md` | **done** |
+| 6 | Pre-NFL-only model — sustained breakout primary, lateness descriptive | model + honest validation | **next** |
 
 **The HS box-score scrape (stage 3b) was cancelled and the project is now college-only** (§2.4). The recruiting layer's
 floor at NFL entry ~2010 cuts off the entire 2001–2005 cluster of late breakouts; college
@@ -270,6 +309,36 @@ Building from play-by-play rather than a season-stats table paid for itself twic
 box scores conflate. Mayfield's 2015 reads as 405 official rushing yards but 604 on actual rush
 plays with the difference lost on 39 sacks — the distinction between measuring mobility and
 measuring pass protection.
+
+### 4.3 What stage 5 established
+
+**The archetype taxonomy is a partition of a continuum, not a discovery of natural kinds.**
+Silhouette peaks at k=2 and never rises above 0.24 — college QB style has no gaps in it. k=4 is
+chosen as a local maximum where every cluster has an obvious name, and the report says so rather
+than implying the algorithm found four species.
+
+**Clustering on style required actively removing quality.** The check is the share of
+within-season EPA variance falling *between* archetypes: 0.56 clustering on quality stats, 0.31
+with `completion_pct` included, **0.14** for the feature set kept, 0.03 for mobility alone.
+Completion percentage is an accuracy measure but also the most quality-loaded rate a QB has, so it
+was cut from the fit and kept as a profile column. The four survivors are `rush_share`,
+`rush_yds_per_att`, `rush_td_share` and `yards_per_completion` — all portable-tier, so an
+archetype fitted on 2004–2021 can be assigned to a current prospect. Nothing per-game is used,
+because CFBD exposes no games-played and a per-game feature would be un-assignable to exactly the
+prospects the taxonomy exists to judge.
+
+**The algorithm recovered a 2×2 nobody asked for.** At k=4 the centroids land one per quadrant of
+mobility × depth-of-target: Quick-Game Pocket Passer, Downfield Pocket Passer, Short-Game Runner,
+Downfield Dual-Threat. Names are derived from *centroid position*, not the k-means label integer,
+so **99.1%** of seasons keep their name under a different seed — label integers would have
+permuted wholesale.
+
+**The one real result, and its limit.** Among 211 matched QBs with a settled outcome,
+`pocket_quick` produces a sustained breakout at **0.05 (3/60)** against `runner_downfield` at
+**0.28 (9/32)**, intervals non-overlapping, permutation p = 0.034. Among the 38 who did break out,
+archetype does **not** predict whether it happened late (p = 0.064, 9 positives). Neither result
+licenses archetype as a standalone classifier; the first is a prior for stage 6, the second is a
+statement about power.
 
 ---
 

@@ -1979,6 +1979,90 @@ the results of the other models?")_
 - 10 new tests (**256 total**), ruff clean. Plan gains §2.5 (extension, calibration table, two-tier
   design); stages table renumbered (the cancelled HS scrape is now 3b) with CFBD as stage 4.
 
+## Entry 059 — QB breakout stage 5: college archetypes, and a data defect found on the way
+
+**Date:** 2026-07-26
+
+**Prompt (full text):**
+
+> Go for it
+
+**Response notes:**
+
+**A defect in stage 3, found before building on top of it.** Sanity-checking the college
+QB-season aggregate against known real-world rates showed cfbfastR **does not populate every play
+flag in every season**, and an unpopulated flag aggregates to a clean **zero rather than a null**:
+
+- `int` is absent in **2004 and 2006–2013** (observed rate 0.000–0.004 vs a real 2.5–3.3%)
+- `sack` is absent in **2013** (0.001 vs a real 6–7% of dropbacks); sack plays are missing from
+  the play-by-play entirely that year, so dropbacks collapse to attempts
+
+This is the most dangerous shape a defect can take — nothing is missing, nothing errors, and every
+QB who played 2006–2013 simply appears never to have thrown an interception. Cam Newton, Russell
+Wilson, Andy Dalton, Nick Foles, Kirk Cousins and Ryan Tannehill all sat in that window, and
+"never turns it over" would have been the loudest false archetype in this stage.
+
+Fixed in `college.py` with `FLAG_FLOORS` + `mask_unreliable_flags()`: a **minimum plausible
+season-level prevalence** is checked at build time and the affected columns nulled when a flag
+fails — not a hard-coded year list, since upstream could backfill and the same failure could
+appear in a season not yet published. `season_flag_quality()` reports the evidence, each season
+carries `int_recorded`/`sacks_recorded`, and a career INT total is nulled unless *every* season in
+it recorded them. The repair is idempotent and was applied to the cached aggregate.
+
+**It also invalidated a stage-4 conclusion, in the good direction.** The CFBD calibration had
+`int_rate` at noise ratio **0.649** — written off as "rare events, too noisy to carry". A fifth of
+the overlap was 2013, regressing real CFBD values against fabricated zeros. With those rows nulled
+the same calibration is **0.253**, one of the tightest in the table, and INT rate moves into the
+portable tier. *A disagreement between two sources is a hypothesis about one of them, not a
+verdict on both.*
+
+**Stage 5 proper — archetypes.** New `qb_breakout/archetypes/` package,
+`scripts/qb_breakout_archetypes.py`, `REPORT_qb_breakout_archetypes.md`.
+
+- **Style, not quality — enforced by measurement, not intention.** Clustering on efficiency
+  returns a leaderboard with four bins. The check is the share of within-season EPA variance
+  falling *between* archetypes: **0.56** clustering on quality stats (control), **0.31** with
+  `completion_pct` in, **0.14** for the set kept, **0.03** for mobility alone. Completion
+  percentage is an accuracy measure but also the most quality-loaded rate a QB has, so it was cut
+  and kept as a profile column.
+- **Final four features:** `rush_share`, `rush_yds_per_att`, `rush_td_share`,
+  `yards_per_completion` (depth-of-target proxy — dividing yards by *completions* rather than
+  attempts removes the accuracy term). All portable-tier, so the taxonomy can be assigned to a
+  current prospect. Nothing per-game, deliberately: CFBD exposes no games-played, and a per-game
+  feature would be un-assignable to exactly the prospects this exists to judge.
+- **Z-scored within season.** Without it the first split found is a decade, not a style.
+- **Fitted on ≥150 dropbacks, assigned to everything** — the basketball project's attempt-gating
+  lesson back-applied. Thin seasons still get an archetype; they just don't get to pull a centroid.
+- **The algorithm recovered a 2×2 it was never told to look for**: at k=4 the centroids land one
+  per quadrant of mobility × depth. Quick-Game Pocket Passer (Stroud, Foles, Kellen Moore,
+  Haskins), Downfield Pocket Passer (Bradford, Winston, Burrow), Short-Game Runner (Colt McCoy,
+  Locker), Downfield Dual-Threat (Kyler Murray, RG3, Mariota, Hurts).
+- **Names derive from centroid position, not the k-means label integer** — refit with a different
+  seed and **99.1%** of seasons keep their name, where label integers permute wholesale. Directly
+  back-applies the basketball refit's renaming cascade.
+- **Honest about k:** silhouette peaks at k=2 and never exceeds 0.24. Style is a continuum; k=4 is
+  a partition of it chosen because every cluster has an obvious name, and the report says so.
+
+**Result, with its limits stated:** among 211 matched QBs with a settled outcome, `pocket_quick`
+produces a sustained breakout at **0.05 (3/60)** vs `runner_downfield` at **0.28 (9/32)**,
+non-overlapping intervals, permutation p = **0.034**. Among the 38 who did break out, archetype
+does **not** predict lateness (p = 0.064). Reported with Wilson intervals and a permutation null
+rather than a chi-square, because the cells are single-digit.
+
+**Two bugs of my own, both caught by tests I wrote to fail:**
+- The outcome cross-tab first used `ever_breakout` — the **single-bar top-15 diagnostic** (52
+  matched), not the project's two-bar label (38). It inflated every rate on the page. Outcomes are
+  now specs carrying the population they are defined over, and `late_sustained` is labelled as
+  conditional on having broken out at all rather than reported as a rate over everyone.
+- The report's conclusion paragraph asserted "not evidence of anything" while the computed p was
+  0.030. The verdict prose is now **generated from the p-values** (`build_verdict`), the same
+  discipline the cohort script already uses.
+- A zero-variance season produced **NaN, not null**, in the z-score — NaN passes a null check and
+  reaches k-means. Fixed in both the standardiser and the usability filter.
+
+13 new tests (**216 football tests**), ruff clean. Plan gains §2.6 (missing flags), §4.3 (what
+stage 5 established), corrected §2.5 calibration table; stages table has 5 done, 6 next.
+
 ---
 
 <!-- Template for new entries:

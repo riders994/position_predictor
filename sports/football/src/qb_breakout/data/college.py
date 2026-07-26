@@ -59,6 +59,26 @@ PBP_COLUMNS = [
 # holder, or a wildcat back — not someone whose efficiency is measurable.
 MIN_DROPBACKS = 50
 
+# cfbfastR does not populate every play flag in every season, and an unpopulated flag aggregates
+# to a perfectly clean **zero** rather than to a null. Downstream that reads as "this quarterback
+# threw no interceptions all year" instead of "this season does not record interceptions", which
+# is the more dangerous of the two failures — it is invisible and it looks like elite ball
+# security. Measured season-level prevalence across 2004–2021:
+#
+#   ``int``   unpopulated in 2004 (0.004) and 2006–2013 (0.000); real college rate is 2.5–3.3%
+#   ``sack``  unpopulated in 2013 (0.001); real rate is 6–7% of dropbacks
+#
+# Rather than hard-code those years — the upstream repo could backfill them, and the same failure
+# could appear in a season not yet published — the floors below are checked per season at build
+# time and the affected columns are nulled when a flag is missing. Each entry maps a counting
+# column to (denominator, minimum plausible rate, columns invalidated when it fails).
+FLAG_FLOORS = {
+    "interceptions": ("attempts", 0.010,
+                      ("interceptions", "int_rate")),
+    "sacks": ("dropbacks", 0.020,
+              ("sacks", "sack_yds", "sack_rate", "adj_yards_per_dropback")),
+}
+
 
 def pbp_url(season: int) -> str:
     return PBP_URL.format(season=season)
@@ -180,12 +200,80 @@ def aggregate_qb_seasons(pbp, *, min_dropbacks: int = MIN_DROPBACKS):
     ).sort(["season", "pass_epa"], descending=[False, True])
 
 
+def season_flag_quality(qb_seasons):
+    """Report, per season, whether each play flag was actually populated upstream.
+
+    Returns one row per (season, flag) with the observed rate, the floor it was judged against,
+    and whether it passed. This is the evidence behind :func:`mask_unreliable_flags`, and it is
+    worth reading directly before trusting any season-spanning total.
+    """
+    import polars as pl
+
+    rows = []
+    for count_col, (denom_col, floor, _) in FLAG_FLOORS.items():
+        if count_col not in qb_seasons.columns or denom_col not in qb_seasons.columns:
+            continue
+        per_season = qb_seasons.group_by("season").agg(
+            rate=pl.col(count_col).sum() / pl.col(denom_col).sum()
+        )
+        rows.append(per_season.with_columns(
+            flag=pl.lit(count_col),
+            floor=pl.lit(floor),
+            recorded=(pl.col("rate") >= floor).cast(pl.Int8),
+        ))
+    if not rows:
+        return pl.DataFrame()
+    return pl.concat(rows).select(["season", "flag", "rate", "floor", "recorded"]).sort(
+        ["flag", "season"])
+
+
+def mask_unreliable_flags(qb_seasons):
+    """Null out columns for seasons where the underlying play flag was never populated.
+
+    Idempotent: a column already nulled aggregates to a rate of null, which fails the floor and is
+    simply nulled again. Adds one ``{flag}_recorded`` indicator per flag so a consumer can filter
+    on data availability instead of silently averaging over a hole.
+    """
+    import polars as pl
+
+    if qb_seasons.height == 0 or "season" not in qb_seasons.columns:
+        return qb_seasons
+
+    out = qb_seasons
+    for count_col, (denom_col, floor, invalidated) in FLAG_FLOORS.items():
+        if count_col not in out.columns or denom_col not in out.columns:
+            continue
+        rates = out.group_by("season").agg(
+            _rate=pl.col(count_col).sum() / pl.col(denom_col).sum()
+        )
+        bad = set(rates.filter(
+            pl.col("_rate").is_null() | (pl.col("_rate") < floor)
+        )["season"].to_list())
+        indicator = f"{count_col.replace('interceptions', 'int')}_recorded"
+        out = out.with_columns(
+            (~pl.col("season").is_in(list(bad))).cast(pl.Int8).alias(indicator)
+        )
+        if not bad:
+            continue
+        out = out.with_columns([
+            pl.when(pl.col("season").is_in(list(bad)))
+            .then(None)
+            .otherwise(pl.col(c))
+            .alias(c)
+            for c in invalidated if c in out.columns
+        ])
+    return out
+
+
 def build_college_qb_seasons(seasons, *, cache_dir=None, progress=None,
                              min_dropbacks: int = MIN_DROPBACKS):
     """Aggregate several seasons of play-by-play into one QB-season table.
 
     Each season is loaded, reduced, and released before the next, so peak memory stays at roughly
     one season rather than the whole span.
+
+    Unpopulated upstream flags are nulled per season rather than left as zeros — see
+    :func:`mask_unreliable_flags`.
     """
     import polars as pl
 
@@ -199,7 +287,7 @@ def build_college_qb_seasons(seasons, *, cache_dir=None, progress=None,
         del pbp
     if not frames:
         return pl.DataFrame()
-    return pl.concat(frames, how="diagonal_relaxed")
+    return mask_unreliable_flags(pl.concat(frames, how="diagonal_relaxed"))
 
 
 def add_career_features(qb_seasons):
@@ -240,6 +328,10 @@ def add_career_features(qb_seasons):
         career_pass_yds=pl.col("pass_yds").sum(),
         career_pass_td=pl.col("pass_td").sum(),
         career_int=pl.col("interceptions").sum(),
+        # Seasons whose interceptions are actually recorded. A career total summed over a span
+        # that includes an unrecorded season is not a career total, so it is nulled below rather
+        # than reported low.
+        _int_seasons=pl.col("int_recorded").sum() if "int_recorded" in df.columns else pl.lit(None),
         career_rush_yds=pl.col("rush_yds").sum(),
         career_rush_td=pl.col("rush_td").sum(),
         career_games=pl.col("games").sum(),
@@ -274,4 +366,9 @@ def add_career_features(qb_seasons):
         # A career that starts in the first covered season is almost certainly clipped: we cannot
         # tell a true freshman starter from a senior whose earlier years are off-camera.
         college_career_truncated=(pl.col("first_season") <= FIRST_PBP_SEASON).cast(pl.Int8),
-    ).drop(["_epa_by_season", "career_completion_pct"])
+        # A career interception total is only a total if every season in it recorded them.
+        career_int=pl.when(pl.col("_int_seasons") == pl.col("n_college_seasons"))
+        .then(pl.col("career_int"))
+        .otherwise(None),
+        int_seasons_recorded=pl.col("_int_seasons"),
+    ).drop(["_epa_by_season", "career_completion_pct", "_int_seasons"])

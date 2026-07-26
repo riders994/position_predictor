@@ -79,6 +79,7 @@ make -C sports/football fetch                                     # once, shared
 uv run python sports/football/scripts/qb_breakout_cohort.py       # cohort + labels
 uv run python sports/football/scripts/qb_breakout_college.py      # college layer + join
 uv run python sports/football/scripts/qb_breakout_cfbd.py         # CFBD extension (needs a key)
+uv run python sports/football/scripts/qb_breakout_archetypes.py   # style archetypes
 uv run python sports/football/scripts/qb_breakout_recruiting.py   # HS layer (optional)
 ```
 
@@ -106,7 +107,22 @@ spread as error. So the features split into a **portable tier** (completion %, Y
 share, volume) that can score current prospects, and a **cfbfastR-only tier** (EPA, success rate)
 that is a historical instrument. Stage 6 fits both and reports what portability costs.
 
+Archetypes are clustered on **style, not quality** — clustering on efficiency returns a
+leaderboard with four bins, so the feature set is four rate stats describing mobility and depth of
+target, and the quality columns are held out to check the result. The check is the share of
+within-season EPA variance falling between clusters: 0.56 clustering on quality stats, 0.14 for
+the set kept. At k=4 the centroids land one per quadrant of mobility × depth — a 2×2 nobody asked
+for — giving the Quick-Game Pocket Passer, Downfield Pocket Passer, Short-Game Runner and
+Downfield Dual-Threat. Names come from centroid position rather than the k-means label integer, so
+99% of seasons keep their name under a different random seed.
+
+The one result that survives a permutation test: quick-game pocket passers produce a sustained
+breakout at **0.05 (3/60)** against **0.28 (9/32)** for downfield dual-threats (p = 0.034). Among
+QBs who *did* break out, archetype does not predict whether it happened late (p = 0.064, 9
+positives) — a statement about power as much as about football.
+
 Write-ups: [`reports/REPORT_qb_breakout_cohort.md`](reports/REPORT_qb_breakout_cohort.md),
 [`reports/REPORT_qb_breakout_college.md`](reports/REPORT_qb_breakout_college.md),
-[`reports/REPORT_qb_breakout_cfbd.md`](reports/REPORT_qb_breakout_cfbd.md);
+[`reports/REPORT_qb_breakout_cfbd.md`](reports/REPORT_qb_breakout_cfbd.md),
+[`reports/REPORT_qb_breakout_archetypes.md`](reports/REPORT_qb_breakout_archetypes.md);
 design: [`docs/QB_BREAKOUT_PLAN.md`](docs/QB_BREAKOUT_PLAN.md).

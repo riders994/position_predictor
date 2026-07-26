@@ -19,6 +19,8 @@ from qb_breakout.data.college import (  # noqa: E402
     _normalise_dtypes,
     add_career_features,
     aggregate_qb_seasons,
+    mask_unreliable_flags,
+    season_flag_quality,
 )
 from qb_breakout.data.college_link import link_college_to_cohort, normalize_school  # noqa: E402
 
@@ -99,11 +101,77 @@ def test_flag_columns_typed_as_floats_are_cast():
     assert out["rush"].to_list() == [True, False]
 
 
-# ------------------------------------------------------------------------------- career shape
+# --------------------------------------------------------------------- unpopulated play flags
 
 
 def _seasons(rows):
     return pl.DataFrame(rows)
+
+
+def test_a_season_that_never_records_a_flag_is_nulled_not_zeroed():
+    """cfbfastR records no interceptions in 2006-2013; that must not read as ball security.
+
+    This is the defect's whole danger: an unpopulated flag sums to a clean zero, so nothing is
+    missing and nothing looks wrong — the QB simply appears never to have thrown a pick.
+    """
+    rows = ([_season_row(player=f"A{i}", season=2010, interceptions=0, int_rate=0.0)
+             for i in range(5)]
+            + [_season_row(player=f"B{i}", season=2015) for i in range(5)])
+    out = mask_unreliable_flags(_seasons(rows))
+
+    bad = out.filter(pl.col("season") == 2010)
+    assert bad["int_rate"].null_count() == 5      # nulled, not left at 0.0
+    assert bad["interceptions"].null_count() == 5
+    assert set(bad["int_recorded"].to_list()) == {0}
+
+    good = out.filter(pl.col("season") == 2015)
+    assert good["int_rate"].null_count() == 0
+    assert set(good["int_recorded"].to_list()) == {1}
+
+
+def test_a_missing_sack_flag_invalidates_everything_derived_from_it():
+    """2013 has no sack plays at all, so sack rate *and* adjusted yards per dropback are void."""
+    rows = [_season_row(player=f"A{i}", season=2013, sacks=0, sack_yds=0.0, sack_rate=0.0)
+            for i in range(5)]
+    out = mask_unreliable_flags(_seasons(rows))
+    for col in ("sacks", "sack_yds", "sack_rate", "adj_yards_per_dropback"):
+        assert out[col].null_count() == 5, col
+
+
+def test_masking_is_idempotent():
+    """Re-running the repair on already-repaired data must not change it."""
+    rows = ([_season_row(player=f"A{i}", season=2010, interceptions=0, int_rate=0.0)
+             for i in range(5)]
+            + [_season_row(player=f"B{i}", season=2015) for i in range(5)])
+    once = mask_unreliable_flags(_seasons(rows))
+    assert mask_unreliable_flags(once).equals(once)
+
+
+def test_flag_quality_reports_the_evidence_per_season():
+    rows = ([_season_row(player=f"A{i}", season=2010, interceptions=0, int_rate=0.0)
+             for i in range(3)]
+            + [_season_row(player=f"B{i}", season=2015) for i in range(3)])
+    q = season_flag_quality(_seasons(rows))
+    ints = q.filter(pl.col("flag") == "interceptions").sort("season")
+    assert ints["recorded"].to_list() == [0, 1]
+    assert ints["rate"].to_list()[0] == 0.0
+
+
+def test_a_career_total_is_not_summed_across_an_unrecorded_season():
+    """8 + (unrecorded) is not 8. A partial total is worse than no total."""
+    rows = mask_unreliable_flags(_seasons([
+        _season_row(player="QB", season=2012, interceptions=0, int_rate=0.0),
+        _season_row(player="QB", season=2015, interceptions=8),
+        _season_row(player="Clean", season=2015, interceptions=8),
+        _season_row(player="Clean", season=2016, interceptions=6),
+    ]))
+    career = add_career_features(rows).to_pandas().set_index("player")
+    assert pd.isna(career.loc["QB", "career_int"])
+    assert career.loc["QB", "int_seasons_recorded"] == 1
+    assert career.loc["Clean", "career_int"] == 14
+
+
+# ------------------------------------------------------------------------------- career shape
 
 
 def _season_row(player="QB", season=2015, team="Oklahoma", epa=0.2, **kw):

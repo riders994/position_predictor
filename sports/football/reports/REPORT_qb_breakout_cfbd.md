@@ -44,10 +44,10 @@ share of real between-player spread the mapping **fails** to reproduce; low is g
 | completion_pct | 1774 | 0.9393 | 0.0873 | 0.816 | 0.0297 | 0.0693 | 0.429 |
 | yards_per_attempt | 1774 | 1.0264 | 0.4187 | 0.922 | 0.4092 | 1.4683 | 0.279 |
 | td_rate | 1774 | 1.0337 | 0.0045 | 0.925 | 0.0066 | 0.024 | 0.273 |
-| int_rate | 1774 | 0.896 | 0.0007 | 0.579 | 0.0114 | 0.0176 | 0.649 |
+| int_rate | 1585 | 1.0263 | 0.0004 | 0.936 | 0.004 | 0.016 | 0.253 |
 
-**Portable (noise ratio ≤ 0.5):** rush_share, completion_pct, yards_per_attempt, td_rate
-**Not portable:** pass_epa_per_db (from ppa_pass), int_rate
+**Portable (noise ratio ≤ 0.5):** rush_share, completion_pct, yards_per_attempt, td_rate, int_rate
+**Not portable:** pass_epa_per_db (from ppa_pass)
 
 The `rush_share` calibration is the clean case: slope ≈ 1.01 and an intercept of −0.043 that is
 simply the sack correction, recovering 95% of the variance. Efficiency is the opposite — a
