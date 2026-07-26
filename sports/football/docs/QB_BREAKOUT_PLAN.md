@@ -278,6 +278,7 @@ score at all.
 | 4 | CFBD current-season extension + comparability test | `cfbd_qb_seasons.parquet`, `REPORT_qb_breakout_cfbd.md` | **done** |
 | 5 | Archetypes (clustering on college style) | `qb_breakout_archetypes.parquet`, `REPORT_qb_breakout_archetypes.md` | **done** |
 | 6 | Pre-NFL-only model — sustained breakout primary, lateness descriptive | `qb_breakout_scores.parquet`, `REPORT_qb_breakout_model.md` | **done** |
+| 7 | Drafting situation — franchise + regime vs draft capital | `qb_breakout_situation.parquet`, `REPORT_qb_breakout_situation.md` | **done** |
 
 **The HS box-score scrape (stage 3b) was cancelled and the project is now college-only** (§2.4). The recruiting layer's
 floor at NFL entry ~2010 cuts off the entire 2001–2005 cluster of late breakouts; college
@@ -375,6 +376,42 @@ college box score says nothing about which of those picks hits. The middle band 
 **The honest conclusion is a negative one.** If late breakouts are visible before the NFL, they
 are **not visible in college production**. What is untested is *context* — competition faced,
 supporting cast, scheme, the conditions a QB produced under rather than the totals he produced.
+
+### 4.5 What stage 7 established
+
+The first prompt asked for "player archetypes, **drafting situations**, and other factors". This
+is the drafting-situation answer, and it is bounded by arithmetic before it is bounded by football.
+
+**Raw team breakout rates are not computed, on purpose.** 140 drafted QBs with a settled outcome
+across 32 franchises is a **median of 4 QBs and 1 breakout each** — seven franchises have zero,
+one has three. A table of team rates would show a 0–60% spread, all of it noise, and it would be
+the most quotable thing in the repo.
+
+**What replaces it: observed minus expected given draft capital.** Each QB gets an out-of-fold
+P(breakout) from his pick alone; a regime's expectation is the sum. Teams differ enormously in the
+picks they spend on QBs, so a raw comparison is mostly a comparison of draft position. The null is
+simulated by drawing each QB from his own probability — no normal approximation, which would be
+wrong at these counts.
+
+**Result: nothing detectable.** Dispersion of observed-minus-expected across franchises
+**p = 0.128**; across head coaches **p = 0.089**. Two coaches clear p < 0.05 individually against
+**0.8 expected by chance** from 15 uncorrected comparisons.
+
+**The power calculation is the real output.** A typical franchise drafted 4 QBs and expected ~1
+breakout; to register at 5% it would have needed **3** — roughly **2 extra breakouts above
+expectation across its entire draft history**. No plausible front-office effect is that large, so
+the honest statement is not "there is no effect" but "**nothing this size or smaller was
+findable**".
+
+**General managers are not analysed because the data does not exist.** nflverse publishes head
+coaches (schedules, 1999+) but no GM table, and no free structured GM-by-team-season source exists
+(Wikipedia has it per team page). `situation/regime.py::attach_gm` + `--gm-table` take a supplied
+CSV. It would not change the conclusion: GM tenures are *shorter* than franchise histories, so the
+cells get smaller.
+
+**The right follow-up is a different outcome, not more factors.** A career event with 35 instances
+is the wrong instrument for a situation effect. Snaps earned in years 1–3, starts, or per-season
+fantasy points give a data point per season instead of one per career.
 
 ---
 

@@ -81,6 +81,7 @@ uv run python sports/football/scripts/qb_breakout_college.py      # college laye
 uv run python sports/football/scripts/qb_breakout_cfbd.py         # CFBD extension (needs a key)
 uv run python sports/football/scripts/qb_breakout_archetypes.py   # style archetypes
 uv run python sports/football/scripts/qb_breakout_model.py        # pre-NFL-only model
+uv run python sports/football/scripts/qb_breakout_situation.py    # drafting team / regime
 uv run python sports/football/scripts/qb_breakout_recruiting.py   # HS layer (optional)
 ```
 
@@ -138,9 +139,20 @@ outcome it predicts. The fair test is within a draft band, and there the college
 are visible before the NFL, they are not visible in college *production*. Context — competition,
 supporting cast, scheme — is what remains untested.
 
+**Drafting situation** was measured too, and the answer is bounded by arithmetic before football.
+140 drafted QBs across 32 franchises is a median of 4 QBs and 1 breakout each, so no raw team rate
+is computed — the analysis is observed-minus-expected given draft capital, against a simulated
+null. Nothing is detectable: franchises **p = 0.128**, head coaches **p = 0.089**, with two
+coaches clearing p < 0.05 individually against 0.8 expected by chance. The power calculation is
+the real output — a typical franchise would have needed **~2 extra breakouts above expectation
+across its whole draft history** to register, so the honest statement is "nothing this size or
+smaller was findable". General managers aren't analysed because no free GM-by-team-season data
+exists; `--gm-table` accepts one.
+
 Write-ups: [`reports/REPORT_qb_breakout_cohort.md`](reports/REPORT_qb_breakout_cohort.md),
 [`reports/REPORT_qb_breakout_college.md`](reports/REPORT_qb_breakout_college.md),
 [`reports/REPORT_qb_breakout_cfbd.md`](reports/REPORT_qb_breakout_cfbd.md),
 [`reports/REPORT_qb_breakout_archetypes.md`](reports/REPORT_qb_breakout_archetypes.md),
-[`reports/REPORT_qb_breakout_model.md`](reports/REPORT_qb_breakout_model.md);
+[`reports/REPORT_qb_breakout_model.md`](reports/REPORT_qb_breakout_model.md),
+[`reports/REPORT_qb_breakout_situation.md`](reports/REPORT_qb_breakout_situation.md);
 design: [`docs/QB_BREAKOUT_PLAN.md`](docs/QB_BREAKOUT_PLAN.md).

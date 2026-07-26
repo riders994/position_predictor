@@ -1474,6 +1474,76 @@ that out-of-fold scores cover every QB exactly once.
 
 15 new tests (**231 football tests**), ruff clean. Plan gains §4.4; stages table now 1–6 all done.
 
+## Entry 061 — QB breakout stage 7: drafting team and regime, bounded by arithmetic
+
+**Date:** 2026-07-26
+
+**Prompt (full text):**
+
+> Let's look at drafting team, also GM of drafting team as factors as well
+
+**Response notes:**
+
+Closes the last thread from the project's first prompt — "player archetypes, **drafting
+situations**, and other factors". New `qb_breakout/situation/`, `scripts/qb_breakout_situation.py`,
+`REPORT_qb_breakout_situation.md`.
+
+**Checked the power before building the analysis, and it changed the design.** 140 drafted QBs
+with a settled outcome across 32 franchises = a **median of 4 QBs and 1 breakout per team**; seven
+teams have zero, one has three. A table of raw team breakout rates would show a 0–60% spread, all
+noise, and would be the most quotable artifact in the repo. **So the module never computes one** —
+there's a test asserting the output frame has no `rate` column.
+
+**What it computes instead: observed minus expected given draft capital.** Each QB gets an
+out-of-fold P(breakout) from his pick alone (log-scaled pick + undrafted flag); a regime's
+expectation is the sum. Teams differ hugely in the picks they spend on QBs, so a raw comparison is
+mostly a comparison of draft position. Null simulated by drawing each QB from his own probability
+— no normal approximation, which is wrong at these counts.
+
+**Results — nothing detectable:**
+- Franchise: dispersion of observed-minus-expected **p = 0.128** (28 franchises ≥3 QBs)
+- Head coach at draft: **p = 0.089** (15 coaches ≥3 QBs)
+- Two coaches clear p < 0.05 individually (Shanahan 3/3 vs 1.29 expected; Harbaugh 2/3 vs 0.34)
+  against **0.8 expected by chance** from 15 uncorrected comparisons — the report states that
+  arithmetic next to the table rather than leaving it to the reader.
+- Belichick: 6 QBs, 0 breakouts, 0.95 expected — the most-quoted-shaped cell in the table, and not
+  significant either.
+
+**The power calculation is the actual output.** A typical franchise drafted 4 QBs expecting ~1
+breakout; to clear 5% it needed **3** — about **2 extra breakouts above expectation across its
+entire draft history**. No plausible front-office effect is that large. That converts "we found
+nothing" into "**nothing this size or smaller was findable**", which is a different and more
+useful claim.
+
+**Head coach is available; GM is not.** nflverse publishes coaches via `load_schedules`
+(home_coach/away_coach, 1999+, 177 coaches) — stacked home+away, mid-season changes resolved to
+whoever coached most games, since the draft is a spring decision. **No free structured
+GM-by-team-season dataset exists** (searched; Wikipedia has it per team page). Built
+`attach_gm()` + `--gm-table` so a supplied CSV is a one-command job, and said plainly in the
+report that it wouldn't change the conclusion — GM tenures are *shorter* than franchise histories,
+so the cells shrink.
+
+**Team-code gotcha again:** draft frames use PFR codes (GNB, SDG), schedules use nflverse codes
+(GB, LAC). Both sides canonicalised through `labels/teams.py` before joining; there's a test.
+
+**Framing note:** this stays out of the pre-NFL player model, on the same rule that keeps draft
+position out — situation is the league's decision about the player, not evidence about him. It is
+analysed as a benchmark-side factor.
+
+**Test-driven correction to my own test:** `test_random_group_labels_do_not_look_like_a_team_effect`
+failed on one seed at p=0.03. Checked calibration across 30 seeds first — mean p 0.545, 3% below
+0.05, so the implementation was right and the *test* was a coin-flip that fails 1 run in 20. Now
+asserts the distribution across 10 seeds (median p > 0.2, ≤2 below 0.05).
+
+**Conclusion the report reaches:** this question cannot be answered with 177 QBs, and a career
+event with 35 instances is the wrong instrument for a situation effect. The right follow-up is a
+**different outcome, not more factors** — snaps in years 1–3, starts, or per-season fantasy points
+give a data point per season instead of one per career. And note §4.4 already showed the pick
+itself predicts at AUC 0.890 largely *because it allocates opportunity*: a franchise's influence
+on a QB's career mostly **is** the pick it spent, which is measured, not missing.
+
+15 new tests (**246 football tests**), ruff clean. Plan gains §4.5 and stage 7.
+
 ---
 
 <!-- Template for new entries:
