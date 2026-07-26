@@ -34,8 +34,8 @@ from qb_breakout.eda import (  # noqa: E402
     timing_distribution, trough_profile,
 )
 from qb_breakout.labels import (  # noqa: E402
-    BREAKOUT_RANK, LATE_YEAR_THRESHOLD, MIN_GAMES, build_qb_careers, build_qb_seasons,
-    rank_qb_seasons,
+    BREAKOUT_RANK, LATE_YEAR_THRESHOLD, MIN_GAMES, SUSTAIN_RANK, build_qb_careers,
+    build_qb_seasons, rank_qb_seasons,
 )
 
 # The label the project models. Chosen empirically over "first top-20" and "first top-12":
@@ -84,6 +84,12 @@ def write_report(ranked, careers, path: Path, *, late_threshold: int) -> Path:
     n_defined = int(careers[TARGET_LABEL].notna().sum())
     seasons_span = f"{int(ranked['season'].min())}–{int(ranked['season'].max())}"
 
+    # Quoted inline so the prose cannot drift from the table when the tier changes.
+    trough = trough_profile(careers, ranked, late_col=TARGET_LABEL)
+
+    def t(outcome, col):
+        return trough.loc[outcome, col]
+
     md = f"""# Late-breakout QBs — cohort and descriptive analysis
 
 Which quarterbacks became fantasy-relevant *after* the league had moved on, and what they had in
@@ -93,8 +99,9 @@ stages. Design rationale: [`docs/QB_BREAKOUT_PLAN.md`](../docs/QB_BREAKOUT_PLAN.
 
 - **Seasons covered:** {seasons_span} (nflverse weekly stats)
 - **Cohort:** {len(careers)} QBs entering the NFL in 1999 or later
-- **Breakout tier:** top-{BREAKOUT_RANK} PPR points-per-game among QBs clearing {MIN_GAMES}
-  games — superflex-relevant, since QB15 is where draft-day value lives
+- **Breakout tier:** a **top-{BREAKOUT_RANK}** PPR points-per-game season (the quality bar —
+  where genuine draft-day value starts) among QBs clearing {MIN_GAMES} games, **held at
+  top-{SUSTAIN_RANK}** (still a startable superflex asset) in ≥2 of the 3 seasons from it
 - **Late:** the breakout arrived in NFL year {late_threshold} or later
 - **Late breakouts found:** **{n_late}** of {n_defined} QBs who ever broke out
 
@@ -107,18 +114,30 @@ They disagree sharply:
 
 {_md_table(label_comparison(careers))}
 
-`late` (first top-{BREAKOUT_RANK} season) is too loose. The bar is rank 20 of roughly 32 QBs who
-play, so one ordinary season clears it — **Baker Mayfield's 2018 rookie year ranks exactly 20th**,
-and Ryan Tannehill's 2014 ranks 10th. Both therefore read as *on-time* breakouts, which is the
-opposite of what their careers show.
+`late` (a single top-{BREAKOUT_RANK} season, no confirmation) is too loose — one good season is
+weak evidence at a position where roughly 32 QBs play in a year.
 
 `late_qb1` (first top-12 season) over-corrects: it labels **Tom Brady** a late breakout because
 his first top-12 fantasy season came in year 6, even though he was a quality starter from year 2.
 
-`{TARGET_LABEL}` requires the tier to **hold** — top-{BREAKOUT_RANK} in at least 2 of the 3
-seasons starting with the breakout. This is the definition the project models. It is the only one
-of the three that puts Mayfield (year 6), Tannehill (year 8) and Geno Smith (year 10) in the late
-cell while leaving Brady, Josh Allen, Joe Burrow and Brock Purdy on time.
+`{TARGET_LABEL}` uses **two bars, not one**, because "became good" and "stayed useful" are
+different claims: a top-{BREAKOUT_RANK} season triggers the breakout, and top-{SUSTAIN_RANK} in
+≥2 of the 3 seasons from it confirms the tier held.
+
+Collapsing them fails in both directions. At a single top-{SUSTAIN_RANK} bar, **Baker Mayfield's
+2018 rookie year ranks exactly 20th** and he reads as an on-time breakout before going 27th, 24th
+and 28th. At a single top-{BREAKOUT_RANK} bar the archetypes vanish instead: Mayfield's real run
+is 17/4/19 and Geno Smith's is 9/21/16, so neither holds two top-{BREAKOUT_RANK} seasons in any
+three-year window despite both plainly being valuable. Trigger high, confirm lower.
+
+Scored against 14 QBs whose careers are not in dispute, this puts Mayfield (year 7), Tannehill
+(year 8), Geno Smith (year 10), Alex Smith (year 9), Cousins and Love in the late cell while
+leaving Brady, Josh Allen, Burrow, Purdy and Foles on time.
+
+One consequence of the QB{BREAKOUT_RANK} quality bar worth stating plainly: **Jimmy Garoppolo
+never breaks out at all**, because his best season ranks 18th. Under the previous top-20 bar he
+counted as a late breakout. That is the tier doing its job, not a defect — but it is the kind of
+borderline case the choice of 15 vs 20 decides.
 
 ## 2. Developed late, or needed a new building?
 
@@ -140,13 +159,15 @@ Median profile over each QB's first three NFL seasons — the rookie-contract wi
 judges them on. Seasons too short to be ranked are counted as rank 40, worse than the worst real
 rank, so "did not play enough to rank" registers as the bad outcome it is.
 
-{_md_table(trough_profile(careers, ranked, late_col=TARGET_LABEL), index=True)}
+{_md_table(trough, index=True)}
 
 **This is the central result, and it justifies the whole project.** Through three NFL seasons,
 future late breakouts look far more like QBs who never broke out than like QBs who broke out on
-time: median early PPG of 5.97 against 4.18 for the busts and 15.68 for the on-time group, and a
-median early rank pinned at the unranked floor for both the late and the never groups. They do get
-more early playing time than the busts (median 14.5 games vs 7), so there is *some* separation —
+time: median early PPG of {t('late', 'mean_early_ppg')} against {t('never', 'mean_early_ppg')} for
+the busts and {t('on_time', 'mean_early_ppg')} for the on-time group, with median early rank
+{t('late', 'mean_early_rank')} and {t('never', 'mean_early_rank')} respectively against
+{t('on_time', 'mean_early_rank')}. They do get more early playing time than the busts (median
+{t('late', 'early_games')} games vs {t('never', 'early_games')}), so there is *some* separation —
 but on production, early NFL evidence barely distinguishes a future late breakout from a bust.
 
 If early NFL performance cannot separate them, then a model that waits for NFL evidence is waiting

@@ -31,8 +31,8 @@ read in that light.
 | outcome | n | matched | pct |
 |---|---|---|---|
 | late | 7 | 6 | 86.0 |
-| never | 150 | 130 | 87.0 |
-| on_time | 33 | 30 | 91.0 |
+| never | 157 | 137 | 87.0 |
+| on_time | 26 | 23 | 88.0 |
 
 ## Why rows failed to match
 
@@ -57,7 +57,7 @@ count for any high-school-feature model.
 | Tyrod Taylor | 2011 | 2007.0 | QB-PP | 84.0 | 16.0 | 3.0 | VA |
 | Kirk Cousins | 2012 | 2007.0 | QB-PP | 70.0 | nan | 137.0 | MI |
 | Ryan Tannehill | 2012 | 2007.0 | QB-PP | 77.0 | nan | 34.0 | TX |
-| Jimmy Garoppolo | 2014 | 2010.0 | QB-PP | 40.0 | nan | nan | IL |
+| Jameis Winston | 2015 | 2012.0 | QB-PP | 84.0 | 14.0 | 1.0 | AL |
 | Baker Mayfield | 2018 | 2013.0 | QB-PP | 70.0 | nan | 69.0 | TX |
 | Jordan Love | 2020 | 2016.0 | QB-DT | 70.0 | nan | 62.0 | CA |
 
@@ -74,8 +74,8 @@ classifier; it is a case series.
 
 The workable design is the nested one already set out in the plan (§5):
 
-1. **Model `ever_breakout` instead** — 36 matched QBs with a resolved outcome in the
-   2010+ era, roughly 6x the positives. "Which pre-NFL
+1. **Model `ever_breakout` instead** — 29 matched QBs with a resolved outcome in the
+   2010+ era, roughly 4x the positives. "Which pre-NFL
    profiles produce NFL-relevant QBs at all" is a question this data can actually answer.
 2. **Treat lateness descriptively** — archetype profiles and base rates over the 6,
    reported as such, with no classifier implying precision the N cannot support.

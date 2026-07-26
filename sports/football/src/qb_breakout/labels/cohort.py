@@ -42,9 +42,19 @@ from __future__ import annotations
 
 from .teams import canonicalize
 
-# A "breakout" = first season finishing top-20 among eligible QBs by PPR points per game.
-# 20 (not 12) because superflex is the relevant format and QB15 is where draft value lives.
-BREAKOUT_RANK = 20
+# A breakout season has to clear two different bars, because "became good" and "stayed useful"
+# are different claims and one number cannot carry both.
+#
+# BREAKOUT_RANK is the **quality** bar the breakout season itself must clear: QB15, where
+# genuine draft-day value starts. SUSTAIN_RANK is the **relevance** bar the surrounding window
+# must hold: QB20, still a startable superflex asset.
+#
+# Collapsing them is what breaks the label. At a single top-20 bar, one ordinary rookie season
+# counts (Mayfield's 2018 ranks exactly 20th). At a single top-15 bar, the archetypes disappear
+# instead — Mayfield's good run is 17/4/19 and Geno's is 9/21/16, so neither has two top-15
+# seasons in any three-year window even though both were plainly valuable throughout.
+BREAKOUT_RANK = 15
+SUSTAIN_RANK = 20
 # Reference tier carried alongside the primary label (traditional 1-QB league starter).
 QB1_RANK = 12
 # "Late" = the breakout arrived in NFL year 4+, i.e. after the rookie contract's cheap years.
@@ -140,7 +150,9 @@ def build_qb_seasons(weekly, *, regular_season_only: bool = True):
     return out.sort_values(["season", "ppg"], ascending=[True, False]).reset_index(drop=True)
 
 
-def rank_qb_seasons(seasons, *, min_games: int = MIN_GAMES):
+def rank_qb_seasons(seasons, *, min_games: int = MIN_GAMES,
+                    breakout_rank: int = BREAKOUT_RANK,
+                    sustain_rank: int = SUSTAIN_RANK):
     """Rank each season's eligible QBs by PPG and flag breakout-tier seasons.
 
     Only seasons clearing ``min_games`` are ranked; the rest get ``ppg_rank = NaN`` and cannot
@@ -158,19 +170,27 @@ def rank_qb_seasons(seasons, *, min_games: int = MIN_GAMES):
     df.loc[elig, "ppg_rank"] = (
         df.loc[elig].groupby("season")["ppg"].rank(method="min", ascending=False)
     )
-    df["is_breakout"] = df["ppg_rank"].le(BREAKOUT_RANK).fillna(False)
+    # Quality bar (can trigger a breakout) vs relevance bar (keeps one alive across the window).
+    df["is_breakout"] = df["ppg_rank"].le(breakout_rank).fillna(False)
+    df["is_startable"] = df["ppg_rank"].le(sustain_rank).fillna(False)
     df["is_qb1"] = df["ppg_rank"].le(QB1_RANK).fillna(False)
     return df
 
 
 def first_sustained_breakout(ranked, *, latest_season=None, window: int = SUSTAIN_WINDOW,
                              need: int = SUSTAIN_NEED):
-    """First breakout season that *stuck*: top-20 in ``need`` of the ``window`` seasons from it.
+    """First season that clears the quality bar *and* holds the relevance bar around it.
 
-    A single top-20 season is weak evidence — the bar is rank 20 of roughly 32 QBs who play, so
-    one ordinary rookie year clears it. Baker Mayfield's 2018 ranks exactly 20th and then he is
-    27th, 24th and 28th; treating 2018 as his breakout labels the archetypal late bloomer
-    "on time". Requiring the tier to hold over a short window removes those one-off blips.
+    A breakout is triggered by an ``is_breakout`` season (top-15 — genuine draft-day value) and
+    confirmed by ``is_startable`` (top-20 — still a usable superflex asset) in ``need`` of the
+    ``window`` seasons starting there.
+
+    Both halves are load-bearing, and using one number for both fails in opposite directions. A
+    single top-20 trigger is too weak: one ordinary rookie season clears it, and Mayfield's 2018
+    ranks exactly 20th before he goes 27th/24th/28th. Requiring *two* top-15 seasons is too
+    strong: Mayfield's actual good run is 17/4/19 and Geno Smith's is 9/21/16, so neither has two
+    top-15 seasons in any three-year window despite both being plainly valuable throughout.
+    Trigger high, confirm lower.
 
     Seasons the QB missed entirely count against the window (a benched or injured QB is not
     sustaining a tier), so absence is read from the season index rather than from row presence.
@@ -184,14 +204,18 @@ def first_sustained_breakout(ranked, *, latest_season=None, window: int = SUSTAI
 
     latest = int(latest_season if latest_season is not None else ranked["season"].max())
     rows = []
+    # Fall back to the trigger flag when no separate relevance flag is present, so callers
+    # holding an older ranked frame still get the single-bar behaviour rather than an error.
+    sustain_col = "is_startable" if "is_startable" in ranked.columns else "is_breakout"
     for pid, grp in ranked.groupby("player_id"):
-        hit = dict(zip(grp["season"], grp["is_breakout"]))
+        trigger = dict(zip(grp["season"], grp["is_breakout"]))
+        hold = dict(zip(grp["season"], grp[sustain_col]))
         info = grp.set_index("season")[["ppg_rank", "team"]].to_dict("index")
-        cands = sorted(s for s, h in hit.items() if h)
+        cands = sorted(s for s, h in trigger.items() if h)
         censored = False
         for s in cands:
             span = range(s, s + window)
-            got = sum(1 for y in span if hit.get(y, False))
+            got = sum(1 for y in span if hold.get(y, False))
             if got >= need:
                 rows.append({"player_id": pid, "sustained_season": s,
                              "sustained_rank": info[s]["ppg_rank"],

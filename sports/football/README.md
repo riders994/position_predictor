@@ -60,26 +60,32 @@ uv run python sports/football/scripts/keeper.py \
 Era-ensemble ranks returning players at **Spearman ≈ 0.74–0.75** (RB/WR) on the full eligible
 universe, beating every baseline. Versus the market on the rows it ranks, the model trails slightly
 on overall rank but **matches/edges it on top-tier precision (P@12)** with no market input.
+Per-position write-ups: [`reports/REPORT_football_rb.md`](reports/REPORT_football_rb.md),
+[`reports/REPORT_football_wr.md`](reports/REPORT_football_wr.md),
+[`reports/REPORT_football_qb.md`](reports/REPORT_football_qb.md); cross-version progress under
+[`reports/versions/`](reports/versions/).
+
 ## Second project — late-breakout QBs
 
 A separate question in the same tree: **which QBs break out after the league has written them
 off, and was it visible before they ever took an NFL snap?** Models here are restricted to
-**pre-NFL evidence** (high-school recruiting profile + college production) by design — NFL data
-builds the label only.
+**pre-NFL evidence** by design — NFL data builds the label only. In practice that means **college
+production**: the high-school recruiting layer was built and measured, but its 2006-class floor
+cuts off the entire 2001-2005 cluster of late breakouts, so it is retained only as an optional
+covariate.
 
 ```bash
 make -C sports/football fetch                                  # once, shared caches
 uv run python sports/football/scripts/qb_breakout_cohort.py    # cohort + labels + report
 ```
 
-A breakout is a **sustained top-20 PPR PPG season** (superflex-relevant); *late* means NFL year
-4+. Of 331 QBs entering since 1999, 69 ever broke out and **17 did it late**. The result that
-motivates the constraint: through three NFL seasons, future late breakouts look far more like
-busts than like on-time breakouts — early NFL production does not separate them.
+A breakout needs **two bars**: a **top-15** PPR PPG season triggers it (genuine draft-day value),
+**held at top-20** in >=2 of the 3 seasons from it (still startable in superflex). One number
+fails both ways — at top-20 Baker Mayfield's rookie year (rank exactly 20) counts; at top-15 his
+real 17/4/19 run does not. *Late* means NFL year 4+. Of 331 QBs entering since 1999, 59 ever
+broke out and **16 did it late**. The result that motivates the constraint: through three NFL
+seasons, future late breakouts look far more like busts than like on-time breakouts — early NFL
+production does not separate them.
+
 Write-up: [`reports/REPORT_qb_breakout_cohort.md`](reports/REPORT_qb_breakout_cohort.md);
 design: [`docs/QB_BREAKOUT_PLAN.md`](docs/QB_BREAKOUT_PLAN.md).
-
-Per-position write-ups: [`reports/REPORT_football_rb.md`](reports/REPORT_football_rb.md),
-[`reports/REPORT_football_wr.md`](reports/REPORT_football_wr.md),
-[`reports/REPORT_football_qb.md`](reports/REPORT_football_qb.md); cross-version progress under
-[`reports/versions/`](reports/versions/).

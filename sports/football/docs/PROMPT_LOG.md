@@ -1176,6 +1176,53 @@ the results of the other models?")_
 
 ---
 
+## Entry 056 — QB breakout: top-15 tier (two-bar rule) + drop the high-school layer
+
+**Date:** 2026-07-26
+
+**Prompt (full text):**
+
+> Top 20 now seems too big. What does it look like for top 15?
+
+> Let's skip high school data since it's so sparse
+
+**Response notes:**
+- **Top-15 alone breaks the label — the tier and the sustain rule compound.** Swapping 20→15 while
+  keeping "top-N in ≥2 of 3" *deleted* the archetypes: Mayfield, Geno Smith, Alex Smith, Jordan
+  Love and Garoppolo all stopped being breakouts at all. Cause: Mayfield's good run is 17/4/19 and
+  Geno's is 9/21/16 — one top-15 season each, so neither holds two in any 3-year window.
+- **Fix — two bars for two claims,** which also reconciles the user's own two remarks (top-20 for
+  superflex, "QB15 tends to be good draft value"): a **top-15 season triggers** the breakout
+  (quality), **top-20 in ≥2 of 3 confirms** it held (relevance). Trigger high, confirm lower.
+  Implemented as `rank_qb_seasons(breakout_rank=15, sustain_rank=20)` → `is_breakout` +
+  `is_startable`; `first_sustained_breakout` triggers on the first, holds on the second (falls back
+  to single-bar if `is_startable` is absent).
+- **Scored 14 undisputed careers: 13 correct.** Baker Y7 (2024, rank 4 — his real breakout, was Y6),
+  Tannehill Y8, Geno Y10, Alex Smith Y9 (was Y5), Rodgers/Cousins/Love late; Brady/Allen/Burrow/
+  Purdy/Foles on-time. Darnold still censored (window open). **Garoppolo now never breaks out**
+  (career-best rank 18) — reported as a visible consequence of the QB15 bar, not hidden.
+- Cohort at the new tier: **59 ever broke out, 16 late** (was 69/17). Kyle Orton + Garoppolo drop
+  out; Jameis Winston enters.
+- **High-school layer dropped, and the numbers justify it.** Re-ran the recruiting join at top-15:
+  still only **6** late breakouts with a HS profile. Measured the reach trade-off — the
+  late-breakout cohort is **bimodal** (2001–2005 and 2011–2020, dead zone between), and recruiting's
+  2006-class floor cuts off the entire earlier cluster:
+  | earliest entry | cohort | ever | late |
+  |---|---|---|---|
+  | 2010 (recruiting reach) | 190 | 33 | 7 (6 matched) |
+  | 2005 (college PBP reach) | 244 | 42 | **11** |
+  | 2004 | 257 | 46 | **12** |
+  Going college-only **nearly doubles the positives**. HS box-score scrape **cancelled**; the built
+  recruiting artifacts are **retained but demoted** to an optional covariate rather than deleted.
+- **Report prose is now computed from the tables** rather than hardcoded, so the trough numbers
+  cannot drift from the tier. Central result survives the change: late breakouts median early PPG
+  6.0 vs 4.48 (busts) / 15.75 (on-time), early rank at the unranked floor for both late and never.
+- Plan rewritten: §2.2 layer table, new §2.3 (HS set aside), §2.4 join chain, §3.2 (one bar cannot
+  define a breakout), §5.1 N ladder → `ever_breakout` n≈42 / late n=11. 4 new tests (25 total for
+  labels), 165 football tests pass, ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

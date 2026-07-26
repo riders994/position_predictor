@@ -15,6 +15,8 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from qb_breakout.labels.cohort import (  # noqa: E402
+    BREAKOUT_RANK,
+    SUSTAIN_RANK,
     build_qb_careers,
     build_qb_seasons,
     first_sustained_breakout,
@@ -89,27 +91,50 @@ def test_seasons_below_the_games_cutoff_are_unranked_and_cannot_break_out():
 # --------------------------------------------------------------------------- sustained breakout
 
 
-def _ranked_from_ranks(player, ranks_by_season):
-    """Hand-build a ranked frame so sustain logic is tested independently of scoring."""
+def _ranked_from_ranks(player, ranks_by_season, *, trigger=BREAKOUT_RANK, hold=SUSTAIN_RANK):
+    """Hand-build a ranked frame so sustain logic is tested independently of scoring.
+
+    Carries both bars: ``is_breakout`` (top-15, may trigger a breakout) and ``is_startable``
+    (top-20, keeps the window alive).
+    """
     return pd.DataFrame([
         dict(player_id=player, season=s, ppg_rank=r, team="GB",
-             is_breakout=(r is not None and r <= 20))
+             is_breakout=r <= trigger, is_startable=r <= hold)
         for s, r in ranks_by_season.items()
     ])
 
 
-def test_one_off_top20_season_does_not_count_as_sustained():
-    """The Mayfield-2018 case: rank 20 once, then nothing, is not a breakout."""
+def test_a_season_that_only_clears_the_relevance_bar_never_triggers():
+    """The Mayfield-2018 case: rank 20 is startable, not a breakout, so it cannot trigger."""
     ranked = _ranked_from_ranks("Baker", {2018: 20, 2019: 27, 2020: 24, 2021: 28})
     out = first_sustained_breakout(ranked, latest_season=2021).iloc[0]
     assert pd.isna(out["sustained_season"])
     assert not out["sustained_censored"]
 
 
-def test_tier_that_holds_counts_from_its_first_season():
-    ranked = _ranked_from_ranks("Baker", {2018: 20, 2019: 27, 2023: 17, 2024: 4, 2025: 19})
+def test_one_quality_season_held_at_the_lower_bar_counts():
+    """Baker's real run: 17/4/19 — a single top-15 year, startable either side of it.
+
+    Requiring two top-15 seasons would reject this outright, which is why the confirmation bar
+    sits lower than the trigger.
+    """
+    ranked = _ranked_from_ranks("Baker", {2023: 17, 2024: 4, 2025: 19})
     out = first_sustained_breakout(ranked, latest_season=2025).iloc[0]
-    assert out["sustained_season"] == 2023
+    assert out["sustained_season"] == 2024
+
+
+def test_geno_pattern_triggers_on_the_quality_season_not_the_startable_one():
+    """9/21/16: triggers in the top-15 year, confirmed by the other top-20 year."""
+    ranked = _ranked_from_ranks("Geno", {2022: 9, 2023: 21, 2024: 16})
+    out = first_sustained_breakout(ranked, latest_season=2024).iloc[0]
+    assert out["sustained_season"] == 2022
+
+
+def test_quality_season_with_no_surrounding_relevance_is_not_sustained():
+    """One good year flanked by nothing is a blip, however good the year was."""
+    ranked = _ranked_from_ranks("Blip", {2015: 3, 2016: 36, 2017: 35})
+    out = first_sustained_breakout(ranked, latest_season=2017).iloc[0]
+    assert pd.isna(out["sustained_season"])
 
 
 def test_seasons_missed_entirely_count_against_the_window():
