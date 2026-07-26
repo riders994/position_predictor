@@ -1,0 +1,12 @@
+{
+  "source": "cfbfastR-data pbp/parquet/play_by_play_{season}.parquet (public GitHub, no key)",
+  "seasons": [
+    2004,
+    2021
+  ],
+  "rows": 3419,
+  "cols": 30,
+  "pulled_at": "2026-07-26T05:39:59.571465+00:00",
+  "sha256": "99329ca7bf957e7704c46c7049d4eb4731c8a4098af998e235d0f75c605d74e1",
+  "note": "QB-seasons aggregated from play-by-play; >=50 dropbacks; sacks counted as dropbacks not rushes. Floor 2004 (2002-03 ship a thinner schema); ceiling 2021 (cfbfastR-data publishes no further)."
+}

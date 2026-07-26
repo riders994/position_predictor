@@ -59,16 +59,30 @@ bridge to college data.
 
 | Layer | Status | Source | Key | Coverage |
 |---|---|---|---|---|
-| **College — production** | **primary** | **cfbfastR-data** parquet (public GitHub), `sportsdataverse.cfb` | `cfb_player_id` / name+school | 2002– |
-| College — roster/bio | primary | `sportsdataverse.cfb.load_cfb_rosters` | `athlete_id` | 2003– |
+| **College — production** | **primary** | **cfbfastR-data** parquet (public GitHub) | name + school | **2004–2021** |
+| College — roster/bio | available | `sportsdataverse.cfb.load_cfb_rosters` | `athlete_id` | 2003– |
 | High school — recruiting | built, **demoted** (§2.3) | ESPN recruiting API (no key) | name + class year | 2006– |
 | High school — box scores | **cancelled** (§2.3) | — | — | — |
 | High school — 247 composite | not pursued | CFBD (needs a free key) | name + class | 2000– |
 
 **Coverage is the binding constraint, and it is what decided the college-only design.** College
-play-by-play starts in 2002 and so reaches QBs entering the NFL from about 2005; recruiting starts
-with the 2006 class and cannot reach earlier than about 2010. Since the label additionally needs
-4+ elapsed NFL seasons, the earlier floor is worth a great deal — see §2.3 for the count.
+play-by-play reaches QBs entering the NFL from about 2005; recruiting starts with the 2006 class
+and cannot reach earlier than about 2010. Since the label additionally needs 4+ elapsed NFL
+seasons, the earlier floor is worth a great deal — see §2.3 for the count.
+
+Two boundaries on the college source, both found by building it and both real:
+
+- **Floor 2004, not 2002.** The 2002 and 2003 files exist but ship an older, thinner schema (366
+  columns vs 405) with no `completion`, `pass_td`, `rush_td` or `EPA_success`, so no QB-season
+  can be assembled from them. Careers straddling 2004 are **clipped** — Aaron Rodgers reads as one
+  college season because only 2004 is in range — so `college_career_truncated` flags them (30 of
+  the matched cohort, 2 late breakouts). Their `career_*` totals are unusable; their `final_*`
+  block is fine, which is the argument for leaning the feature set on final-season form.
+- **Ceiling 2021.** cfbfastR-data publishes no further, and `sportsdataverse` reads the same repo,
+  so this is the source's limit rather than a fetch bug. It costs **nothing for fitting** (a QB
+  whose last college season is 2022+ enters the NFL in 2023+ and is right-censored anyway), but it
+  does mean this layer **cannot score today's prospects**. Closing that gap needs a free CFBD API
+  key or an ESPN-based loader — the one outstanding data decision.
 
 ### 2.3 High school: built, measured, set aside
 
@@ -83,8 +97,8 @@ reach is too short:
 | 2005 (college PBP reach) | 244 | 42 | **11** |
 | 2004 | 257 | 46 | **12** |
 
-Recruiting starts with the 2006 class, which puts its floor at roughly NFL entry 2010. College
-play-by-play starts in 2002, so it reaches entry ~2005 — and the late-breakout cohort happens to
+Recruiting starts with the 2006 class, which puts its floor at roughly NFL entry 2010. Usable
+college play-by-play starts in 2004, so it reaches entry ~2005 — and the late-breakout cohort
 be **bimodal**, clustering in 2001–2005 (Brees, Garrard, Romo, Schaub, Rodgers, Alex Smith,
 Cassel, Fitzpatrick) and again in 2011–2020, with a dead zone between. The earlier cluster is
 exactly what the recruiting floor cuts off. Going college-only therefore **nearly doubles the
@@ -100,11 +114,18 @@ the era that matters least.
 
 There is no single key spanning college and the NFL. The chain is:
 
-`draft_picks.cfb_player_id` → college roster/production, with name + college fuzzy matching as
-the fallback; undrafted QBs (Romo, Keenum, Hill) have no `cfb_player_id` and are reachable only
-by the fallback. **Join quality is reported, not assumed** — an unmatched QB is recorded as
-unmatched rather than silently dropped from the cohort, because a match rate that varies by
-outcome would reshape the cohort invisibly (the recruiting join in §2.3 is the worked example).
+cfbfastR play-by-play names players but carries **no player ID**, so `draft_picks.cfb_player_id`
+has nothing on the college side to join to. The match is therefore **normalised name + plausible
+timing** (last college season 1-5 years before NFL entry), with **school as a tiebreaker, not a
+filter** — requiring the school to match would discard real players over spelling ("Michigan St."
+vs "Michigan State"), and spelling variance is worse for smaller programs, which is exactly where
+late-round and undrafted QBs come from. Undrafted QBs (Romo, Keenum, Hill) have no
+`draft_college` at all and are reachable only on name and timing.
+
+Ambiguous candidates are **refused, not guessed**. **Join quality is reported, not assumed** — an
+unmatched QB is recorded as unmatched rather than silently dropped, because a match rate that
+varies by outcome would reshape the cohort invisibly. Both joins were checked for exactly that and
+both came back essentially flat across outcomes (§2.3, §4.2).
 
 ---
 
@@ -172,7 +193,7 @@ score at all.
 |---|---|---|---|
 | 1 | Cohort + labels + descriptive analysis | `qb_breakout_careers.parquet`, `REPORT_qb_breakout_cohort.md` | **done** |
 | 2 | High-school recruiting layer | `espn_recruits_qb.parquet`, `REPORT_qb_breakout_recruiting.md` | **done** |
-| 3 | College production layer | `college_qb_seasons.parquet` | **next** |
+| 3 | College production layer | `cfb_qb_seasons.parquet`, `REPORT_qb_breakout_college.md` | **done** |
 | ~~4~~ | ~~Best-effort HS box-score scrape~~ | — | **cancelled** (§2.3) |
 | 5 | Archetypes (clustering on college features) | archetype assignments + profiles | planned |
 | 6 | Pre-NFL-only model — `ever_breakout` primary, lateness descriptive | model + honest validation | planned |
@@ -192,6 +213,22 @@ with no hindsight, which remains available as a covariate on the players who hav
 What it could not fix is reach. That is why the layer is retained but demoted, and why stage 3
 is college.
 
+### 4.2 What stage 3 established
+
+3,419 QB-seasons (≥50 dropbacks) across 1,684 college careers, 2004–2021. The cohort matches at
+**88% for QBs entering 2005+**, and again **essentially unbiased across outcomes** (late 82% /
+never 88% / on-time 94%).
+
+**9 late breakouts carry a college profile against 6 for high school** — Rodgers, Alex Smith,
+Tyrod Taylor, Cousins, Tannehill, Geno Smith, Winston, Mayfield, Love — and `ever_breakout` has
+**38** matched QBs with a resolved outcome. That is the modelling sample stage 6 works with.
+
+Building from play-by-play rather than a season-stats table paid for itself twice: efficiency
+(EPA per dropback, success rate) exists at all, and **sacks separate from rushing**, which NCAA
+box scores conflate. Mayfield's 2015 reads as 405 official rushing yards but 604 on actual rush
+plays with the difference lost on 39 sacks — the distinction between measuring mobility and
+measuring pass protection.
+
 ---
 
 ## 5. Modelling, and the small-N problem
@@ -203,28 +240,31 @@ is college.
 | QBs entering 1999+ | 331 |
 | Ever broke out (top-15 held at top-20) | 59 |
 | Broke out **late** | 16 |
-| Late, within college-data reach (entry 2005+) | **11** |
-| Ever broke out, entry 2005+ | 42 |
+| Late, within college-data reach (entry 2005+) | 11 |
+| **Late, with a college profile actually matched** | **9** |
+| **Ever broke out, entry 2005+, matched** | **38** |
 | *(for contrast)* Late with a high-school profile | 6 |
 
-**Eleven positives still cannot support a late/not-late classifier.** The primary modelled
-outcome is therefore `ever_breakout` (n≈42 within college reach), with lateness handled
+**Nine positives cannot support a late/not-late classifier.** The primary modelled
+outcome is therefore `ever_breakout` (n=38 matched within college reach), with lateness handled
 descriptively and as a conditional second stage. This is a change of emphasis forced by the data,
 not a change of question — §1 still asks whether late breakouts were visible in advance; §5.2 is
 how much of that the evidence can actually carry.
 
 ### 5.2 Methodological consequences
 
-**16 late breakouts** across 1999–2025 is the honest ceiling, and college-data reach cuts it to
-11. This governs every methodological choice:
+**16 late breakouts** across 1999–2025 is the honest ceiling, and college-data reach plus join
+attrition cuts it to 9. This governs every methodological choice:
 
 - **Evidence-weighting, not prediction at scale.** The deliverable is calibrated priors and
   interpretable archetype effects, not a leaderboard implying precision that N cannot support.
 - **Leave-one-out / repeated stratified CV**, never a single split — one held-out fold would
   contain one or two positives.
-- **Nested outcome, not one binary.** `ever_breakout` (n≈42 within college reach) is far
-  better powered than `late | breakout` (n=11). Model the well-powered part first and treat
-  lateness as a conditional second stage.
+- **Nested outcome, not one binary.** `ever_breakout` (n=38) is far better powered than
+  `late | breakout` (n=9). Model the well-powered part first and treat lateness as a conditional
+  second stage.
+- **Prefer `final_*` features to `career_*`.** Career totals are clipped for anyone whose college
+  years straddle 2004 (§2.2), while final-season form is intact for everyone.
 - **Bootstrap every coefficient.** Report intervals; a feature that flips sign across resamples
   is noise, and at this N many will.
 - **A negative result is a real result.** If pre-NFL features carry no signal for lateness, that

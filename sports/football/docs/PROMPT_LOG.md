@@ -1223,6 +1223,57 @@ the results of the other models?")_
 
 ---
 
+## Entry 057 — QB breakout stage 3: college production layer from cfbfastR play-by-play
+
+**Date:** 2026-07-26
+
+**Prompt (full text):**
+
+> Start
+
+**Response notes:**
+- Built the **primary pre-NFL evidence layer** from cfbfastR play-by-play (public GitHub parquet,
+  no API key): `data/college.py` (aggregation + career shape), `data/college_link.py` (cohort join),
+  `scripts/qb_breakout_college.py`, `REPORT_qb_breakout_college.md`.
+- **Play-by-play over a season-stats table, for two concrete reasons.** (1) EPA per dropback and
+  success rate exist at all. (2) **Sacks separate cleanly from rushing** — NCAA box scores charge
+  sack yardage to rushing, so Mayfield's 2015 reads as 405 official rushing yards where he actually
+  gained 604 on rush plays and lost the rest on 39 sacks. That is the difference between measuring
+  mobility and measuring pass protection. Verified the aggregation against his real line
+  (3,689 yds / 36 TD / 7 INT vs actual 3,700 / 36 / 7).
+- **Three source boundaries found by building it, all real, none of them fetch bugs:**
+  - **Floor 2004, not 2002/2003.** Those two files exist but ship an older, thinner schema (366
+    cols vs 405) with no `completion` / `pass_td` / `rush_td` / `EPA_success` / team-name fields.
+  - **Ceiling 2021.** cfbfastR-data publishes no further and `sportsdataverse` reads the same repo.
+    Costs nothing for *fitting* (last college season 2022+ → NFL entry 2023+ → right-censored) but
+    means the layer **cannot score today's prospects**. Closing it needs a CFBD key or an ESPN
+    loader — flagged as the one outstanding data decision.
+  - **2009 types `rush` as Float64** where every other season is Boolean; added dtype normalisation.
+- **Truncation caught and flagged rather than hidden.** Careers straddling 2004 are clipped —
+  Aaron Rodgers reads as *one* college season / 274 attempts because only 2004 is in range.
+  `college_career_truncated` marks them (30 matched, 2 late breakouts); `career_*` is unusable for
+  those rows, `final_*` is not, which is now the documented argument for leaning on final-season
+  form.
+- **Join is name + timing, with school as tiebreaker not filter.** cfbfastR carries no player ID,
+  so `draft_picks.cfb_player_id` has nothing to join to. Requiring school to match would discard
+  players over spelling ("Michigan St." vs "Michigan State"), and that variance is worse for small
+  programs — i.e. exactly where late-round and undrafted QBs come from. Ambiguity refused, not
+  guessed.
+- **Results:** 3,419 QB-seasons (>=50 dropbacks) across 1,684 college careers. Cohort match
+  **215/331 overall, 88% for 2005+ entrants**, and **unbiased across outcomes** (late 82% / never
+  88% / on-time 94%). **9 late breakouts carry a college profile vs 6 for high school** — Rodgers,
+  Alex Smith, Tyrod Taylor, Cousins, Tannehill, Geno, Winston, Mayfield, Love. `ever_breakout` = 38
+  matched, which is the modelling sample for stage 6.
+- **Bugs fixed while building:** column-name collisions between the two career frames
+  (`first_season`, `last_season`, `career_games` mean different things on each side) — college side
+  now prefixed `college_*`; and an empty rushing frame producing null-typed join keys, which
+  crashed aggregation for any slice with no rush plays.
+- 23 new tests (246 total), ruff clean. Plan updated: §2.2 boundaries, §2.4 join chain rewritten
+  (cfb_player_id is not usable), §4.2 what stage 3 established, §5.1 N ladder → ever_breakout 38 /
+  late 9.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

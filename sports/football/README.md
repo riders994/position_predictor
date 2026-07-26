@@ -75,8 +75,10 @@ cuts off the entire 2001-2005 cluster of late breakouts, so it is retained only 
 covariate.
 
 ```bash
-make -C sports/football fetch                                  # once, shared caches
-uv run python sports/football/scripts/qb_breakout_cohort.py    # cohort + labels + report
+make -C sports/football fetch                                     # once, shared caches
+uv run python sports/football/scripts/qb_breakout_cohort.py       # cohort + labels
+uv run python sports/football/scripts/qb_breakout_college.py      # college layer + join
+uv run python sports/football/scripts/qb_breakout_recruiting.py   # HS layer (optional)
 ```
 
 A breakout needs **two bars**: a **top-15** PPR PPG season triggers it (genuine draft-day value),
@@ -87,5 +89,12 @@ broke out and **16 did it late**. The result that motivates the constraint: thro
 seasons, future late breakouts look far more like busts than like on-time breakouts — early NFL
 production does not separate them.
 
-Write-up: [`reports/REPORT_qb_breakout_cohort.md`](reports/REPORT_qb_breakout_cohort.md);
+College evidence comes from cfbfastR play-by-play (2004-2021) rather than a season-stats table,
+so EPA per dropback exists and **sacks separate from rushing** — NCAA box scores charge sack
+yardage to rushing, which understates mobile QBs badly. 3,419 QB-seasons, 88% matched to the
+cohort for 2005+ entrants, unbiased across outcomes. **9 late breakouts carry a college profile**
+(vs 6 for high school), and `ever_breakout` has 38 — the actual modelling sample.
+
+Write-ups: [`reports/REPORT_qb_breakout_cohort.md`](reports/REPORT_qb_breakout_cohort.md),
+[`reports/REPORT_qb_breakout_college.md`](reports/REPORT_qb_breakout_college.md);
 design: [`docs/QB_BREAKOUT_PLAN.md`](docs/QB_BREAKOUT_PLAN.md).
