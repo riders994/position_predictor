@@ -132,18 +132,53 @@ score at all.
 | # | Stage | Output | Status |
 |---|---|---|---|
 | 1 | Cohort + labels + descriptive analysis | `qb_breakout_careers.parquet`, `REPORT_qb_breakout_cohort.md` | **done** |
-| 2 | High-school recruiting layer | `recruiting.parquet` + join-quality report | next |
-| 3 | Best-effort HS box-score scrape | `hs_stats.parquet` + coverage report | planned |
-| 4 | College production layer | `college_qb_seasons.parquet` | planned |
+| 2 | High-school recruiting layer | `espn_recruits_qb.parquet`, `REPORT_qb_breakout_recruiting.md` | **done** |
+| 3 | College production layer | `college_qb_seasons.parquet` | next |
+| 4 | Best-effort HS box-score scrape | `hs_stats.parquet` + coverage report | planned |
 | 5 | Archetypes (clustering on pre-NFL features) | archetype assignments + profiles | planned |
-| 6 | Pre-NFL-only model of P(late breakout) | model + honest validation | planned |
+| 6 | Pre-NFL-only model — `ever_breakout` primary, lateness descriptive | model + honest validation | planned |
+
+**Stage order changed after stage 2.** College production moves ahead of the HS scrape: the
+recruiting join left only 6 late breakouts with a high-school profile (§5.1), so the priority is
+extending per-player signal and reach, which college data does far better than a scraped
+high-school box score would.
+
+### 4.1 What stage 2 established
+
+The recruiting join works — 87–93% match from 2010 on, and **essentially unbiased across
+outcomes** (late 86% / never 87% / on-time 91%), so the surviving sample is not skewed against
+the cohort of interest. ESPN also supplies a scout-assigned high-school archetype (`QB-PP` pocket
+passer vs `QB-DT` dual threat) with no hindsight, which is directly useful for stage 5.
+
+The constraint it exposed is the positive count, not the match rate: the label needs 4+ elapsed
+NFL seasons and recruiting starts with the 2006 class, and their intersection leaves **6** late
+breakouts with high-school data. That is a case series, not a classifier's training set — hence
+the nested design in §5.
 
 ---
 
 ## 5. Modelling, and the small-N problem
 
+### 5.1 The N, precisely
+
+| Population | N |
+|---|---|
+| QBs entering 1999+ | 331 |
+| Ever broke out (sustained top-20) | 69 |
+| Broke out **late** | 17 |
+| Late **and** carrying a high-school profile | **6** |
+| Ever broke out, 2010+ entry, profile matched | 36 |
+
+**Six positives cannot support a late/not-late classifier.** The primary modelled outcome is
+therefore `ever_breakout` on the 2010+ matched cohort, with lateness handled descriptively and as
+a conditional second stage. This is a change of emphasis forced by the data, not a change of
+question — §1 still asks whether late breakouts were visible in advance; §5.2 is how much of that
+the evidence can actually carry.
+
+### 5.2 Methodological consequences
+
 **17 late breakouts** across 1999–2025 is the honest ceiling, and the recruiting-data era cuts it
-further. This governs every methodological choice:
+to 6. This governs every methodological choice:
 
 - **Evidence-weighting, not prediction at scale.** The deliverable is calibrated priors and
   interpretable archetype effects, not a leaderboard implying precision that N cannot support.
