@@ -1117,6 +1117,65 @@ the results of the other models?")_
 
 ---
 
+## Entry 055 — New football project: the late-breakout QB (cohort + labels)
+
+**Date:** 2026-07-25
+
+**Prompt (full text):**
+
+> Let's start a new football project. We're in the era of the late-breakout QB. I want to see what
+> we can do to identify them before they happen. Let's start by analyzing QBs that have done this
+> and then look at player archetypes, drafting situations, and other factors. While their pro
+> statistics should contribute to identifying the archetype, I want a limitation of this analysis
+> to be that it focuses mainly on college and high school stats for any final modeling.
+
+**Follow-up decisions (answers to clarifying questions):**
+
+> - **Breakout definition:** Fantasy — first top-12 PPG season. *"Let's make it top 20 for superflex
+>   relevance. Also QB15 tends to be good draft value"*
+> - **Late threshold:** Both Y4+ and team-change flags (cross-tab the four cells)
+> - **High-school data:** Recruiting profile + best-effort HS stats scrape. *"This is research, so
+>   partial data is better than none."*
+
+**Response notes:**
+- **New project** `sports/football/src/qb_breakout/` (sibling to `position_predictor`, same tree,
+  reuses its nflverse caches and `utils.io` paths). Branch `qb-late-breakout`.
+- **Data-source recon before planning.** ESPN's recruiting API is open (no key) and returns HS
+  name/city/state, national/position/state/region rank, ESPN grade, and camp measurables
+  (40/3-cone/shuttle/vertical). College PBP 2003+ is free via cfbfastR-data; `sportsdataverse.cfb`
+  is already a dependency. CFBD needs a free key (401 without). **Flagged up front:** no free bulk
+  source for HS box scores exists — the HS layer is fundamentally a *recruiting profile*, with the
+  scrape as partial-coverage augmentation.
+- **Key finding — the user's stated definition doesn't capture the user's own examples.** Built
+  "first top-20 PPG season" as asked, then checked it against the named archetypes: **Baker
+  Mayfield's 2018 rookie season ranks exactly 20th** and Tannehill's 2014 ranks 10th, so both
+  classify as *on-time*. Built two alternatives and scored all three against 11 unambiguous cases:
+  - `late` (first top-20) — misses Mayfield, Tannehill
+  - `late_qb1` (first top-12) — wrongly calls **Tom Brady** late (first top-12 in year 6)
+  - **`late_sustained`** (top-20 in ≥2 of 3 seasons from the breakout) — correct on all 11
+  Shipped `late_sustained` as the modelling target, other two as diagnostics. Peak-timing was also
+  tested and rejected: it flags 51/93 QBs because nearly everyone peaks late (Brady, Burrow, Allen).
+- **Three label bugs found and fixed while building:** (1) PFR vs nflverse team codes (GNB≠GB) made
+  Rodgers/Cassel/Alex Smith read as having changed teams — added a franchise crosswalk that also
+  collapses relocations (SD→LAC, STL→LA, OAK→LV); (2) entry season imputed from first *observed*
+  season made Testaverde (1987 #1 pick) a 1999 rookie — now resolved draft → `rosters.entry_year`
+  → first season, dropping the unresolvable; (3) no censoring — recent entrants were counted as
+  failures.
+- **Central result (§4 of the report):** through 3 NFL seasons, future late breakouts look far more
+  like busts than like on-time breakouts (median PPG 5.97 vs 4.18 / 15.68; median early rank at the
+  unranked floor for both late and never). **Early NFL production does not separate them** — which
+  is the empirical justification for the user's pre-NFL-only constraint.
+- **Shipped:** `labels/cohort.py` (3 label variants, entry resolution, two-way censoring),
+  `labels/teams.py` (franchise crosswalk), `eda/describe.py` (draft-situation base rates, trough
+  profile, timing distribution, pending watchlist), `scripts/qb_breakout_cohort.py`,
+  `docs/QB_BREAKOUT_PLAN.md`, `reports/REPORT_qb_breakout_cohort.md`. 21 new tests, 211 pass,
+  ruff clean.
+- **Cohort:** 331 QBs entering 1999+; 69 ever broke out; **17 late breakouts**; 28 censored.
+  Draft-capital base rate is the actionable one: R1 top-10 breaks out often but rarely *late*
+  (10% of its breakouts), while R4-7 and undrafted are 50%/67% late-given-breakout.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
