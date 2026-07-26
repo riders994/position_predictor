@@ -1410,6 +1410,70 @@ rather than a chi-square, because the cells are single-digit.
 13 new tests (**216 football tests**), ruff clean. Plan gains §2.6 (missing flags), §4.3 (what
 stage 5 established), corrected §2.5 calibration table; stages table has 5 done, 6 next.
 
+## Entry 060 — QB breakout stage 6: the pre-NFL-only model, and a negative result worth having
+
+**Date:** 2026-07-26
+
+**Prompt (full text):**
+
+> Move on to the nest phase
+
+**Response notes:**
+
+New `qb_breakout/model/` package (`features.py` tiers + sample rule, `fit.py` evaluation),
+`scripts/qb_breakout_model.py`, `REPORT_qb_breakout_model.md`, `qb_breakout_scores.parquet`.
+
+**Defining the sample turned out to be the first real decision.** A 2024 entrant who has not
+broken out has not *failed* to break out — labelling him a negative teaches the model that recent
+profiles do not work, and there were 34 such rows. Restricted to **5+ NFL seasons of opportunity**
+(90% of sustained breakouts happen by year 5, 95% by year 7): **177 QBs, 35 breakouts**. Reported
+with a sensitivity table rather than asserted — the base rate is flat at ~0.18 from a 3-season
+threshold to an 11-season one, which is the evidence the cut removes false negatives without
+reshaping the outcome.
+
+**Also had to extend `add_career_features` with portable `final_*` columns** (`final_attempts`,
+`final_td_rate`, `final_int_rate`, `final_yards_per_completion`, `final_rush_td_share`) so the
+portable tier was real rather than approximately real.
+
+**Results:**
+- **College production carries real signal.** CV AUC **0.696** vs a label-permutation null of
+  **0.493 ± 0.071** (p < 0.005, 200 shuffles with the whole pipeline re-run each time). Temporal
+  split (train early entrants → score later ones) holds at **0.725**.
+- **Portability is free — stage 4's question, answered.** Portable tier **0.696** vs full tier
+  **0.689**; the efficiency features add *nothing detectable*, well inside the ±0.018 fold spread.
+  The project ends with a model that can score current prospects, at no measured cost. Gradient
+  boosting doesn't help either (fitted and reported so nobody wonders).
+- **What it reads is workload and role, not efficiency**: final-season attempts, *not* being a
+  quick-game pocket passer, rush share, archetype stability — all sign-stable under bootstrap.
+  That ordering is exactly why EPA adds nothing.
+
+**The draft benchmark, and the trap in it.** Draft position is never a feature — the project's
+standing convention (model and market as independent opinions, never blended) applies here as it
+does to ECR. As a benchmark it scores **0.890** against the model's 0.696. But a fantasy breakout
+requires snaps and *the draft allocates snaps*: first-rounders average **85 career games** and
+break out at **0.565**, day-three/undrafted average **18 games** and break out at **0.023**. The
+draft partly **causes** the outcome it predicts, so beating it is not the standard a college-only
+model should be held to — a model that did beat it would be suspect.
+
+**The fair test is within a draft band, and it fails where it matters.** Among first-round picks
+the college model is at **chance (0.496, n=46, 26 breakouts)** — once the league has committed a
+first-rounder, his college box score says nothing about which of those picks hits. R2-3 looks
+better (0.675) on 7 positives; day-three has 2 breakouts and cannot be evaluated.
+
+**The conclusion is negative and stated as such:** if late breakouts are visible before the NFL,
+they are **not visible in college production**. Of the 35 breakouts in the sample, 8 were late —
+enough to describe, not enough to fit. Stage 5 hit the same wall from the archetype direction.
+What is untested is **context**: competition faced, supporting cast, scheme — the conditions a QB
+produced under rather than the totals he produced.
+
+**Testing focused on the ways a small-N model lies**, not on accuracy it isn't entitled to: that
+unsettled outcomes stay out, that censored ones stay out, that draft position never becomes a
+feature, that the portable tier is a strict subset of the full one differing by exactly the
+efficiency block, that shuffled labels score ~0.5 (a null that isn't centred means a leak), and
+that out-of-fold scores cover every QB exactly once.
+
+15 new tests (**231 football tests**), ruff clean. Plan gains §4.4; stages table now 1–6 all done.
+
 ---
 
 <!-- Template for new entries:

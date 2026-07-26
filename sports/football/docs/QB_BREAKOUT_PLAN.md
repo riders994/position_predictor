@@ -277,7 +277,7 @@ score at all.
 | ~~3b~~ | ~~Best-effort HS box-score scrape~~ | — | **cancelled** (§2.3) |
 | 4 | CFBD current-season extension + comparability test | `cfbd_qb_seasons.parquet`, `REPORT_qb_breakout_cfbd.md` | **done** |
 | 5 | Archetypes (clustering on college style) | `qb_breakout_archetypes.parquet`, `REPORT_qb_breakout_archetypes.md` | **done** |
-| 6 | Pre-NFL-only model — sustained breakout primary, lateness descriptive | model + honest validation | **next** |
+| 6 | Pre-NFL-only model — sustained breakout primary, lateness descriptive | `qb_breakout_scores.parquet`, `REPORT_qb_breakout_model.md` | **done** |
 
 **The HS box-score scrape (stage 3b) was cancelled and the project is now college-only** (§2.4). The recruiting layer's
 floor at NFL entry ~2010 cuts off the entire 2001–2005 cluster of late breakouts; college
@@ -339,6 +339,42 @@ permuted wholesale.
 archetype does **not** predict whether it happened late (p = 0.064, 9 positives). Neither result
 licenses archetype as a standalone classifier; the first is a prior for stage 6, the second is a
 statement about power.
+
+### 4.4 What stage 6 established
+
+**The sample had to be defined before it could be fitted.** A 2024 entrant who has not broken out
+has not *failed* to — labelling him a negative teaches the model that recent profiles do not work.
+Requiring **5+ NFL seasons of opportunity** (90% of sustained breakouts happen by year 5) gives
+**177 QBs, 35 breakouts**. The base rate is flat at ~0.18 from a 3-season threshold to an
+11-season one, which is the evidence that the cut removes false negatives without reshaping the
+outcome.
+
+**College production carries real signal.** Cross-validated AUC **0.696** against a
+label-permutation null of **0.493 ± 0.071** (p < 0.005), holding at **0.725** on a temporal split
+that trains on early entrants and scores later ones.
+
+**Portability is free — the stage-4 question, answered.** The portable tier scores 0.696 against
+the full tier's 0.689: the efficiency features add *nothing detectable*. The project therefore
+ends with a model that can score this year's prospects rather than only explain history. Gradient
+boosting does not help either, as expected at this N.
+
+**What it reads is workload and role, not efficiency.** Ranked by coefficient: final-season
+attempts, *not* being a quick-game pocket passer, rush share, archetype stability. That ordering
+explains why EPA adds nothing.
+
+**The draft is far better (AUC 0.890) and that comparison is a trap.** A fantasy breakout requires
+snaps and the draft *allocates* snaps — first-rounders average 85 career games against 18 for
+day-three and undrafted QBs, and break out at 0.565 against 0.023. The draft partly **causes** the
+outcome it predicts, so beating it is not the standard a college-only model should be held to.
+
+**The fair test is within a draft band, and there the answer is no.** Among first-round picks the
+college model is at **chance (0.496, n=46)**: once the league has committed a first-rounder, his
+college box score says nothing about which of those picks hits. The middle band (0.675) rests on
+7 positives; the day-three band has 2.
+
+**The honest conclusion is a negative one.** If late breakouts are visible before the NFL, they
+are **not visible in college production**. What is untested is *context* — competition faced,
+supporting cast, scheme, the conditions a QB produced under rather than the totals he produced.
 
 ---
 

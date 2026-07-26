@@ -349,6 +349,15 @@ def add_career_features(qb_seasons):
         final_adj_yards_per_db=pl.col("adj_yards_per_dropback").last(),
         final_rush_share=pl.col("rush_share").last(),
         final_dropbacks=pl.col("dropbacks").last(),
+        # Portable-tier finals (§2.5): computable from CFBD as well as cfbfastR, so a model built
+        # on them can score a current prospect rather than only a historical one.
+        final_attempts=pl.col("attempts").last(),
+        final_td_rate=pl.col("td_rate").last(),
+        final_int_rate=pl.col("int_rate").last(),
+        final_yards_per_completion=(pl.col("pass_yds") / pl.col("completions")).last(),
+        final_rush_td_share=(
+            pl.col("rush_td") / (pl.col("pass_td") + pl.col("rush_td"))
+        ).last(),
         first_epa_per_db=pl.col("pass_epa_per_db").first(),
         _epa_by_season=pl.col("pass_epa_per_db"),
     )

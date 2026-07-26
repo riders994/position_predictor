@@ -80,6 +80,7 @@ uv run python sports/football/scripts/qb_breakout_cohort.py       # cohort + lab
 uv run python sports/football/scripts/qb_breakout_college.py      # college layer + join
 uv run python sports/football/scripts/qb_breakout_cfbd.py         # CFBD extension (needs a key)
 uv run python sports/football/scripts/qb_breakout_archetypes.py   # style archetypes
+uv run python sports/football/scripts/qb_breakout_model.py        # pre-NFL-only model
 uv run python sports/football/scripts/qb_breakout_recruiting.py   # HS layer (optional)
 ```
 
@@ -95,7 +96,9 @@ College evidence comes from cfbfastR play-by-play (2004-2021) rather than a seas
 so EPA per dropback exists and **sacks separate from rushing** — NCAA box scores charge sack
 yardage to rushing, which understates mobile QBs badly. 3,419 QB-seasons, 88% matched to the
 cohort for 2005+ entrants, unbiased across outcomes. **9 late breakouts carry a college profile**
-(vs 6 for high school), and `ever_breakout` has 38 — the actual modelling sample.
+(vs 6 for high school), and 38 matched QBs have a sustained breakout — the modelling sample.
+(Note `ever_breakout` is the loose single-bar diagnostic, not the label; the two-bar version is
+`sustained_season`.)
 
 cfbfastR stops publishing after 2021, which is fine for fitting but means the layer cannot score
 *this year's* prospects. [CFBD](https://collegefootballdata.com) closes that gap (2013-present,
@@ -105,7 +108,7 @@ cleanly (r ≈ 0.99); **efficiency does not** — CFBD's PPA against cfbfastR's 
 correlates only 0.735, and a calibrated version would carry two-thirds of the between-player
 spread as error. So the features split into a **portable tier** (completion %, YPA, TD rate, rush
 share, volume) that can score current prospects, and a **cfbfastR-only tier** (EPA, success rate)
-that is a historical instrument. Stage 6 fits both and reports what portability costs.
+that is a historical instrument. Stage 6 fits both — and finds portability costs nothing.
 
 Archetypes are clustered on **style, not quality** — clustering on efficiency returns a
 leaderboard with four bins, so the feature set is four rate stats describing mobility and depth of
@@ -121,8 +124,23 @@ breakout at **0.05 (3/60)** against **0.28 (9/32)** for downfield dual-threats (
 QBs who *did* break out, archetype does not predict whether it happened late (p = 0.064, 9
 positives) — a statement about power as much as about football.
 
+**The model, and what it concludes.** 177 QBs with a settled outcome, 35 breakouts. College
+production predicts a breakout at cross-validated **AUC 0.696** against a label-permutation null
+of 0.493 — real signal, not noise — and the **portable tier matches the full one (0.689)**, so
+efficiency features add nothing and the project ends with a tool that can score *this year's*
+prospects. What the model actually reads is workload and role, not efficiency.
+
+Draft position, kept out of the model and used only as an independent benchmark, scores **0.890**
+— but that comparison is a trap: the draft *allocates* the snaps a fantasy breakout requires
+(first-rounders average 85 career games against 18 for day-three picks), so it partly causes the
+outcome it predicts. The fair test is within a draft band, and there the college evidence is at
+**chance among first-round picks (0.496)**. The honest conclusion is negative: if late breakouts
+are visible before the NFL, they are not visible in college *production*. Context — competition,
+supporting cast, scheme — is what remains untested.
+
 Write-ups: [`reports/REPORT_qb_breakout_cohort.md`](reports/REPORT_qb_breakout_cohort.md),
 [`reports/REPORT_qb_breakout_college.md`](reports/REPORT_qb_breakout_college.md),
 [`reports/REPORT_qb_breakout_cfbd.md`](reports/REPORT_qb_breakout_cfbd.md),
-[`reports/REPORT_qb_breakout_archetypes.md`](reports/REPORT_qb_breakout_archetypes.md);
+[`reports/REPORT_qb_breakout_archetypes.md`](reports/REPORT_qb_breakout_archetypes.md),
+[`reports/REPORT_qb_breakout_model.md`](reports/REPORT_qb_breakout_model.md);
 design: [`docs/QB_BREAKOUT_PLAN.md`](docs/QB_BREAKOUT_PLAN.md).
