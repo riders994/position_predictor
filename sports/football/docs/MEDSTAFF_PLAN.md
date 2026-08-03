@@ -283,11 +283,31 @@ not fully independent (an old roster is old on both sides).
 | 4 | Expected-value models | `medstaff_expected.py` | **done** |
 | 5 | Cross-group signature (§5.7) | `medstaff_signature.py` | **done** |
 | 6 | Reliability & power | `medstaff_reliability.py` | **done** |
-| 7 | Grades | `medstaff_grades.py` | |
+| 7 | Grades | `medstaff_grades.py` | **done** |
 
 **Stage 6 before stage 7 is deliberate.** The reliability verdict must exist before anything
 resembling a leaderboard does; stage 7 reads it and interpolates it into its own header, so the
 verdict cannot drift from the evidence. A reader who stops at stage 6 has the honest answer.
+
+### 6.6 What stage 7 produced — the board
+
+Forced-rank curve **3 A · 5 B · 8 C · 8 D · 8 F**. Weights proportional to measured split-half
+reliability (self-limiting), reported beside the attributability prior — which orders the
+components **almost exactly the other way round**, since recurrence is the most attributable and
+least reliable while duration is the least attributable and most reliable. That tension is the
+honest content of the weights table; there is no way to satisfy both.
+
+- **0 of 32 clubs are separable from the club immediately below them.** Adjacent-pair separation
+  is a strict test in a 32-club field, so this is expected — but it means the ordering within a
+  band, and between adjacent bands, carries no information.
+- **17 of 32 are separable from the league average.** The extremes are real relative to the mean;
+  the fine ordering is not. That is the pair of numbers to quote together.
+- **17 of 32 get the same letter on the 3-year window** — the most direct stability check on the
+  board itself, and consistent with stage 6's finding that most of the signal is period-specific.
+- Position-group cells are shrunk toward their own club's value and **never ranked**; they ship
+  in the parquet rather than as a report table precisely so they are not read as an ordering.
+- **No raw rate ever reaches the board** (tested), the direct analogue of the sibling project's
+  no-raw-rate test.
 
 ### 6.5 What stage 5 established — the signature holds for concussion
 

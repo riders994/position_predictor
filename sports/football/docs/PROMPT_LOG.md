@@ -1501,6 +1501,52 @@ the results of the other models?")_
 
 ---
 
+## Entry 072 — medstaff stage 7: the grades, on a forced-rank curve
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> Let's produce the grades. Top 3 are A, next 5 are B, next 8 are C, next 8 are D, next 8 are F.
+> After running these reports for a few years, we'll re-calibrate so that a certain score yields
+> a certain grade, rather than the tiered curve I established.
+
+**Response notes:**
+- **Final stage.** `src/medstaff/grades/` (compose + staff), `scripts/medstaff_grades.py`,
+  `REPORT_medstaff_grades.md`. 22 tests (**389 repo-wide**), ruff clean. Runs in ~2s.
+- **User-specified forced-rank quota: 3 A · 5 B · 8 C · 8 D · 8 F** — sums to exactly 32.
+  Implemented as `LETTER_QUOTAS`, with the **recalibration path built in from the start**:
+  `ABSOLUTE_BANDS` + `assign_letters(bands=...)` already accept an absolute score-to-grade table,
+  so the future switch is a parameter, not a rewrite. Tested both paths.
+- **Flagged, not argued:** a forced curve assigns three A's and eight F's to *any* input including
+  noise — it orders, it does not test. There is a test documenting exactly that. The user had
+  already anticipated it by asking for absolute thresholds later.
+- **The two separation numbers, which must be quoted together:**
+  **0 of 32** clubs are separable from the club immediately below them (adjacent-pair separation
+  is a strict test in a 32-club field), but **17 of 32** are separable from the **league average**.
+  So the extremes are real relative to the mean; the fine ordering is not. Added
+  `separated_from_average` after the adjacent-pair statistic came back empty and uninformative.
+- **17 of 32 get the same letter on the 3-year window** — the most direct stability check on the
+  board itself, and consistent with stage 6 finding most signal is period-specific.
+- **Weights ∝ measured split-half reliability** (self-limiting: a component with no signal gets
+  ~0 weight without anyone deciding it should). Reported beside the **attributability prior**,
+  which orders the components **almost exactly the other way round** — recurrence is most
+  attributable and least reliable, duration least attributable and most reliable. No way to
+  satisfy both; that tension is the honest content of the weights table.
+- **Board (5yr, 2021–25):** A = LA, CHI, CIN · F = BUF, DAL, GB, NE, MIA, SEA, KC, CLE.
+- **Report opens with stage 6's verdict**, not the letters: this grades a **team availability
+  system**, and stage 6 narrowed it further to **availability-management policy, not medicine**
+  (only duration and returns-at-all persist; recurrence does not).
+- Position-group cells shrunk toward their own club's value and **never ranked** — they ship in
+  the parquet rather than as a report table so they are not read as an ordering.
+- **No raw rate reaches the board** (tested) — the direct analogue of the sibling project's
+  no-raw-rate test.
+- `--staff-table` hook works and canonicalises relocated codes; without it the report says plainly
+  it is grading franchises, since no free trainer-by-season source exists.
+- **PROJECT COMPLETE: all 7 stages done.**
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
