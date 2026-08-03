@@ -2055,6 +2055,54 @@ the results of the other models?")_
 
 ---
 
+## Entry 070 — medstaff stage 6: reliability, and what actually persists
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> Do stage 6
+
+**Response notes:**
+- Run **before** the grades on purpose: a reader who stops here has the honest answer.
+  `src/medstaff/validate/`, `scripts/medstaff_reliability.py`, `REPORT_medstaff_reliability.md`.
+- **Two tests because they fail differently.** **Split-half** splits each club's **players**,
+  never its rows (a row split would put one fragile player on both sides and manufacture
+  agreement out of one man's hamstring), Spearman-Brown corrected. **Temporal** grades 2021–23
+  and tests 2024–25 — the harder test, and the one a reader cares about, since a grade is only
+  useful if it says something going forward.
+- **RESULT — 2 of 5 components pass the preregistered gate:**
+
+  | component | split-half | temporal | temporal p | perm p | gate |
+  |---|---|---|---|---|---|
+  | incidence (no hist) | 0.708 | 0.293 | 0.104 | 0.020 | FAIL — temporal |
+  | incidence (with hist) | 0.701 | 0.192 | 0.293 | 0.033 | FAIL — temporal |
+  | **duration** | 0.827 | **0.529** | 0.002 | 0.001 | **PASS** |
+  | recurrence | 0.414 | **0.078** | 0.670 | 0.057 | FAIL — temporal + permutation |
+  | **returns-at-all** | 0.664 | **0.397** | 0.024 | 0.003 | **PASS** |
+
+- **THE HEADLINE IS THE GAP BETWEEN THE TWO TESTS.** Split-half is high everywhere (0.41–0.83) —
+  the residuals are internally consistent, not measurement noise — but temporal is much lower.
+  For most components the residual is a property of **a period**, not a carry-forward property of
+  the club. Real, but not something to put on next season's board.
+- **What is stable is NOT medicine.** The two passing components — duration and returns-at-all —
+  are largely *how a club uses IR and times a return*: an operational/roster-policy signature.
+  **Recurrence, the one outcome most plausibly owned by a medical staff, is weakest on every
+  test.** Combined with stage 4 (where recurrence was also the only component failing its
+  permutation test), the consistent story is that clubs differ in availability *management*, not
+  in medicine.
+- **Consequence for stage 7, now written into the plan:** the board separates clubs by
+  **availability-management policy**, not quality of medicine — a narrower claim than "medical
+  staff grades" and the one the evidence supports.
+- **The gate LABELS, it does not suppress** (per the locked decision): grades publish either way,
+  failing components marked at every appearance rather than in a footnote.
+- **Removed hardcoded constants:** stage 6 first carried stage 4's permutation p-values as
+  retyped literals. Now recomputed from stage 4's own parquet — a retyped number goes stale
+  silently the first time the upstream stage is rerun.
+- 11 new tests (**353 repo-wide**), ruff clean. Runtime ~45s.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

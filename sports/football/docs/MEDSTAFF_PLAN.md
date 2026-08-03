@@ -282,12 +282,40 @@ not fully independent (an old roster is old on both sides).
 | 3 | Exposure & confounders | `medstaff_exposure.py` | **done** |
 | 4 | Expected-value models | `medstaff_expected.py` | **done** |
 | 5 | Cross-group signature (§5.7) | `medstaff_signature.py` | |
-| 6 | Reliability & power | `medstaff_reliability.py` | |
+| 6 | Reliability & power | `medstaff_reliability.py` | **done** |
 | 7 | Grades | `medstaff_grades.py` | |
 
 **Stage 6 before stage 7 is deliberate.** The reliability verdict must exist before anything
 resembling a leaderboard does; stage 7 reads it and interpolates it into its own header, so the
 verdict cannot drift from the evidence. A reader who stops at stage 6 has the honest answer.
+
+### 6.4 What stage 6 established — read before any grade
+
+Split-half (splitting each club's **players**, never its rows, Spearman-Brown corrected) against
+temporal (grade 2021–23, test 2024–25):
+
+| component | split-half | temporal | temporal p | permutation p | gate |
+|---|---|---|---|---|---|
+| incidence (no history) | 0.708 | 0.293 | 0.104 | 0.020 | FAIL — temporal |
+| incidence (with history) | 0.701 | 0.192 | 0.293 | 0.033 | FAIL — temporal |
+| **duration** | 0.827 | **0.529** | 0.002 | 0.001 | **PASS** |
+| recurrence | 0.414 | **0.078** | 0.670 | 0.057 | FAIL — temporal, permutation |
+| **returns-at-all** | 0.664 | **0.397** | 0.024 | 0.003 | **PASS** |
+
+**2 of 5 pass. The gap between the two tests is the headline.** Split-half is high everywhere
+(0.41–0.83), so the residuals are internally consistent rather than measurement noise — but
+temporal is much lower. For most components the residual is a property of **a period**, not a
+carry-forward property of the club.
+
+**What is stable is not medicine.** The two components that pass — duration and returns-at-all —
+are largely *how a club uses injured reserve and times a return*: an operational and roster-policy
+signature. **Recurrence, the one outcome most plausibly owned by a medical staff, is weakest on
+every test** (temporal 0.078, permutation 0.057).
+
+**Consequence for stage 7:** the board separates clubs by **availability-management policy**, not
+by quality of medicine. That is a narrower claim than "medical staff grades" and it is the one the
+evidence supports. Failing components are labelled at every appearance, never in a footnote — the
+gate labels, it does not suppress (per the locked decision in §1.2).
 
 ### 6.3 What stage 4 established
 
