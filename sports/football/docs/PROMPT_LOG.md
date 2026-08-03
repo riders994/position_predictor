@@ -1356,6 +1356,52 @@ the results of the other models?")_
 
 ---
 
+## Entry 069 — medstaff stage 4: expectation models, and a risk-set bug they exposed
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> start stage 4
+
+**Response notes:**
+- **`src/medstaff/expected/`** (`models.py` + `datasets.py`), `scripts/medstaff_expected.py`,
+  `REPORT_medstaff_expected.md`. Penalised discrete-time logistic hazard with splines on age and
+  week; **leave-one-team-out** folds; **club identity guarded out of the design matrix** (raises).
+- **The load-bearing test:** inject a synthetic club effect of known size, assert **LOTO recovers
+  it while random k-fold shrinks it**. LOTO is the more expensive scheme and the whole design
+  rests on it being necessary, so necessity is demonstrated rather than asserted.
+- **⚠️ BUG the first run exposed: incidence base rate came out 0.000.** The stage-3 risk set
+  excluded weeks inside an episode **including the onset week itself**, so the event week was
+  never at risk. In survival terms the event week is the **last at-risk week**. Fixed to exclude
+  only `onset_week+1 .. end_week`; risk set 130,139 → **144,552** player-weeks and base rate
+  0.000 → 0.100. Caught only because a zero base rate is obviously impossible — nothing errored.
+- **Results (LOTO, 2,000-draw nulls):** incidence 0.100 base / perm p **0.025** / intraclass
+  0.867 · duration 0.163 / **0.0005** / 0.882 · recurrence 0.018 / **0.058** / 0.440 ·
+  returns_at_all 0.545 / **0.0045** / 0.625.
+- **THE PATTERN: the evidence runs opposite to attributability.** Recurrence — most plausibly
+  owned by a medical staff, downstream of the return-to-play decision, least contaminated by
+  luck — is the **only component that fails its permutation test**. Incidence — *least*
+  attributable (conditioning, scheme, surface, luck) — separates clubs most strongly. Consistent
+  with clubs differing mainly in exposure and IR usage rather than medicine. A caution, not a
+  finding; stage 6 decides whether any of it is stable.
+- **The with/without-history bound is TIGHT** (intraclass 0.859 vs 0.867), so the §5.3 ambiguity
+  is not load-bearing in practice. Could not have been known in advance — it is why the bound was
+  built rather than a covariate choice being made.
+- **⚠️ Caveat added to the report: `intraclass` is NOT "share attributable to the medical
+  staff."** It only says the spread is not Poisson noise; the surviving variance can still be
+  roster construction, disclosure, scheme or stadium — and the deliberately restrained model
+  (§5.1) leaves uncaptured composition *in* the residual by design. Most likely misreading.
+- **Nulls:** whole-factor permutation (reassigns whole *players* to clubs) is the primary
+  inference — one test, no multiplicity. Per-club p-values use the **more conservative** of
+  independent-Bernoulli and **player-block bootstrap**; the block null is verified wider by test
+  when within-player weeks are correlated. Uncorrected p's reported with expected chance hits
+  stated inline.
+- Calibration tracks the diagonal for incidence and recurrence. Runtime ~6 min at 2,000 sims.
+- 22 new tests (**342 repo-wide**), ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

@@ -241,7 +241,11 @@ def build_risk_set(panel, episodes):
         for ep in episodes.select(
             ["season", "gsis_id", "onset_week", "end_week", "return_week"]
         ).iter_rows(named=True):
-            for w in range(ep["onset_week"], (ep["end_week"] or ep["onset_week"]) + 1):
+            # The onset week itself STAYS at risk — it is the week the event happened, and in
+            # survival terms the event week is the last at-risk week. Only the weeks *after*
+            # onset, while the spell is open, are not at risk of a new onset. Covering the
+            # onset week too drives the incidence base rate to exactly zero.
+            for w in range(ep["onset_week"] + 1, (ep["end_week"] or ep["onset_week"]) + 1):
                 covered.append((ep["season"], ep["gsis_id"], w))
     covered_df = pl.DataFrame(
         covered, schema=["season", "gsis_id", "week"], orient="row"

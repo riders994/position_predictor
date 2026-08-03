@@ -280,7 +280,7 @@ not fully independent (an old roster is old on both sides).
 | 1 | Data: registration, taxonomy, diagnostics | `medstaff_ingest.py` | **done** |
 | 2 | Episodes | `medstaff_episodes.py` | **done** |
 | 3 | Exposure & confounders | `medstaff_exposure.py` | **done** |
-| 4 | Expected-value models | `medstaff_expected.py` | |
+| 4 | Expected-value models | `medstaff_expected.py` | **done** |
 | 5 | Cross-group signature (§5.7) | `medstaff_signature.py` | |
 | 6 | Reliability & power | `medstaff_reliability.py` | |
 | 7 | Grades | `medstaff_grades.py` | |
@@ -288,6 +288,31 @@ not fully independent (an old roster is old on both sides).
 **Stage 6 before stage 7 is deliberate.** The reliability verdict must exist before anything
 resembling a leaderboard does; stage 7 reads it and interpolates it into its own header, so the
 verdict cannot drift from the evidence. A reader who stops at stage 6 has the honest answer.
+
+### 6.3 What stage 4 established
+
+Fitted out-of-fold with leave-one-team-out; **club identity is never a feature** (guarded).
+
+| component | rows | base | permutation p | intraclass |
+|---|---|---|---|---|
+| incidence (no history) | 144,552 | 0.100 | **0.025** | 0.867 |
+| incidence (with history) | 144,552 | 0.100 | **0.039** | 0.859 |
+| duration | 48,267 | 0.163 | **0.0005** | 0.882 |
+| recurrence | 37,859 | 0.018 | 0.058 | 0.440 |
+| returns_at_all | 14,420 | 0.545 | **0.0045** | 0.625 |
+
+- **The evidence runs opposite to attributability.** Recurrence — the component most plausibly
+  owned by a medical staff — is the **only one that does not clear** its permutation test.
+  Incidence, the component least attributable to a training room, separates clubs most strongly.
+  That ordering is a caution, not a finding: it is consistent with clubs differing mainly in
+  exposure and IR usage rather than in medicine.
+- **The with/without-history bound is tight** (0.859–0.867), so the §5.3 ambiguity turns out not
+  to be load-bearing in practice — worth knowing, and it could not have been known in advance.
+- **⚠️ `intraclass` is not "share attributable to the medical staff."** It says the spread is not
+  Poisson noise. The surviving variance can still be roster construction, disclosure, scheme or
+  stadium — and because the model is deliberately restrained (§5.1), composition the covariates
+  miss stays *in* the residual by design. This is the most likely misreading of the table.
+- Calibration tracks the diagonal for both incidence and recurrence.
 
 ### 6.2 What stage 3 established
 

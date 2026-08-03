@@ -167,7 +167,9 @@ class TestRiskSet:
             "season": 2023, "gsis_id": "G1", "onset_week": 2, "end_week": 3, "return_week": 4,
         }])
         risk = build_risk_set(panel, episodes)
-        assert sorted(risk["week"].to_list()) == [1, 4]
+        # week 2 is the onset week and stays at risk (the event week is the last at-risk week);
+        # week 3 is inside the open spell and is not
+        assert sorted(risk["week"].to_list()) == [1, 2, 4]
 
     def test_practice_squad_and_byes_excluded(self):
         panel = self._panel([
@@ -184,6 +186,6 @@ class TestRiskSet:
         }])
         risk = build_risk_set(panel, episodes).sort("week")
         got = dict(zip(risk["week"].to_list(), risk["weeks_since_return"].to_list()))
-        assert 2 not in got, "the injured week itself is not at risk"
+        assert got[2] is None, "the onset week is at risk, with no return yet"
         assert got[3] == 0 and got[4] == 1 and got[6] == 3
         assert got[1] is None, "no return has happened yet"

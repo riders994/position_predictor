@@ -1,6 +1,6 @@
 # Medical-staff grades — Stage 3: exposure and confounders
 
-The risk set is **130,139 player-weeks** across 2021–2025, drawn from
+The risk set is **144,552 player-weeks** across 2021–2025, drawn from
 221,313 panel rows. Nothing here is an outcome and nothing here is a grade — this is the
 input side of the observed-minus-expected the grades are built from.
 
@@ -17,19 +17,19 @@ A player-week only counts as exposure if a new injury could have *started* in it
 
 | covariate | non_null_share |
 |---|---|
-| surface (game) | 0.963 |
+| surface (game) | 0.962 |
 | home_surface (club) | 1.000 |
 | rest_days | 1.000 |
 | indoor | 1.000 |
 | age | 0.993 |
 | years_exp | 1.000 |
 | bmi | 0.999 |
-| snaps | 0.857 |
-| snap_share_3wk | 0.857 |
+| snaps | 0.820 |
+| snap_share_3wk | 0.820 |
 | prior_designated_weeks | 1.000 |
-| weeks_since_return | 0.298 |
+| weeks_since_return | 0.301 |
 
-**Snap coverage is 85.7%.** `snap_counts` keys on `pfr_player_id`, so it needs a
+**Snap coverage is 82.0%.** `snap_counts` keys on `pfr_player_id`, so it needs a
 crosswalk to `gsis_id`, and the obvious sources are biased in the one direction that would have
 corrupted this project:
 
@@ -45,14 +45,14 @@ players — missing at roughly the same rate everywhere.
 
 | position_group | snap_coverage | mean_snap_share |
 |---|---|---|
-| ST | 0.962 | 0.000 |
-| LB | 0.910 | 0.416 |
-| DB | 0.892 | 0.518 |
-| WR_TE | 0.880 | 0.457 |
-| RB | 0.863 | 0.308 |
-| DL | 0.857 | 0.453 |
-| OL | 0.832 | 0.558 |
-| QB | 0.470 | 0.780 |
+| ST | 0.946 | 0.000 |
+| LB | 0.868 | 0.425 |
+| DB | 0.845 | 0.526 |
+| WR_TE | 0.836 | 0.463 |
+| DL | 0.825 | 0.457 |
+| RB | 0.821 | 0.314 |
+| OL | 0.799 | 0.571 |
+| QB | 0.471 | 0.790 |
 
 Snaps remain an *intensity* covariate and never the availability signal — the roster does that
 job at full coverage — and every snap-derived column is null-safe.
@@ -67,9 +67,9 @@ Per player-week, the surface actually played on:
 
 | surface | player_weeks |
 |---|---|
-| grass | 66804 |
-| turf | 58469 |
-| — | 4866 |
+| grass | 74266 |
+| turf | 64791 |
+| — | 5495 |
 
 Club home surfaces, which are a stadium property rather than a staff choice and the canonical
 mechanism behind knee and ankle risk:
@@ -83,25 +83,25 @@ Short weeks (four or five days' rest — Thursday games):
 
 | short_week | player_weeks |
 |---|---|
-| no | 121781 |
-| yes | 8358 |
+| no | 135477 |
+| yes | 9075 |
 
 ## 4. Who is exposed
 
 | position_group | risk_weeks | mean_age | mean_snap_share |
 |---|---|---|---|
-| OL | 24846 | 27.152 | 0.558 |
-| DB | 24402 | 26.089 | 0.518 |
-| WR_TE | 22095 | 26.259 | 0.457 |
-| DL | 19326 | 26.812 | 0.453 |
-| LB | 18348 | 26.222 | 0.416 |
-| RB | 9484 | 25.891 | 0.308 |
-| QB | 6154 | 28.249 | 0.780 |
-| ST | 5484 | 28.985 | 0.000 |
+| DB | 27475 | 26.093 | 0.526 |
+| OL | 27405 | 27.151 | 0.571 |
+| WR_TE | 24916 | 26.258 | 0.463 |
+| DL | 21371 | 26.833 | 0.457 |
+| LB | 20460 | 26.238 | 0.425 |
+| RB | 10639 | 25.888 | 0.314 |
+| QB | 6620 | 28.247 | 0.790 |
+| ST | 5666 | 28.998 | 0.000 |
 
 ## 5. Prior injury history — the covariate that cuts both ways
 
-Mean prior designated weeks per risk row: **7.4**
+Mean prior designated weeks per risk row: **7.6**
 (median 3,
 max 121).
 
