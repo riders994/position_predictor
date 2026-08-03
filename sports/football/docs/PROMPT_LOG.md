@@ -1313,6 +1313,49 @@ the results of the other models?")_
 
 ---
 
+## Entry 068 — medstaff stage 3: exposure, and a position-biased ID crosswalk
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> start stage 3
+
+**Response notes:**
+- **`src/medstaff/exposure/`** + `scripts/medstaff_exposure.py` + `REPORT_medstaff_exposure.md`.
+  Risk set = **130,139 player-weeks** (2021–2025) with confounders attached.
+- **Risk-set definition:** a week only counts as exposure if a new injury could have *started*
+  in it. Weeks inside an open spell are dropped (counting them turns one long absence into many
+  weeks of injury-free exposure), as are practice-squad weeks and byes.
+- **⚠️ THE FINDING — the ID crosswalk is position-biased.** `snap_counts` keys on
+  `pfr_player_id`; the two obvious crosswalk sources fail *specifically on linemen*:
+  `rosters_weekly.pfr_id` is null for **99.8% of OL rows** (vs 9–24% elsewhere), and `ids` is a
+  **fantasy** table that resolved **2 of 352** distinct linemen. Symptom that exposed it: OL mean
+  snap share came out **0.032** against QB 0.780 — linemen play nearly every offensive snap, so
+  it had to be wrong. **Why it mattered more than missing data:** position correlates with body
+  part, and body part is exactly what the stage-5 signature analysis compares, so position-biased
+  missingness would have arrived looking like a finding. **Fix:** registered `players`
+  (`load_players`), ~12% null for linemen and ~11% for skill players — unbiased. **OL snap
+  coverage 2.4% → 83.2%**, mean snap share 0.558. QB coverage is 47% and that is correct:
+  inactive backup weeks stay in the risk set (a scratch can still get hurt in practice) and have
+  no snap row.
+- **Surface is dirty free text:** `"grass "` with a trailing space is a distinct value from
+  `"grass"` (93 vs 612 rows) and `""` means missing. Normalised to grass/turf with turf brands
+  collapsed — brand is not an injury-risk distinction. 17 clubs play home on grass, 15 on turf.
+- **Prior injury history ships as its own table, deliberately.** It reaches back to **2009** from
+  the *report* (comparable across that span even though the roster fields are not) and is
+  **strictly prior seasons** so it cannot leak the outcome. It is the one covariate that is
+  partly the staff's own output — a poor system manufactures players who look fragile — so stage
+  4 must fit incidence **with and without** it and report the pair as a **bound**, not a point.
+- **Bug found by a test:** an all-null `birth_date` column arrives typed Null and raised
+  `- not allowed on date and null`; now cast explicitly to Date. Real data has 0.8% nulls mixed
+  in so it never surfaced in the live run — only a synthetic fixture caught it.
+- `years_exp` clipped at 22 (one 2023 roster row claims 29 — the row is real exposure, the number
+  is not). Coverage: surface 96.3%, home surface/rest/indoor 100%, age 99.3%, BMI 99.9%.
+- 26 new tests (**320 repo-wide**), ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

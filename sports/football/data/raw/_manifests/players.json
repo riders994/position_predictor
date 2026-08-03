@@ -1,0 +1,12 @@
+{
+  "name": "players",
+  "source": "nflverse/nflreadpy",
+  "note": "Full player universe with gsis_id<->pfr_id. Unlike `ids` and the weekly rosters, its pfr_id coverage is not position-biased (~12% null for both linemen and skill players), which is what makes snap joins usable.",
+  "seasons": [],
+  "min_season": null,
+  "pulled_at": "2026-08-03T17:06:51.024851+00:00",
+  "n_rows": 25039,
+  "n_cols": 39,
+  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/players.parquet",
+  "sha256": "5e989a714581aff05153672782773b8aeb65643c758514b3298aed8e370289ec"
+}

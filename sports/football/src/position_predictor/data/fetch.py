@@ -158,7 +158,12 @@ def _registry() -> dict[str, Dataset]:
         Dataset("combine", L("load_combine"), min_season=2000,
                 note="Combine athletic testing (numeric)."),
         Dataset("ids", L("load_ff_playerids"), needs_years=False,
-                note="Cross-source player ID crosswalk."),
+                note="Cross-source player ID crosswalk (fantasy positions only — carries "
+                     "essentially no offensive linemen; see `players` for a complete one)."),
+        Dataset("players", L("load_players"), needs_years=False,
+                note="Full player universe with gsis_id<->pfr_id. Unlike `ids` and the weekly "
+                     "rosters, its pfr_id coverage is not position-biased (~12% null for both "
+                     "linemen and skill players), which is what makes snap joins usable."),
         Dataset("sleeper_players", _load_sleeper, needs_years=False,
                 source="sleeper/v1/players/nfl",
                 note="Sleeper fantasy_positions eligibility (current snapshot; gsis_id join)."),

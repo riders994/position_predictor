@@ -55,6 +55,7 @@ grading a training staff. Head-coach change is the only turnover instrument avai
 | `injuries` | `load_injuries` | 2009–2025 | Body part, game designation, practice participation |
 | `rosters_weekly` | `load_rosters_weekly` | 2002–2025 | **The availability spine** — ACT/INA/RES-IR/PUP/PS |
 | `schedules` | `load_schedules` | all | Surface & roof (confounders), rest days, head coach |
+| `players` | `load_players` | all | The **only** unbiased `gsis_id`↔`pfr_id` crosswalk (§2.6) |
 
 Registered as three `Dataset(...)` lines in `position_predictor/data/fetch.py`; the existing
 `L()` / `_clip_seasons` / `_load_resilient` / `_write_manifest` machinery is unchanged.
@@ -79,6 +80,23 @@ across the boundary.
 Over the same seasons the coalesced body part is **≤0.1%** null and `practice_status` **≤0.7%**.
 **Every outcome is therefore built on those two**; `report_status` is used only as a severity
 refinement in a 2016+ sensitivity run, with a season-level `report_regime` control.
+
+### 2.6 ⚠️ The ID crosswalk is position-biased (found in stage 3)
+
+`snap_counts` keys on `pfr_player_id`, so using it needs a crosswalk to `gsis_id` — and the two
+obvious sources are biased in the one direction that would have corrupted this project:
+
+- **`rosters_weekly.pfr_id` is null for 99.8% of offensive-line rows**, against 9–24% elsewhere
+- **`ids` is a fantasy table**: of 352 distinct linemen in one season's snap counts it resolves
+  **two**
+
+Either would have left snap-workload covariates present for skill players and absent for
+linemen. Position correlates with body part, and body part is exactly what the stage-5 signature
+analysis compares — so position-biased missingness would have arrived looking like a finding.
+
+**`load_players()` is the fix**: ~12% null for linemen and ~11% for skill players, i.e. missing
+at roughly the same rate everywhere. OL snap coverage goes from **2.4% → 83.2%** with a sensible
+mean snap share (0.558). Snaps remain an *intensity* covariate and never the availability signal.
 
 ### 2.5 ⚠️ The 2021 roster-status break (found in stage 2)
 
@@ -261,7 +279,7 @@ not fully independent (an old roster is old on both sides).
 |---|---|---|---|
 | 1 | Data: registration, taxonomy, diagnostics | `medstaff_ingest.py` | **done** |
 | 2 | Episodes | `medstaff_episodes.py` | **done** |
-| 3 | Exposure & confounders | `medstaff_exposure.py` | |
+| 3 | Exposure & confounders | `medstaff_exposure.py` | **done** |
 | 4 | Expected-value models | `medstaff_expected.py` | |
 | 5 | Cross-group signature (§5.7) | `medstaff_signature.py` | |
 | 6 | Reliability & power | `medstaff_reliability.py` | |
@@ -270,6 +288,17 @@ not fully independent (an old roster is old on both sides).
 **Stage 6 before stage 7 is deliberate.** The reliability verdict must exist before anything
 resembling a leaderboard does; stage 7 reads it and interpolates it into its own header, so the
 verdict cannot drift from the evidence. A reader who stops at stage 6 has the honest answer.
+
+### 6.2 What stage 3 established
+
+- The risk set is **130,139 player-weeks**: weeks inside an open spell are excluded (counting
+  them would turn one long absence into weeks of injury-free exposure), as are practice-squad
+  weeks and byes.
+- Covariate coverage is near-complete for everything the club does not choose — surface 96.3%,
+  home surface / rest days / indoor 100%, age 99.3%, BMI 99.9%.
+- The crosswalk defect in §2.6 was found and fixed here.
+- Prior injury history reaches back to 2009 from the *report*, strictly prior seasons only, and
+  ships as its own table so stage 4 can fit incidence with and without it (§5.3).
 
 ### 6.1 What stage 1 established
 
