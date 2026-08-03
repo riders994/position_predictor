@@ -54,6 +54,20 @@ uv run python sports/football/scripts/keeper.py \
 **Full command reference** — every stage and tool, with flags and outputs:
 [`docs/USAGE.md`](docs/USAGE.md).
 
+### Late-breakout QB (`qb_breakout`) — ⏸️ shelved
+
+A sibling research project: which QBs break out *after* the league writes them off, and was it
+visible before they took an NFL snap? All seven stages are complete. **The code lives on the
+`qb-late-breakout` branch and is not on `primary`** — the plan
+([`docs/QB_BREAKOUT_PLAN.md`](docs/QB_BREAKOUT_PLAN.md)), the decision trail (PROMPT_LOG entries
+055–061) and the stage reports (`reports/REPORT_qb_breakout_*.md`) are here so the findings are
+not stranded.
+
+**Headline, and it is a negative one:** college production does predict breakout (CV AUC 0.696
+vs a permutation null of 0.493), but adds nothing *within a draft band* — among first-round
+picks the model is at chance (0.496, n=46). If late breakouts are visible pre-NFL, they are not
+visible in college production.
+
 ## Headline
 
 Era-ensemble ranks returning players at **Spearman ≈ 0.74–0.75** (RB/WR) on the full eligible
