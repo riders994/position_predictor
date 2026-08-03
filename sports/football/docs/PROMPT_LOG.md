@@ -1450,6 +1450,57 @@ the results of the other models?")_
 
 ---
 
+## Entry 071 — medstaff stage 5: the cross-group signature holds for concussion
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> start stage 5
+
+**Response notes:**
+- The user's own idea (Entry 063), now run properly. `src/medstaff/signature/`,
+  `scripts/medstaff_signature.py`, `REPORT_medstaff_signature.md`. Needed **body-part-specific
+  expectations**, which stage 4 did not produce (its incidence model predicts *any* onset) — so
+  five extra leave-one-team-out fits, one per focal part. ~4 min.
+- **RESULT — the preregistered primary hypothesis holds:**
+
+  | part | composition | p | rate | p | probe |
+  |---|---|---|---|---|---|
+  | **concussion** | **+0.437** | **0.012** | **+0.445** | **0.011** | 0.405 / 0.404 |
+  | back | +0.368 | 0.038 | +0.402 | 0.023 | 0.433 / 0.172 |
+  | ankle | +0.361 | 0.042 | +0.216 | 0.234 | 0.258 / 0.174 |
+  | knee | +0.197 | 0.279 | +0.224 | 0.218 | −0.027 / 0.335 |
+  | hip | +0.106 | 0.562 | +0.150 | 0.412 | 0.209 / 0.106 |
+
+- **Concussion clears α=0.05 in BOTH specs and is strongest in both.** Named in advance ⇒ tested
+  at 0.05, not the corrected 0.010 (applying the family correction to a preregistered primary
+  would discard the point of naming one). **It barely moved when the probe's crude denominator
+  was replaced with a proper exposure-adjusted model** — that stability is the strongest thing
+  that can be said for it. **Of the 4 exploratory parts, 0 clear 0.010.**
+- **⚠️ Fixed a preregistration error in my own report logic:** the first draft applied Bonferroni
+  to the primary hypothesis too, which contradicts the preregistration. Also fixed a generated
+  sentence that called concussion "the only part" clearing 0.05 in both specs and then listed two
+  (back does as well).
+- **The variance decomposition agrees via a different statistic:** `share_common` (club main
+  effect vs club×group interaction) is highest for **concussion 0.299** and lowest for **knee
+  0.089** — concussion's excess is the most spread across position groups, knee's the most
+  group-specific. Exactly the predicted ordering, from an independent statistic.
+- **The knee probe result did NOT replicate, and that is the probe being corrected** — its
+  rate-only 0.335 came from a disclosure-contaminated denominator (distinct listed players).
+  Properly adjusted, knee is weakly positive in both and significant in neither.
+- **Composition spec is disclosure-robust** by construction (a club that lists everyone inflates
+  numerator and denominator alike) — a real advantage over every level-based measure in the
+  project. Tested: composition must be invariant to overall level while rate must not be.
+- **`unknown` body parts (21.6% of episodes) are EXCLUDED, not pooled** — concentrated in long
+  absences, would swamp the parts compared.
+- **Coach-follows is power-bounded as designed:** only **4** coaches ran two clubs in the window.
+  Vrabel near-identical across TEN 0.073 / NE 0.074; the other three move both ways. At n=4 this
+  is the power bound reported instead of a result.
+- 14 new tests (**367 repo-wide**), ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

@@ -281,13 +281,46 @@ not fully independent (an old roster is old on both sides).
 | 2 | Episodes | `medstaff_episodes.py` | **done** |
 | 3 | Exposure & confounders | `medstaff_exposure.py` | **done** |
 | 4 | Expected-value models | `medstaff_expected.py` | **done** |
-| 5 | Cross-group signature (§5.7) | `medstaff_signature.py` | |
+| 5 | Cross-group signature (§5.7) | `medstaff_signature.py` | **done** |
 | 6 | Reliability & power | `medstaff_reliability.py` | **done** |
 | 7 | Grades | `medstaff_grades.py` | |
 
 **Stage 6 before stage 7 is deliberate.** The reliability verdict must exist before anything
 resembling a leaderboard does; stage 7 reads it and interpolates it into its own header, so the
 verdict cannot drift from the evidence. A reader who stops at stage 6 has the honest answer.
+
+### 6.5 What stage 5 established — the signature holds for concussion
+
+Offense-against-defense concordance across 32 clubs, both specifications, properly
+exposure-adjusted (leave-one-team-out for the rate spec):
+
+| part | composition | p | rate | p | preregistered (probe) |
+|---|---|---|---|---|---|
+| **concussion** | **+0.437** | **0.012** | **+0.445** | **0.011** | 0.405 / 0.404 |
+| back | +0.368 | 0.038 | +0.402 | 0.023 | 0.433 / 0.172 |
+| ankle | +0.361 | 0.042 | +0.216 | 0.234 | 0.258 / 0.174 |
+| knee | +0.197 | 0.279 | +0.224 | 0.218 | −0.027 / 0.335 |
+| hip | +0.106 | 0.562 | +0.150 | 0.412 | 0.209 / 0.106 |
+
+- **The preregistered primary hypothesis holds.** Concussion clears α = 0.05 in **both**
+  specifications and is the strongest part in both. Named in advance, so tested at 0.05 rather
+  than the corrected 0.010; applying the family correction to it would discard the point of
+  preregistering. **It barely moved when the crude probe denominator was replaced with a proper
+  exposure-adjusted model** (0.405/0.404 → 0.437/0.445) — the strongest thing that can be said
+  for it.
+- **Of the four exploratory parts, none clear the corrected threshold (0.010).** Back is the near
+  miss and the only other part positive in both specs; labelled exploratory, not a finding.
+- **The variance decomposition agrees, via a different statistic.** `share_common` — the share of
+  variance that is a club main effect rather than club×group interaction — is highest for
+  **concussion (0.299)** and lowest for **knee (0.089)**. Concussion's excess is the most spread
+  across position groups; knee's the most group-specific. Exactly the predicted ordering.
+- **The knee probe result did not replicate** and that is the probe being corrected: its
+  rate-only 0.335 came from a disclosure-contaminated denominator. Properly adjusted, knee is
+  weakly positive in both specs and significant in neither.
+- **Coach-follows is power-bounded, as designed.** Only **4** head coaches ran two clubs inside
+  the window. Vrabel's concussion share is near-identical across TEN (0.073) and NE (0.074);
+  the other three move in both directions. At n = 4 this is not evidence either way — it is the
+  power bound being reported instead of a result.
 
 ### 6.4 What stage 6 established — read before any grade
 
