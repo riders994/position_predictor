@@ -172,3 +172,64 @@ class TestCanonicalTeam:
     def test_null_and_blank(self):
         assert canonical_team(None) is None
         assert canonical_team("") is None
+
+
+class TestRosterStatusRegime:
+    """The 2021 comparability break — see MEDSTAFF_PLAN §2.5.
+
+    `status_description_abbr` carries no reserve codes before 2021 and `INA` is barely
+    populated, so absence measures silently mean different things either side of it. These
+    guard the fix: reserve must come from `status`, not the abbr codes.
+    """
+
+    def test_reserve_reads_from_status_not_the_abbr_codes(self):
+        import polars as pl
+
+        from medstaff.data.ingest import RESERVE_STATUSES, roster_status_regime_table
+
+        # A 2015-shaped frame: RES present in `status`, no R-codes in the abbr field at all.
+        frame = pl.DataFrame({
+            "season": [2015, 2015, 2015, 2015],
+            "status": ["ACT", "RES", "ACT", "INA"],
+            "status_description_abbr": ["A01", "A01", "A01", "A01"],
+        }).with_columns(
+            pl.col("status").is_in(RESERVE_STATUSES).alias("on_reserve"),
+            pl.col("status_description_abbr").str.starts_with("R").alias("reserve_code_present"),
+            (pl.col("status") == "ACT").alias("active"),
+            (pl.col("status") == "INA").alias("inactive"),
+        )
+        table = roster_status_regime_table(frame)
+        row = table.row(0, named=True)
+        assert row["reserve_share"] == 0.25, "status finds the IR player"
+        assert row["abbr_R_share"] == 0.0, "the abbr codes would have found none"
+        assert row["comparable"] is False
+
+    def test_comparable_flag_marks_the_2021_boundary(self):
+        import polars as pl
+
+        from medstaff.data.ingest import FIRST_COMPARABLE_SEASON, roster_status_regime_table
+
+        frame = pl.DataFrame({
+            "season": [2019, 2021],
+            "on_reserve": [False, True], "reserve_code_present": [False, True],
+            "active": [True, True], "inactive": [False, False],
+        })
+        table = roster_status_regime_table(frame).sort("season")
+        assert table["comparable"].to_list() == [False, True]
+        assert FIRST_COMPARABLE_SEASON == 2021
+
+    def test_covid_reserve_is_not_an_injury(self):
+        """R59 is the 2021-only Reserve/COVID-19 list: RES status, but not medicine."""
+        import polars as pl
+
+        from medstaff.data.ingest import COVID_RESERVE_CODES, RESERVE_STATUSES
+
+        abbr = pl.col("status_description_abbr").fill_null("")
+        frame = pl.DataFrame({
+            "status": ["RES", "RES", "ACT"],
+            "status_description_abbr": ["R01", "R59", "A01"],
+        }).with_columns(
+            (pl.col("status").is_in(RESERVE_STATUSES)
+             & ~abbr.is_in(COVID_RESERVE_CODES)).alias("on_reserve")
+        )
+        assert frame["on_reserve"].to_list() == [True, False, False]

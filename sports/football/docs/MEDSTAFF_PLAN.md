@@ -80,6 +80,31 @@ Over the same seasons the coalesced body part is **≤0.1%** null and `practice_
 **Every outcome is therefore built on those two**; `report_status` is used only as a severity
 refinement in a 2016+ sensitivity run, with a season-level `report_regime` control.
 
+### 2.5 ⚠️ The 2021 roster-status break (found in stage 2)
+
+Two `rosters_weekly` fields silently change meaning at 2021, and both would have corrupted every
+absence measure in the project:
+
+- **`status_description_abbr` carries no reserve codes before 2021** — R-codes are 0.0% of rows
+  for 2012–2015 and the field is 51% null in 2016. Keying IR off it made injured reserve look
+  like something clubs invented in 2021 (2 episodes across 2012–2019, then 1,059 per season).
+- **`status == "INA"` is barely populated before 2021** (2.8k rows across 2012–2019 against
+  16.8k across 2021–2025) while `ACT` falls 0.86 → 0.59. The gameday active/inactive split is
+  simply not in the earlier data, so games-missed is not comparable across the break.
+
+`status == "RES"` is the one stable signal (6–14% of rows in every season since 2012), so
+**reserve is read from `status`, never from the abbr codes**.
+
+This is the same shape as the sibling project's cfbfastR flag defect: an unpopulated field
+aggregates to a clean zero rather than a null, so nothing errors and the series just quietly
+means something different either side of the boundary. `roster_status_regime_table()` measures
+it per season, and there are tests pinning both halves.
+
+**Reserve/COVID-19 (`R59`) is excluded.** It occurs in **2021 only** (725 player-weeks, exactly
+zero in every other season) and carries `RES` status without being an injury. Left in, it pushed
+2021's reserve share to 0.46 against ~0.31 for 2022–2025 and made every club look worse at
+medicine in the first year of the five-year window.
+
 ### 2.3 Body-part taxonomy
 
 292 distinct raw strings → **16 groups**, mapping **99.8%** of rows (200 rows, 0.2%, fall to
@@ -98,11 +123,12 @@ clauses, and whole free-text sentences.
 
 ### 2.4 Sample and windows
 
-- **Fitting sample 2012–2025 excluding 2020.** Not 2009: snap counts start 2012 and snaps are
-  the report-independent anchor. 2009–2011 are still loaded, to populate the prior-injury
-  lookback where missing snaps do not matter.
-- **5-year window 2021–2025; 3-year window 2023–2025** — excluding 2020 places both entirely
-  inside the post-COVID 17-game era *and* the post-2016 reporting regime.
+- **Fitting sample 2021–2025** for every absence-based outcome — see §2.5. The injury *report*
+  is comparable from 2009 and supplies the prior-injury lookback at any depth, but anything
+  counting missed games is restricted to the comparable window.
+- **5-year window 2021–2025; 3-year window 2023–2025.** The comparable window *is* the 5-year
+  grading window, and it sits entirely inside the post-COVID 17-game era and the post-2016
+  reporting regime — one homogeneous regime rather than a compromise.
 - Relocations (SD→LAC, STL→LA, OAK→LV, JAC/JAX) fall inside the sample, so `canonical_team` is
   applied on both sides of every join.
 
@@ -234,7 +260,7 @@ not fully independent (an old roster is old on both sides).
 | # | Stage | Script | Status |
 |---|---|---|---|
 | 1 | Data: registration, taxonomy, diagnostics | `medstaff_ingest.py` | **done** |
-| 2 | Episodes | `medstaff_episodes.py` | |
+| 2 | Episodes | `medstaff_episodes.py` | **done** |
 | 3 | Exposure & confounders | `medstaff_exposure.py` | |
 | 4 | Expected-value models | `medstaff_expected.py` | |
 | 5 | Cross-group signature (§5.7) | `medstaff_signature.py` | |

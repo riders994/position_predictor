@@ -1,11 +1,14 @@
 """Raw-data loading, body-part normalisation, and the identity maps every join depends on."""
 
 from .ingest import (
+    COVID_RESERVE_CODES,
     EXCLUDED_SEASONS,
+    FIRST_COMPARABLE_SEASON,
     FIRST_INJURY_SEASON,
-    FIRST_MODEL_SEASON,
     RAW_DATASETS,
     RESERVE_PREFIX,
+    RESERVE_STATUSES,
+    roster_status_regime_table,
     body_part_summary,
     join_rate,
     listing_propensity,
@@ -39,11 +42,14 @@ from .taxonomy import (
 from .teams import TEAM_ALIASES, canonical_team, canonicalize
 
 __all__ = [
+    "COVID_RESERVE_CODES",
     "EXCLUDED_SEASONS",
+    "FIRST_COMPARABLE_SEASON",
     "FIRST_INJURY_SEASON",
-    "FIRST_MODEL_SEASON",
     "RAW_DATASETS",
     "RESERVE_PREFIX",
+    "RESERVE_STATUSES",
+    "roster_status_regime_table",
     "FOCAL_GROUPS",
     "GROUPS",
     "GROUP_ORDER",

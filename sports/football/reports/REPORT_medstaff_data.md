@@ -79,16 +79,16 @@ its Questionables.
 
 | team | listed | q_play_rate |
 |---|---|---|
-| WAS | 2811 | 0.869 |
-| ARI | 2887 | 0.891 |
-| MIA | 2918 | 0.850 |
-| GB | 3124 | 0.880 |
-| IND | 3131 | 0.899 |
-| SEA | 3209 | 0.829 |
-| NE | 3246 | 0.912 |
-| CLE | 3380 | 0.867 |
-| NYJ | 3414 | 0.917 |
-| HOU | 3543 | 0.812 |
+| WAS | 2811 | 0.790 |
+| ARI | 2887 | 0.848 |
+| MIA | 2918 | 0.811 |
+| GB | 3124 | 0.836 |
+| IND | 3131 | 0.848 |
+| SEA | 3209 | 0.798 |
+| NE | 3246 | 0.863 |
+| CLE | 3380 | 0.824 |
+| NYJ | 3414 | 0.878 |
+| HOU | 3543 | 0.751 |
 
 ## 4. Body-part taxonomy
 
@@ -136,10 +136,13 @@ All groups:
 
 ## 5. Sample decisions
 
-- **Injuries exist from 2009**, but the modelling sample starts
-  **2012** because snap counts — the report-independent anchor — start there.
-  Earlier seasons are still loaded: they populate each player's prior-injury lookback, where
-  missing snaps do not matter.
+- **Injuries exist from 2009** and the injury *report* is comparable across
+  that whole span, so it supplies the prior-injury lookback at any depth.
+- **⚠️ But absence measures are only comparable from 2021**, which stage 2 established: the
+  gameday active/inactive split is absent from `rosters_weekly` before then (`INA` is 2.8k rows
+  across 2012–2019 vs 16.8k across 2021–2025, and `ACT` falls 0.86 → 0.59), and the reserve
+  codes in `status_description_abbr` carry **no** R-codes before 2021. Anything counting missed
+  games is restricted to 2021+.
 - **2020 excluded** — the practice and roster regime was
   unlike any other season, and the sibling pipeline already excludes it.
 - Grading windows are therefore **2021–2025** (5yr) and **2023–2025** (3yr), which places both

@@ -1902,6 +1902,70 @@ the results of the other models?")_
 
 ---
 
+## Entry 067 — medstaff stage 2: episodes, and a 2021 comparability break
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> Start stage 2
+>
+> [interrupted mid-probe to land the QB-breakout docs, then]
+>
+> resume stage 2 with the roster status signal
+
+**Response notes:**
+- **Plan rule changed before implementing, on measurement.** The plan said "any week with snaps
+  terminates an episode". Measured instead: players on `RES`/`INA`/`DEV`/`CUT` take a snap in
+  **~0.02%** of player-weeks, so weekly roster status separates played from did-not-play almost
+  perfectly — gsis-keyed, no crosswalk, back to 2002. `snap_counts` keys on `pfr_player_id`,
+  crosswalks at **81.7%** from 2012, and would have misread the **21%** of `ACT` player-weeks
+  with zero snaps: a healthy scratch or deep backup is **available**, not injured. Snaps deferred
+  to stage 3 as an intensity covariate.
+- **Episode rules.** Only an `ACT`-and-undesignated week terminates; `INA`/`RES`/bye all
+  continue, which absorbs report noise for free (listed weeks 5 and 7, inactive week 6 → one
+  spell, not two). Only an *impaired* week (real body part, or reserve) starts one, so a healthy
+  scratch never creates an episode.
+- **Two design calls the plan left open.** (a) **Concurrent injuries are not split** — the report
+  carries one primary part and clubs flip it weekly, so splitting would manufacture episodes far
+  more often than catch a real second injury; the spell keeps its opening group and sets
+  `group_changed`. (b) **Body part carries forward within a spell, never across one** — a global
+  forward-fill was written and then deleted, because it would let an unrelated week-10 IR stint
+  inherit a week-2 knee across a return, and long IR spells matter most.
+- **⚠️ THE FINDING — a 2021 comparability break, same shape as the cfbfastR flag defect.**
+  First run showed `used_reserve` at **2 episodes total across 2012–2019** then **1,059/season
+  from 2021**, and episodes jumping 2,106 → 3,385. IR was not invented in 2021: two
+  `rosters_weekly` fields are unpopulated earlier. `status_description_abbr` carries **0.0%**
+  R-codes for 2012–2015 (51% null in 2016), and `status == "INA"` is 2.8k rows across 2012–2019
+  vs 16.8k across 2021–2025 while `ACT` falls **0.86 → 0.59** — the gameday active/inactive split
+  is simply absent. **Fix:** reserve reads from `status` (stable 6–14% every season), never the
+  abbr codes; absence outcomes restricted to **2021–2025**. That window *is* the 5-year grading
+  window, and sits wholly inside the post-COVID 17-game era and post-2016 reporting regime — one
+  homogeneous regime, not a compromise. `roster_status_regime_table()` + tests pin both halves.
+- **⚠️ Reserve/COVID-19 (`R59`) excluded.** 2021 only, 725 player-weeks, **exactly zero** every
+  other season; carries `RES` without being an injury. Left in it pushed 2021's reserve share to
+  0.46 vs ~0.31 for 2022–25 — i.e. it would have made every club look worse at medicine in year
+  one of the five-year window. Also fixed a smaller leak where a stray `Illness`/`non_injury`
+  report row could label a reserve spell (63 episodes → 0).
+- **Result: 14,420 episodes / 221,313 player-weeks, 2021–2025**, now homogeneous (2,791–2,948
+  per season; reserve share 0.29–0.34; mean games missed 3.2–3.4). **451 episodes per club over
+  5 years** (336–564), sd 58 against Poisson 21 — **2.7× wider than chance**, which is the
+  dispersion stage 4 has to decompose.
+- **Recurrence at k=6 games: 9.3% overall.** Knee **13.4%** (n=1,250 returns) > ankle 9.9% >
+  back 8.0% > concussion **5.2%** > hip 5.0%. Concussion lowest is mechanistically right —
+  protocol-mandated clearance. Risk set is **returns, not episodes** (60.5% resolved); the clock
+  counts **games available**, not calendar weeks, so a week-17 return has two games of exposure
+  rather than a free pass.
+- **Known limitation recorded:** 21.6% of episodes have an `unknown` body part — spells that
+  opened on a bare reserve week and never picked up a report row. They count for availability but
+  are excluded from body-part analyses, which matters for stage 5.
+- 33 new tests, one per edge case (bye, trade, roster gap, practice squad, season boundary,
+  never-returns, group flip, severity, all recurrence horizons). **294 repo-wide**, ruff clean.
+- Removed `FIRST_MODEL_SEASON` rather than silence its unused-import warning: a constant named
+  "first model season" that is no longer the first model season is a trap.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

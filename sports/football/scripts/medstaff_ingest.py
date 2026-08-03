@@ -31,7 +31,7 @@ from position_predictor.utils.io import (  # noqa: E402
     DATA_PROCESSED, DATA_RAW, REPORTS_DIR, ensure_dir, write_parquet,
 )
 from medstaff.data import (  # noqa: E402
-    EXCLUDED_SEASONS, FIRST_INJURY_SEASON, FIRST_MODEL_SEASON, FOCAL_GROUPS,
+    EXCLUDED_SEASONS, FIRST_INJURY_SEASON, FOCAL_GROUPS,
     body_part_summary, join_rate, listing_propensity, load_injuries, load_rosters_weekly,
     load_schedules, report_regime_table, season_coverage, unmapped_report,
 )
@@ -188,10 +188,13 @@ All groups:
 
 ## 5. Sample decisions
 
-- **Injuries exist from {FIRST_INJURY_SEASON}**, but the modelling sample starts
-  **{FIRST_MODEL_SEASON}** because snap counts — the report-independent anchor — start there.
-  Earlier seasons are still loaded: they populate each player's prior-injury lookback, where
-  missing snaps do not matter.
+- **Injuries exist from {FIRST_INJURY_SEASON}** and the injury *report* is comparable across
+  that whole span, so it supplies the prior-injury lookback at any depth.
+- **⚠️ But absence measures are only comparable from 2021**, which stage 2 established: the
+  gameday active/inactive split is absent from `rosters_weekly` before then (`INA` is 2.8k rows
+  across 2012–2019 vs 16.8k across 2021–2025, and `ACT` falls 0.86 → 0.59), and the reserve
+  codes in `status_description_abbr` carry **no** R-codes before 2021. Anything counting missed
+  games is restricted to 2021+.
 - **{", ".join(str(s) for s in EXCLUDED_SEASONS)} excluded** — the practice and roster regime was
   unlike any other season, and the sibling pipeline already excludes it.
 - Grading windows are therefore **2021–2025** (5yr) and **2023–2025** (3yr), which places both
