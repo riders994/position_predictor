@@ -1770,6 +1770,138 @@ the results of the other models?")_
 
 ---
 
+## Entry 062 — Medical-staff injury grades: new football project, planned
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> New idea for a football research project. Injury grades of medical staff. We should develop a
+> system to grade each team's medical staff over the last 3 years and 5 years. The grade should
+> consider reinjury risk. Maybe separate grades for position groups.
+
+**Response notes:**
+- **Fourth project in the repo**, planned as a sibling package `sports/football/src/medstaff/`
+  mirroring `qb_breakout` conventions. Plan doc `docs/MEDSTAFF_PLAN.md`.
+- **Feasibility probed before designing** (all measured, not assumed): `nflreadpy.load_injuries`
+  covers **2009–2025**; injury rows join **~99–100%** to `load_rosters_weekly` on
+  `(gsis_id, week)` → rosters_weekly is the availability spine (all positions, gsis-keyed).
+  **Rejected `snap_counts` as the spine** — keyed on `pfr_player_id`, combined crosswalk only
+  **81.7%**, and starts 2012.
+- **⚠️ Regime break at 2016 found in probing:** `report_status` null 3–6% (2009–15) → 39% (2016)
+  → ~53% (2017–25); the league dropped "Probable". Body part (coalesced) and `practice_status`
+  are ~0% null throughout, so **all outcomes are built on the regime-invariant columns**.
+- **Power is good, unlike qb_breakout:** median **412 episodes/team over 5yr** (254 over 3yr),
+  vs the ~4 QBs/franchise that made the sibling's stage 7 unpowered. Raw "Out" per team 2021–25
+  spans **98 (MIA) → 277 (TEN)**, sd 46 vs Poisson ~13 — real dispersion to decompose.
+- **User decisions:** whole roster (all positions, 8 groups) · headline = **return-speed ×
+  recurrence 2×2** (separates good rehab from rushing players back) · grades **always publish**
+  with a signal-vs-luck verdict leading (explicitly NOT gated/suppressed) · team-window grade +
+  optional `--staff-table` CSV hook (no free head-athletic-trainer source — same problem as GM).
+- **Design choices that reverse the obvious**, adopted after a design review: **not a GBM** for
+  the expectation models (a flexible learner eats the residual variance being measured →
+  penalised discrete-time logistic hazard, shallow GBM as robustness check only);
+  **leave-one-team-out**, not random k-fold; fit incidence **with and without prior-injury
+  history and report the pair as a bound** (a bad staff manufactures fragile-looking players, so
+  adjusting for prior injuries adjusts away its own effect); **informative censoring is
+  gameable** so `P(returns at all)` and `released_while_injured` become their own outcomes;
+  whole-factor permutation as primary inference + player-block bootstrap null.
+- **Framing to lead with:** this data cannot identify "medical staff" — the residual bundles
+  athletic training, S&C, sports science, coach practice intensity, GM roster taste and scheme.
+  It grades a **team availability system**. Stated as a non-goal, not a caveat.
+- Standing decision `PROJECT_PLAN.md:151` ("no injury-report text") is **unchanged** — this is a
+  separate project and nothing feeds back into the ranking models.
+
+---
+
+## Entry 063 — Cross-position-group injury signature: the scheme instrument
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> One thing to look at across position groups for a team: same injury tendencies. Focus on knee,
+> ankle, back, hip, concussion (scheme)
+
+**Response notes:**
+- **User's idea became stage 5 and is the strongest attribution instrument in the project.**
+  Logic: if a team's excess sits in ONE body part and appears across position groups sharing
+  nothing except the building, that implicates a common cause (contact policy, S&C, surface,
+  protocol); if confined to one group it's roster/scheme/luck for that group.
+- **It also sidesteps the project's worst confounder**: body-part *composition* is
+  **disclosure-robust** — a club that lists everyone inflates numerator and denominator alike.
+- **Statistic is a variance decomposition, not a grade**: team main effect vs team×group
+  interaction per body part. Team × bodypart × position-group cells are tiny (**median 4
+  episodes over 5yr**), so cells are never graded; concordance aggregates across the 8 groups.
+- **Exploratory probe (2021–25, off/def concordance across 32 teams, crude exposure
+  denominator), recorded so the real run is confirmatory rather than fishing:**
+
+  | part | share-based (signature net of level) | rate-based (level+signature) |
+  |---|---|---|
+  | concussion | 0.405 (p=.022) | 0.404 (p=.022) — **only one stable in both** |
+  | knee | −0.027 | 0.335 (p=.061) — rate-only ⇒ level artifact |
+  | back | 0.433 (p=.013) | 0.172 — share-only ⇒ compositional |
+  | ankle | 0.258 | 0.174 |
+  | hip | 0.209 | 0.106 |
+
+- **The disagreement between specs IS the finding**, so both are always reported. Knee flipping
+  positive only under rate is the signature of a *level* effect (knee is the largest category so
+  it tracks overall burden); back flipping the other way means its share result was compositional.
+- **Multiplicity preregistered:** 5 parts ⇒ Bonferroni 0.01, and **no probe result clears it**.
+  Concussion designated the **primary a-priori hypothesis** (practice contact policy and tackling
+  technique are documented coach decisions; concussion reporting is protocol-mandated hence least
+  disclosure-contaminated). Other four labelled exploratory.
+- **Strongest causal handle designed in:** does the signature **follow the head coach** across
+  franchises? Coaches available 1999+ from `load_schedules`. It is the one design element that
+  breaks the shared-roster confound (offense and defense aren't fully independent — an old roster
+  is old on both sides).
+
+---
+
+## Entry 064 — medstaff stage 1: dataset registration, body-part taxonomy, data report
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> start on stage 1
+
+**Response notes:**
+- Branch `medstaff-grades` off fresh `primary`. **NB `qb-late-breakout` is still unmerged**, so
+  its `src/qb_breakout` is absent here (only stale `__pycache__` on disk) and its PROMPT_LOG
+  entries **055–061** are not on primary — this entry continues from **062** so the global
+  numbering stays collision-free when that PR lands.
+- **3 datasets registered** in `data/fetch.py` (one `Dataset(...)` line each, existing
+  `L()`/`_clip_seasons`/`_load_resilient`/`_write_manifest` machinery unchanged): `injuries`
+  (2009+, 90,752 rows), `rosters_weekly` (2002+, 906,378 rows), `schedules` (7,548 rows).
+- **New package** `src/medstaff/` + `data/` subpackage: `taxonomy.py`, `positions.py`,
+  `teams.py`, `ingest.py`, facade `__init__.py`. Registered in `[tool.hatch...] packages`.
+- **`taxonomy.py` is the substance.** 292 distinct raw body-part strings → 16 groups. Two rules
+  do the work: **non-injury is checked first on the raw string** (so
+  `Ankle [Not Injury Related - Personal, Thursday Only]` is excluded, not counted as an ankle),
+  and among body-part matches **earliest match wins, longest match breaks ties** — earliest
+  encodes "the primary injury is listed first" (`Foot/Wrist/Hip` → foot), longest keeps
+  `hip flexor` in soft-tissue instead of collapsing to `hip`, **structurally rather than by rule
+  ordering**. Handles laterality prefixes, case, plurals, bracket clauses and free-text sentences.
+- **Result: 99.8% of rows map** — only 200 rows (0.2%) land in `other`, and **no single unmapped
+  string exceeds 0.1%** of rows.
+- **`_normalize_keys` fix:** the caches disagreed on join-key dtype — `rosters_weekly` lands
+  `season`/`week` as f64 (nflreadpy concatenates multi-season pulls with `diagonal_relaxed`,
+  which widens ints once any season has a null) while `injuries` keeps i32; polars refused the
+  join. Both pinned to Int32 at load.
+- **Stage-1 report `REPORT_medstaff_data.md` measures the three design-deciding properties:**
+  (1) the **2016 regime break reproduced exactly** — `report_status` null 3.0–6.0% pre-2016,
+  **39.2% in 2016**, 48.7–54.7% after, while coalesced body part is ≤0.1% null and
+  `practice_status` ≤0.7% in every season; (2) **spine join 99.2%** overall — 97.4–98.2% for
+  2009–2015 but **99.9–100% from 2016**; (3) per-club disclosure indices incl.
+  `questionable_play_rate`.
+- **Sanity checks against real-world rates** (the `qb_breakout` flag-defect lesson): distinct
+  concussed players/season **90–183**, matching the known 113–179 range for 2015–25; and
+  **zero clean-zero season × focal-group cells** — the exact signature that defect presented as.
+- 71 new tests (**203 football tests**, 261 repo-wide), ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

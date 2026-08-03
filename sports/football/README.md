@@ -18,9 +18,10 @@ ADP from FantasyFootballCalculator) is a **benchmark only — never blended** in
 
 ```
 src/position_predictor/   code: fetch · build · features · eligibility · eda · models · eval
+src/medstaff/             sibling project: team availability / injury grades (shares the caches)
 scripts/                  stage entrypoints + serving tools (keeper/redraft/postseason)
 config/                   per-position experiment configs (football_{rb,wr,qb}.yaml)
-docs/                     PROJECT_PLAN · data_dictionary · PROMPT_LOG
+docs/                     PROJECT_PLAN · MEDSTAFF_PLAN · data_dictionary · PROMPT_LOG
 notebooks/rb/             EDA, eligibility-cutoff, feature analysis
 reports/                  committed REPORT_*.md + versions/<stem>/<v>/ (figures/results git-ignored)
 data/                     git-ignored cache (committed: raw/_manifests/ + external/ reference)
@@ -50,6 +51,17 @@ uv run python sports/football/scripts/keeper.py \
 ```
 
 (Or `cd sports/football` and drop the `-C`/path prefixes.)
+
+### Medical-staff injury grades (`medstaff`)
+
+A sibling research project — grades each club's **availability system** over 3- and 5-year
+windows, with reinjury risk as the core component. Reuses these caches; no Makefile targets, run
+the stages directly. See [`docs/MEDSTAFF_PLAN.md`](docs/MEDSTAFF_PLAN.md).
+
+```bash
+make -C sports/football fetch DATASETS="injuries rosters_weekly schedules"
+uv run python sports/football/scripts/medstaff_ingest.py     # stage 1: data + diagnostics
+```
 
 **Full command reference** — every stage and tool, with flags and outputs:
 [`docs/USAGE.md`](docs/USAGE.md).
