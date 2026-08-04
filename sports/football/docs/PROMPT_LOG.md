@@ -2182,6 +2182,61 @@ on a QB's career mostly **is** the pick it spent, which is measured, not missing
 
 ---
 
+## Entry 076 — basketball port and football focal additions: both blocked on data, recorded
+
+**Date:** 2026-08-04
+
+**Prompt (full text):**
+
+> Merged. Now let's run this same analysis for basketball. Let's include elbow, achilles, and acl
+> as they are all scheme related
+>
+> Those injuries should be added to the football list from earlier, they feel more scheme related
+> in basketball
+>
+> ESPN has injury history for players
+
+**Response notes:**
+- **Both requests blocked by data availability, not method.** Investigated read-only before writing
+  any code; outcome is two documentation commits and no pipeline.
+- **⚠️ FOOTBALL: ACL is not in the NFL injury report at all.** 2021–25 rows: `elbow` 437,
+  `achilles` 176, **`ACL` 0, `MCL`/`PCL`/`LCL` 0, `torn` 0**, `knee` 4,442. Clubs report
+  **anatomy, not diagnosis** — ceiling is "Knee". `taxonomy.py`'s `\bacl\b` rule has **never
+  fired**. The irony: ACL is the most surface-implicated injury in the literature and is exactly
+  what this source cannot see.
+- **Elbow and achilles are below the power floor** (`MIN_EPISODES_PER_CELL=15`): elbow 223
+  episodes / median **3** per club×side, achilles 66 / **1**, against hip — the weakest part
+  already focal — at 453 / **6**.
+- **A proxy exists and was deliberately NOT adopted:** `knee AND never_returned` = 481 episodes,
+  ~7 per cell. Recorded with its numbers *and* the argument against it — the focal five were
+  preregistered, and adding parts post-hoc is what preregistration guards against (same reason
+  hamstring was split out in §2.8 but kept non-focal). Noted that if ever adopted it must be an
+  **overlay**, not a taxonomy group: carving it out of `knee` would remove 26% of knee's episodes
+  and silently change the published round-1 result.
+  **STANDING DECISION recorded: focal set unchanged.**
+- **⚠️ BASKETBALL — I was WRONG about ESPN and the user was right to push back.** ESPN injury
+  records are **richer than the NFL report**: `details.type` (Knee/Ankle/Hamstring/**Achilles**/…),
+  `details.detail` (**Surgery/Sprain/Strain/Fracture** — an actual *diagnosis* field the NFL data
+  never had), `side`, `returnDate`, plus free text. And **`type = "Rest"` is its own category (19%
+  of records)** — a genuine load-management separator.
+- **But there is NO history**, which is what kills it. `athletes/{id}/injuries` returns **404 for
+  every athlete tested, including players in the current snapshot**, while sibling routes
+  (`/eventlog`, `/statisticslog`, `/awards`) return 200 — so the resource simply does not exist.
+  `espn_nba_injuries()` is a live snapshot (148 records).
+- **Every other route closed:** `nba_api` **zero** injury endpoints across 274; box-score
+  `COMMENT` has 4 values with no body part (**92% "Coach's Decision"**); NBA official report PDF
+  **403**; Pro Sports Transactions **403 behind a Cloudflare challenge — even on robots.txt**.
+  Neither was circumvented; a challenge page is an access control, not a crawl directive.
+- **Community PST datasets stop ~2020** — the football-equivalent window is 2021–25, so they end
+  exactly where we would need to start, and postdate the load-management era's onset.
+- **Deliverable:** `sports/basketball/docs/INJURY_DATA_FEASIBILITY.md` + a PROJECT_PLAN §7 pointer.
+  **Recommendation: do not build it now.** The one action with a deadline is archiving ESPN's
+  snapshot daily — ~3 seasons before a 3-year window exists, and every day not archiving is
+  permanently missing.
+- Docs only: no code, no re-run, no report or parquet changed. 401 tests, ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

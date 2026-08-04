@@ -191,6 +191,60 @@ week-coverage miscounted whole-season absences. The body-part text was right in 
 the roster was wrong in the second — which is the argument for `sanity_checks()` running against
 real data rather than against assumptions about it.
 
+### 2.10 ⚠️ ACL, achilles and elbow: investigated, and the focal set stays as-is
+
+Asked whether elbow, achilles and ACL should join the focal set as scheme-related parts. Measured
+before deciding, and the answer is that two are unavailable and one is underpowered.
+
+**ACL is not in this source at all.** Across 2021–2025 report rows:
+
+| term | rows |
+|---|---|
+| `elbow` | 437 |
+| `achilles` | 176 |
+| **`ACL`** | **0** |
+| **`MCL` / `PCL` / `LCL`** | **0** |
+| **`torn`** | **0** |
+| `knee` (any) | 4,442 |
+
+Clubs report **anatomy, not diagnosis** — the granularity ceiling is "Knee". `taxonomy.py` already
+carries an `\bacl\b` rule and it has **never once fired**. This is the sharp irony of the
+request: ACL is the most surface- and scheme-implicated injury in the sports-science literature,
+and it is precisely the one this source cannot see. Recovering it needs a different source
+entirely — transaction logs, a clinical database, or a paid feed.
+
+**Elbow and achilles are below the power floor.** The signature analysis correlates club × side
+values across 32 clubs against `MIN_EPISODES_PER_CELL = 15`:
+
+| part | episodes | median per club × side |
+|---|---|---|
+| hip — weakest part already focal | 453 | 6 |
+| **elbow** | 223 | **3** |
+| **achilles** | 66 | **1** |
+
+Achilles at 1 episode per cell cannot support a concordance statistic at all. Elbow at 3 is half
+the weakest part already in the set — and hip is the worst performer in the published results
+(composition −0.045, p 0.806). On mechanism it is also the weakest case of the three: elbow in
+football is largely a contact/fall injury with no clear scheme pathway.
+
+**A proxy exists and is deliberately not adopted.** `body_group == "knee" AND never_returned` gives
+**481 episodes, ~7 per club × side** — just above hip, and the closest obtainable stand-in for
+"major knee / ACL". It is recorded here with its numbers so a future reader has both the option
+and the argument against it:
+
+> The focal five were **preregistered**, with concussion as the single primary hypothesis. Adding
+> parts after seeing results is exactly what preregistration guards against — the same reason
+> hamstring was split out as its own group in §2.8 but kept out of `FOCAL_GROUPS`. Adopting a
+> severity proxy post-hoc would retroactively weaken the one result that survived scrutiny.
+
+If it is ever adopted, it must be an **overlay**, not a taxonomy group: carving `severe_knee` out
+of `knee` would remove 481 of knee's 1,879 episodes (26%) and silently change the published round-1
+knee result.
+
+**STANDING DECISION — do not reopen without new data.** `FOCAL_GROUPS` remains **knee, ankle,
+back, hip, concussion**, with concussion primary. Revisit only if a source with diagnosis-level
+granularity is added.
+
 ### 2.8 Hamstring is its own group
 
 Split out of `soft_tissue_lower`, where it was **56% of the group on its own** (2,210 of 3,980
