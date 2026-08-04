@@ -18,20 +18,20 @@ reporting is protocol-mandated rather than discretionary, which makes it the lea
 disclosure-contaminated outcome in the project. The other four are **exploratory** and are
 labelled as such wherever they appear.
 
-**The primary hypothesis, concussion, holds.** Composition **+0.437**
-(p 0.012), rate **+0.445** (p 0.011) — it
-clears α = 0.05 in
+**The primary hypothesis, concussion, holds.** Composition **+0.238**
+(p 0.190), rate **+0.340** (p 0.057) — it
+does not clear α = 0.05 in
 **both** specifications, and it is the **strongest part in both**. Because it was named in advance
 it is tested at 0.05 rather than the corrected level; applying the family correction to it would
 discard the point of preregistering one.
 
 It also replicates the exploratory probe closely — concussion was 0.405 / 0.404 there against
-**0.437 / 0.445** here, now under a properly
+**0.238 / 0.340** here, now under a properly
 exposure-adjusted model instead of the probe's crude denominator. That the number barely moved
 when the denominator was fixed is the strongest thing that can be said for it.
 
-2 parts clear an uncorrected 0.05 in **both** specifications
-(back, concussion) — but only concussion was named in advance, so the other
+0 parts clear an uncorrected 0.05 in **both** specifications
+() — but only concussion was named in advance, so the other
 is exploratory.
 
 **Of the four exploratory parts, 0 clear the corrected threshold
@@ -63,11 +63,11 @@ confirmatory rather than fishing.
 
 | body_group | comp_off_def | comp_p | rate_off_def | rate_p | comp_random_half | prereg_share | prereg_rate |
 |---|---|---|---|---|---|---|---|
-| knee | 0.197 | 0.279 | 0.224 | 0.218 | 0.357 | -0.027 | 0.335 |
-| ankle | 0.361 | 0.042 | 0.216 | 0.234 | 0.171 | 0.258 | 0.174 |
-| back | 0.368 | 0.038 | 0.402 | 0.023 | 0.517 | 0.433 | 0.172 |
-| hip | 0.106 | 0.562 | 0.150 | 0.412 | 0.319 | 0.209 | 0.106 |
-| concussion | 0.437 | 0.012 | 0.445 | 0.011 | 0.529 | 0.405 | 0.404 |
+| knee | 0.003 | 0.986 | 0.264 | 0.145 | 0.346 | -0.027 | 0.335 |
+| ankle | 0.389 | 0.028 | 0.243 | 0.179 | 0.432 | 0.258 | 0.174 |
+| back | 0.249 | 0.170 | 0.346 | 0.053 | 0.512 | 0.433 | 0.172 |
+| hip | -0.045 | 0.806 | 0.134 | 0.464 | 0.259 | 0.209 | 0.106 |
+| concussion | 0.238 | 0.190 | 0.340 | 0.057 | 0.300 | 0.405 | 0.404 |
 
 ## 3. Offense against defense, and why
 
@@ -84,14 +84,14 @@ club-wide.
 
 | dropped_group | spearman | n |
 |---|---|---|
-| DB | 0.142 | 32 |
-| DL | 0.368 | 32 |
-| LB | 0.469 | 32 |
-| OL | 0.288 | 32 |
-| QB | 0.443 | 32 |
-| RB | 0.398 | 32 |
-| ST | 0.437 | 32 |
-| WR_TE | 0.299 | 32 |
+| DB | 0.166 | 32 |
+| DL | 0.201 | 32 |
+| LB | 0.234 | 32 |
+| OL | 0.187 | 32 |
+| QB | 0.216 | 32 |
+| RB | 0.296 | 32 |
+| ST | 0.238 | 32 |
+| WR_TE | 0.229 | 32 |
 
 ## 4. Club main effect against club × group interaction
 
@@ -101,11 +101,11 @@ which points at roster or scheme.
 
 | body_group | cells | club_var | interaction_var | share_common |
 |---|---|---|---|---|
-| knee | 201 | 0.001 | 0.006 | 0.089 |
-| ankle | 201 | 0.001 | 0.004 | 0.201 |
-| back | 201 | 0.000 | 0.001 | 0.237 |
-| hip | 201 | 0.000 | 0.001 | 0.207 |
-| concussion | 201 | 0.001 | 0.001 | 0.299 |
+| knee | 200 | 0.001 | 0.006 | 0.085 |
+| ankle | 200 | 0.001 | 0.004 | 0.220 |
+| back | 200 | 0.000 | 0.001 | 0.229 |
+| hip | 200 | 0.000 | 0.001 | 0.206 |
+| concussion | 200 | 0.001 | 0.001 | 0.280 |
 
 ## 5. Does the signature follow the head coach?
 
@@ -119,14 +119,14 @@ for many coaches to change jobs and accumulate evidence at both.
 
 | coach | team | episodes | share_concussion |
 |---|---|---|---|
-| Frank Reich | IND | 122 | 0.098 |
-| Frank Reich | CAR | 107 | 0.037 |
-| Mike Vrabel | TEN | 273 | 0.073 |
-| Mike Vrabel | NE | 81 | 0.074 |
-| Pete Carroll | SEA | 305 | 0.033 |
-| Pete Carroll | LV | 53 | 0.057 |
-| Sean Payton | NO | 56 | 0.054 |
-| Sean Payton | DEN | 158 | 0.032 |
+| Frank Reich | IND | 119 | 0.101 |
+| Frank Reich | CAR | 97 | 0.041 |
+| Mike Vrabel | NE | 77 | 0.078 |
+| Mike Vrabel | TEN | 250 | 0.068 |
+| Pete Carroll | LV | 50 | 0.060 |
+| Pete Carroll | SEA | 292 | 0.034 |
+| Sean Payton | NO | 53 | 0.057 |
+| Sean Payton | DEN | 147 | 0.034 |
 
 ## 6. Reading this against stage 6
 

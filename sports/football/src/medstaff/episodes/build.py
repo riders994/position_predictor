@@ -135,14 +135,73 @@ def build_panel(rosters_weekly, injuries, schedules):
         .alias("severity"),
     )
 
+    panel = _fill_interior_weeks(panel, schedules)
+
     state = (
-        pl.when(pl.col("on_practice_squad")).then(pl.lit(PRACTICE_SQUAD))
+        pl.when(pl.col("week_state").is_not_null()).then(pl.col("week_state"))
+        .when(pl.col("on_practice_squad")).then(pl.lit(PRACTICE_SQUAD))
         .when(pl.col("on_reserve") | pl.col("designated")).then(pl.lit(IMPAIRED))
         .when(~pl.col("team_played")).then(pl.lit(BYE))
         .when(pl.col("active")).then(pl.lit(AVAILABLE))
         .otherwise(pl.lit(OUT_OTHER))
     )
     return panel.with_columns(state.alias("week_state")).sort(["gsis_id", "season", "week"])
+
+
+def _fill_interior_weeks(panel, schedules):
+    """Insert explicit rows for weeks a player is missing *between* his first and last.
+
+    ``rosters_weekly`` **omits bye weeks**. Left as gaps, the episode builder cannot tell a bye
+    from a release and reads both as the player leaving the roster — which cut every long absence
+    in half at the bye. Measured before the fix: 12,904 of 17,833 player-seasons had an interior
+    missing week, **96% of them entirely the club's bye**, and no episode in the whole dataset
+    exceeded 13 games missed despite 696 player-seasons with zero available weeks.
+
+    Each filled week is labelled by whether the club actually played it: no game means ``BYE`` and
+    the spell continues; a game played means the player really was off the roster and the spell
+    censors. Genuine releases still censor; byes no longer do.
+    """
+    import polars as pl
+
+    bounds = panel.group_by(["season", "gsis_id"]).agg(
+        pl.col("week").min().alias("_lo"), pl.col("week").max().alias("_hi"))
+    full = (
+        bounds.with_columns(pl.int_ranges(pl.col("_lo"), pl.col("_hi") + 1).alias("week"))
+        .explode("week").drop("_lo", "_hi")
+        .with_columns(pl.col("week").cast(panel.schema["week"]))
+    )
+    have = panel.select(["season", "gsis_id", "week"]).with_columns(
+        pl.lit(True).alias("_have"))
+    missing = (
+        full.join(have, on=["season", "gsis_id", "week"], how="left")
+        .filter(pl.col("_have").is_null()).drop("_have")
+        .with_columns(pl.lit(True).alias("_filled"))
+    )
+    base = panel.with_columns(pl.lit(False).alias("_filled"))
+    if missing.is_empty():
+        return base.with_columns(pl.lit(None, dtype=pl.String).alias("week_state"))
+
+    combined = (
+        pl.concat([base, missing], how="diagonal_relaxed")
+        .sort(["gsis_id", "season", "week"])
+        .with_columns(
+            # a filled week belongs to whichever club the player was on just before it
+            pl.col("team").forward_fill().over(["gsis_id", "season"]),
+            pl.col("_filled").fill_null(True),
+            pl.col("on_practice_squad").fill_null(False),
+            pl.col("on_reserve").fill_null(False),
+            pl.col("designated").fill_null(False),
+            pl.col("active").fill_null(False),
+        )
+        .drop("team_played")
+        .join(team_week_games(schedules), on=["season", "week", "team"], how="left")
+        .with_columns(pl.col("team_played").fill_null(False))
+    )
+    return combined.with_columns(
+        pl.when(pl.col("_filled") & ~pl.col("team_played")).then(pl.lit(BYE))
+        .when(pl.col("_filled")).then(pl.lit(OFF_ROSTER))
+        .otherwise(None).alias("week_state")
+    )
 
 
 def _episode_rows(rows):
@@ -174,10 +233,11 @@ def _episode_rows(rows):
         week, state, team = row["week"], row["week_state"], row["team"]
 
         if current is not None:
-            if prev_week is not None and week - prev_week > 1:
-                # Weeks absent from the roster entirely — released, then re-signed. The club
-                # was not rehabbing him in between, so the spell cannot be credited across it.
-                close(CENSOR_OFF_ROSTER, prev_week)
+            if state == OFF_ROSTER:
+                # Genuinely absent from the roster while the club played — released, then
+                # re-signed. Nobody was rehabbing him in between, so the spell cannot be
+                # credited across it. Bye weeks are a separate state and do NOT land here.
+                close(CENSOR_OFF_ROSTER, prev_week if prev_week is not None else week - 1)
             elif team != prev_team:
                 # Rehab credit belongs to whoever did the rehab: the onset club's spell ends and
                 # a fresh one opens below for the acquiring club if he is still impaired.
@@ -230,6 +290,8 @@ def _episode_rows(rows):
 
         # BYE / OUT_OTHER: extends an open spell, never starts one. A healthy scratch is not an
         # injury, but an inactive week inside an open spell is still a game missed.
+        if state == OFF_ROSTER:
+            continue
         if current is not None:
             if state == BYE:
                 current["n_byes"] += 1

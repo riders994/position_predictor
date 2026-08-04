@@ -2045,6 +2045,66 @@ on a QB's career mostly **is** the pick it spent, which is measured, not missing
 
 ---
 
+## Entry 073 — bye weeks were splitting every long absence; hamstring split out
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> Interesting that SF and NO ranked to high. They were the two teams that inspired the analysis.
+>
+> Are we overlooking players who miss whole seasons?
+>
+> Are we looking at hamstring injuries as another specific category? Or is that baked in somewhere else
+>
+> fix the bug and split hamstring out
+
+**Response notes:**
+- **⚠️⚠️ MAJOR BUG, surfaced by the user's whole-season question.** `rosters_weekly` **omits bye
+  weeks**; the episode builder read any missing week as off-roster, so one 18-week IR spell became
+  two episodes (1–13, 15–18) with the first censored `off_roster`. **12,904 of 17,833
+  player-seasons** had an interior missing week, **96% entirely the club's bye**. Symptom: **max
+  `games_missed` in the whole dataset was 13** and **no episode reached 15 weeks**, despite 696
+  player-seasons with ZERO available weeks. Nothing errored.
+- **Fix:** `_fill_interior_weeks` materialises every interior missing week and labels it by whether
+  the club actually played — no game ⇒ `BYE` (spell continues), game played ⇒ `OFF_ROSTER` (spell
+  censors). The old `week - prev_week > 1` gap rule is gone. Genuine releases still censor.
+- **Impact:** episodes 14,420 → **12,280**; max games missed 13 → **17**; episodes ≥14 games
+  0 → **903**; `off_roster` censoring 3,051 → **95**; `returns_at_all` base 0.545 → **0.704**.
+- **⚠️ IT REVERSED STAGE 5's HEADLINE.** Concussion off/def concordance **+0.437 (p .012) /
+  +0.445 (p .011)** → **+0.238 (p .190) / +0.340 (p .057)** — the preregistered primary hypothesis
+  **no longer holds** in either spec. The earlier result was substantially an artifact of
+  bye-splitting inflating body-part shares club-dependently.
+- **Stage 6 still passes 2 of 5 but a DIFFERENT two:** incidence now passes (0.722 / 0.348 /
+  0.004), duration still does (0.807 / 0.518 / 0.001), **`returns_at_all` dropped out** (temporal
+  0.397 → **0.016**), and **recurrence collapsed further** (split-half 0.414 → 0.186, temporal
+  0.078 → **−0.194**, perm 0.058 → 0.110). The most attributable component is now null on
+  everything.
+- **Board moved:** SF C/16th → **D/18th**; NO B/4th → **B/5th**. A = LA, CHI, ATL.
+- **Hamstring split into its own group** — it was **56%** of `soft_tissue_lower` (2,210/3,980 rows)
+  and invisible. Kept **out of `FOCAL_GROUPS`** deliberately: the five were preregistered, and
+  adding a sixth post-hoc is the fishing preregistration exists to prevent. **Measured hamstring
+  recurrence 8.3%** (751 returns) — mid-pack, below knee 14.4% and shoulder 12.0%, and
+  indistinguishable from the rest of soft_tissue_lower (8.3%). Worth recording *because* the
+  literature predicts it should stand out.
+- **On the SF/NO question that started this:** the board is not purely an adjustment artifact —
+  Spearman(raw-burden rank, grade rank) = **−0.554**, so it substantially tracks games actually
+  lost. NO remains the genuine outlier (14th in raw burden, 5th in grade) because it had **fewer
+  onsets than expected** on the league's highest exposure — few injuries, long ones.
+- **On "shouldn't this have surfaced sooner?" — yes, and the failure is nameable.** (a) Only
+  *central tendency* was checked (mean 3.3 games/spell looked fine) while the **maximum** never
+  was; 13 games in a 17-game season is self-evidently wrong. (b) The evidence was **printed and
+  read past**: `off_roster` censoring at **21%** was in the stage-2 report. (c) The bye test
+  **passed** because its fixture supplied an explicit bye row — the defect was that real data has
+  none, so the fixture encoded the wrong assumption instead of testing it. Synthetic fixtures
+  verify logic given an assumed shape; they cannot catch a wrong belief about the shape.
+  **Remediation:** `sanity_checks()` now runs on real data at the end of stage 2 (longest spell,
+  off_roster share, interior panel holes), each with a test asserting it fires on the broken
+  shape.
+- 10 new tests (**401 repo-wide**), ruff clean. Full pipeline rerun, stages 1→7.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

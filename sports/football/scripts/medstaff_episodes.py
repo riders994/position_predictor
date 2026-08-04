@@ -59,6 +59,49 @@ def _table(frame, *, floats: int = 3) -> str:
     return "\n".join([head, sep, *rows])
 
 
+# A season-ending injury in week 1 costs a full season, so the longest spell in a five-season
+# sample must approach the season length. The bye-week defect capped it at 13 and nothing errored
+# for four stages — extremes are checked here, not just central tendency.
+MIN_PLAUSIBLE_MAX_GAMES = 15
+# Genuine mid-season releases of injured players are uncommon. The defect pushed this to 21%.
+MAX_PLAUSIBLE_OFF_ROSTER_SHARE = 0.05
+
+
+def sanity_checks(panel, episodes):
+    """Loud checks against what the world must look like, not against the code's own logic.
+
+    Every entry here exists because something silently wrong got through. Distributions looked
+    healthy while the longest injury in five seasons was 13 games; tests passed because their
+    fixtures assumed the very data shape that was wrong. So these are checked on *real* data.
+    """
+    import polars as pl
+
+    issues = []
+    max_games = int(episodes["games_missed"].max() or 0)
+    if max_games < MIN_PLAUSIBLE_MAX_GAMES:
+        issues.append(
+            f"longest spell is only {max_games} games missed — a season-ending injury should "
+            f"approach the season length; suspect absences are being truncated")
+
+    off_share = (episodes.filter(pl.col("censor_reason") == "off_roster").height
+                 / max(episodes.height, 1))
+    if off_share > MAX_PLAUSIBLE_OFF_ROSTER_SHARE:
+        issues.append(
+            f"{off_share:.1%} of spells censor as off_roster — implausibly high; suspect "
+            f"missing weeks are being read as the player leaving")
+
+    # the panel must have no interior holes, or the builder cannot tell a bye from a release
+    bounds = panel.group_by(["season", "gsis_id"]).agg(
+        pl.col("week").min().alias("lo"), pl.col("week").max().alias("hi"),
+        pl.col("week").n_unique().alias("have"))
+    holes = bounds.filter(pl.col("hi") - pl.col("lo") + 1 > pl.col("have")).height
+    if holes:
+        issues.append(f"{holes:,} player-seasons still have interior missing weeks")
+
+    return {"max_games_missed": max_games, "off_roster_share": off_share,
+            "player_seasons_with_holes": holes, "issues": issues}
+
+
 def build(seasons: tuple[int, ...], *, regime_seasons: tuple[int, ...] | None = None):
     injuries = load_injuries(DATA_RAW, seasons=seasons)
     rosters = load_rosters_weekly(DATA_RAW, seasons=seasons)
@@ -74,13 +117,15 @@ def build(seasons: tuple[int, ...], *, regime_seasons: tuple[int, ...] | None = 
         load_rosters_weekly(DATA_RAW, seasons=regime_seasons or tuple(range(2012, 2026)))
         .filter(__import__("polars").col("game_type") == "REG")
     )
-    return {"panel": panel, "episodes": episodes, "regime": regime}
+    return {"panel": panel, "episodes": episodes, "regime": regime,
+            "sanity": sanity_checks(panel, episodes)}
 
 
 def write_report(result, path: Path, *, seasons: tuple[int, ...]) -> Path:
     import polars as pl
 
     eps, panel = result["episodes"], result["panel"]
+    sanity = result["sanity"]
     n = eps.height
     resolved = eps.filter(pl.col("at_risk"))
 
@@ -160,7 +205,20 @@ zero in every other season — and carries `RES` status without being an injury.
 pushed 2021's reserve share to 0.46 against ~0.31 for 2022–2025, making every club look worse
 at medicine in the first year of the five-year window.
 
-## 3. Episodes
+## 3. Sanity checks against the world
+
+Distributions can look healthy while the data is wrong. These check *extremes and impossibilities*
+on real data, because the bye-week defect (§2) survived four stages behind a perfectly reasonable
+mean of 3.3 games missed per spell.
+
+- longest spell: **{sanity['max_games_missed']} games missed** (must approach season length)
+- `off_roster` censoring: **{sanity['off_roster_share']:.1%}** (genuine in-season releases of
+  injured players are uncommon)
+- player-seasons with interior missing weeks: **{sanity['player_seasons_with_holes']:,}**
+
+{chr(10).join('- ⚠️ ' + i for i in sanity['issues']) if sanity['issues'] else "**All clear.**"}
+
+## 4. Episodes
 
 {_table(by_season)}
 
@@ -180,7 +238,7 @@ spell but never across one, so an unrelated later stint cannot inherit an earlie
 
 {_table(by_pos)}
 
-## 4. Recurrence
+## 5. Recurrence
 
 Risk set is **returns, not episodes** — a spell that never resolved cannot recur, and counting
 it would score an unresolved injury as a clean outcome. **{resolved.height:,} of {n:,} episodes
@@ -199,7 +257,7 @@ stage-5 signature analysis:
 
 {_table(rec_focal)}
 
-## 5. Censoring
+## 6. Censoring
 
 {_table(censor)}
 
@@ -207,7 +265,7 @@ Censoring is not neutral here: a club can look good on return-to-play by having 
 cases quietly censored, or by releasing injured players. Stage 4 therefore models
 "returns at all" as its own outcome rather than folding it into duration.
 
-## 6. Per-club dispersion
+## 7. Per-club dispersion
 
 Episodes per club range **{tm.min():,} → {tm.max():,}** (mean {tm.mean():.0f},
 sd {tm.std():.0f}). Poisson noise alone at this mean would give sd ≈ {poisson_sd:.0f}, so the
@@ -242,8 +300,14 @@ def main(argv=None) -> int:
     p3 = write_report(result, REPORTS_DIR / "REPORT_medstaff_episodes.md", seasons=seasons)
 
     eps = result["episodes"]
+    sanity = result["sanity"]
     print(f"{eps.height:,} episodes from {result['panel'].height:,} player-weeks "
           f"({seasons[0]}–{seasons[-1]})")
+    print(f"sanity: max {sanity['max_games_missed']} games missed · "
+          f"off_roster {sanity['off_roster_share']:.1%} · "
+          f"{sanity['player_seasons_with_holes']:,} panel holes")
+    for issue in sanity["issues"]:
+        print(f"  ⚠️  {issue}")
     for path in (p1, p2, p3):
         print(f"wrote {path}")
     return 0

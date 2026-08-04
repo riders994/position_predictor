@@ -48,7 +48,8 @@ class TestBodyPartGroup:
         ("Back", "back"),
         ("Hip", "hip"),
         ("Concussion", "concussion"),
-        ("Hamstring", "soft_tissue_lower"),
+        ("Hamstring", "hamstring"),
+        ("right Hamstring", "hamstring"),
         ("Quadricep", "soft_tissue_lower"),
         ("Shoulder", "shoulder"),
         ("Thumb", "arm_hand"),
@@ -63,6 +64,18 @@ class TestBodyPartGroup:
     ])
     def test_common_strings(self, raw, expected):
         assert body_part_group(raw) == expected
+
+    def test_hamstring_is_its_own_group_not_pooled_soft_tissue(self):
+        """56% of the old soft_tissue_lower group, and the canonical rehab-quality marker."""
+        assert body_part_group("Hamstring") == "hamstring"
+        assert body_part_group("Groin") == "soft_tissue_lower"
+        assert body_part_group("Quadricep") == "soft_tissue_lower"
+
+    def test_hamstring_is_deliberately_not_focal(self):
+        """The focal five were preregistered; adding a sixth post-hoc is the fishing that
+        preregistration exists to prevent."""
+        assert "hamstring" not in FOCAL_GROUPS
+        assert "hamstring" in GROUPS
 
     def test_hip_flexor_is_soft_tissue_not_hip(self):
         """Longest-match-wins is what keeps this right, independent of rule ordering."""
