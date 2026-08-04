@@ -142,12 +142,28 @@ def _registry() -> dict[str, Dataset]:
                 note="Next Gen Stats receiving (2016+)."),
         Dataset("ngs_passing", L("load_nextgen_stats", stat_type="passing"), min_season=2016,
                 note="Next Gen Stats passing — CPOE, time-to-throw, aggressiveness (2016+)."),
+        Dataset("injuries", L("load_injuries"), min_season=2009,
+                note="Weekly injury report: body part, game designation, practice status "
+                     "(2009+). NB report_status is ~half-null from 2016 (the league dropped "
+                     "'Probable'); body part and practice_status are the regime-invariant "
+                     "columns."),
+        Dataset("rosters_weekly", L("load_rosters_weekly"), min_season=2002,
+                note="Weekly roster status (ACT/INA/RES-IR/PUP/practice squad) — the "
+                     "report-independent absence signal; joins injuries on (gsis_id, week)."),
+        Dataset("schedules", L("load_schedules"), needs_years=False,
+                note="Game context: stadium surface & roof (injury-risk confounders), "
+                     "rest days, and home/away head coach."),
         Dataset("draft_picks", L("load_draft_picks"), min_season=1980,
                 note="Draft capital (pick number)."),
         Dataset("combine", L("load_combine"), min_season=2000,
                 note="Combine athletic testing (numeric)."),
         Dataset("ids", L("load_ff_playerids"), needs_years=False,
-                note="Cross-source player ID crosswalk."),
+                note="Cross-source player ID crosswalk (fantasy positions only — carries "
+                     "essentially no offensive linemen; see `players` for a complete one)."),
+        Dataset("players", L("load_players"), needs_years=False,
+                note="Full player universe with gsis_id<->pfr_id. Unlike `ids` and the weekly "
+                     "rosters, its pfr_id coverage is not position-biased (~12% null for both "
+                     "linemen and skill players), which is what makes snap joins usable."),
         Dataset("sleeper_players", _load_sleeper, needs_years=False,
                 source="sleeper/v1/players/nfl",
                 note="Sleeper fantasy_positions eligibility (current snapshot; gsis_id join)."),

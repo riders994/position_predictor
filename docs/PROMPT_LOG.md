@@ -1770,6 +1770,436 @@ the results of the other models?")_
 
 ---
 
+## Entry 062 — Medical-staff injury grades: new football project, planned
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> New idea for a football research project. Injury grades of medical staff. We should develop a
+> system to grade each team's medical staff over the last 3 years and 5 years. The grade should
+> consider reinjury risk. Maybe separate grades for position groups.
+
+**Response notes:**
+- **Fourth project in the repo**, planned as a sibling package `sports/football/src/medstaff/`
+  mirroring `qb_breakout` conventions. Plan doc `docs/MEDSTAFF_PLAN.md`.
+- **Feasibility probed before designing** (all measured, not assumed): `nflreadpy.load_injuries`
+  covers **2009–2025**; injury rows join **~99–100%** to `load_rosters_weekly` on
+  `(gsis_id, week)` → rosters_weekly is the availability spine (all positions, gsis-keyed).
+  **Rejected `snap_counts` as the spine** — keyed on `pfr_player_id`, combined crosswalk only
+  **81.7%**, and starts 2012.
+- **⚠️ Regime break at 2016 found in probing:** `report_status` null 3–6% (2009–15) → 39% (2016)
+  → ~53% (2017–25); the league dropped "Probable". Body part (coalesced) and `practice_status`
+  are ~0% null throughout, so **all outcomes are built on the regime-invariant columns**.
+- **Power is good, unlike qb_breakout:** median **412 episodes/team over 5yr** (254 over 3yr),
+  vs the ~4 QBs/franchise that made the sibling's stage 7 unpowered. Raw "Out" per team 2021–25
+  spans **98 (MIA) → 277 (TEN)**, sd 46 vs Poisson ~13 — real dispersion to decompose.
+- **User decisions:** whole roster (all positions, 8 groups) · headline = **return-speed ×
+  recurrence 2×2** (separates good rehab from rushing players back) · grades **always publish**
+  with a signal-vs-luck verdict leading (explicitly NOT gated/suppressed) · team-window grade +
+  optional `--staff-table` CSV hook (no free head-athletic-trainer source — same problem as GM).
+- **Design choices that reverse the obvious**, adopted after a design review: **not a GBM** for
+  the expectation models (a flexible learner eats the residual variance being measured →
+  penalised discrete-time logistic hazard, shallow GBM as robustness check only);
+  **leave-one-team-out**, not random k-fold; fit incidence **with and without prior-injury
+  history and report the pair as a bound** (a bad staff manufactures fragile-looking players, so
+  adjusting for prior injuries adjusts away its own effect); **informative censoring is
+  gameable** so `P(returns at all)` and `released_while_injured` become their own outcomes;
+  whole-factor permutation as primary inference + player-block bootstrap null.
+- **Framing to lead with:** this data cannot identify "medical staff" — the residual bundles
+  athletic training, S&C, sports science, coach practice intensity, GM roster taste and scheme.
+  It grades a **team availability system**. Stated as a non-goal, not a caveat.
+- Standing decision `PROJECT_PLAN.md:151` ("no injury-report text") is **unchanged** — this is a
+  separate project and nothing feeds back into the ranking models.
+
+---
+
+## Entry 063 — Cross-position-group injury signature: the scheme instrument
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> One thing to look at across position groups for a team: same injury tendencies. Focus on knee,
+> ankle, back, hip, concussion (scheme)
+
+**Response notes:**
+- **User's idea became stage 5 and is the strongest attribution instrument in the project.**
+  Logic: if a team's excess sits in ONE body part and appears across position groups sharing
+  nothing except the building, that implicates a common cause (contact policy, S&C, surface,
+  protocol); if confined to one group it's roster/scheme/luck for that group.
+- **It also sidesteps the project's worst confounder**: body-part *composition* is
+  **disclosure-robust** — a club that lists everyone inflates numerator and denominator alike.
+- **Statistic is a variance decomposition, not a grade**: team main effect vs team×group
+  interaction per body part. Team × bodypart × position-group cells are tiny (**median 4
+  episodes over 5yr**), so cells are never graded; concordance aggregates across the 8 groups.
+- **Exploratory probe (2021–25, off/def concordance across 32 teams, crude exposure
+  denominator), recorded so the real run is confirmatory rather than fishing:**
+
+  | part | share-based (signature net of level) | rate-based (level+signature) |
+  |---|---|---|
+  | concussion | 0.405 (p=.022) | 0.404 (p=.022) — **only one stable in both** |
+  | knee | −0.027 | 0.335 (p=.061) — rate-only ⇒ level artifact |
+  | back | 0.433 (p=.013) | 0.172 — share-only ⇒ compositional |
+  | ankle | 0.258 | 0.174 |
+  | hip | 0.209 | 0.106 |
+
+- **The disagreement between specs IS the finding**, so both are always reported. Knee flipping
+  positive only under rate is the signature of a *level* effect (knee is the largest category so
+  it tracks overall burden); back flipping the other way means its share result was compositional.
+- **Multiplicity preregistered:** 5 parts ⇒ Bonferroni 0.01, and **no probe result clears it**.
+  Concussion designated the **primary a-priori hypothesis** (practice contact policy and tackling
+  technique are documented coach decisions; concussion reporting is protocol-mandated hence least
+  disclosure-contaminated). Other four labelled exploratory.
+- **Strongest causal handle designed in:** does the signature **follow the head coach** across
+  franchises? Coaches available 1999+ from `load_schedules`. It is the one design element that
+  breaks the shared-roster confound (offense and defense aren't fully independent — an old roster
+  is old on both sides).
+
+---
+
+## Entry 064 — medstaff stage 1: dataset registration, body-part taxonomy, data report
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> start on stage 1
+
+**Response notes:**
+- Branch `medstaff-grades` off fresh `primary`. **NB `qb-late-breakout` is still unmerged**, so
+  its `src/qb_breakout` is absent here (only stale `__pycache__` on disk) and its PROMPT_LOG
+  entries **055–061** are not on primary — this entry continues from **062** so the global
+  numbering stays collision-free when that PR lands.
+- **3 datasets registered** in `data/fetch.py` (one `Dataset(...)` line each, existing
+  `L()`/`_clip_seasons`/`_load_resilient`/`_write_manifest` machinery unchanged): `injuries`
+  (2009+, 90,752 rows), `rosters_weekly` (2002+, 906,378 rows), `schedules` (7,548 rows).
+- **New package** `src/medstaff/` + `data/` subpackage: `taxonomy.py`, `positions.py`,
+  `teams.py`, `ingest.py`, facade `__init__.py`. Registered in `[tool.hatch...] packages`.
+- **`taxonomy.py` is the substance.** 292 distinct raw body-part strings → 16 groups. Two rules
+  do the work: **non-injury is checked first on the raw string** (so
+  `Ankle [Not Injury Related - Personal, Thursday Only]` is excluded, not counted as an ankle),
+  and among body-part matches **earliest match wins, longest match breaks ties** — earliest
+  encodes "the primary injury is listed first" (`Foot/Wrist/Hip` → foot), longest keeps
+  `hip flexor` in soft-tissue instead of collapsing to `hip`, **structurally rather than by rule
+  ordering**. Handles laterality prefixes, case, plurals, bracket clauses and free-text sentences.
+- **Result: 99.8% of rows map** — only 200 rows (0.2%) land in `other`, and **no single unmapped
+  string exceeds 0.1%** of rows.
+- **`_normalize_keys` fix:** the caches disagreed on join-key dtype — `rosters_weekly` lands
+  `season`/`week` as f64 (nflreadpy concatenates multi-season pulls with `diagonal_relaxed`,
+  which widens ints once any season has a null) while `injuries` keeps i32; polars refused the
+  join. Both pinned to Int32 at load.
+- **Stage-1 report `REPORT_medstaff_data.md` measures the three design-deciding properties:**
+  (1) the **2016 regime break reproduced exactly** — `report_status` null 3.0–6.0% pre-2016,
+  **39.2% in 2016**, 48.7–54.7% after, while coalesced body part is ≤0.1% null and
+  `practice_status` ≤0.7% in every season; (2) **spine join 99.2%** overall — 97.4–98.2% for
+  2009–2015 but **99.9–100% from 2016**; (3) per-club disclosure indices incl.
+  `questionable_play_rate`.
+- **Sanity checks against real-world rates** (the `qb_breakout` flag-defect lesson): distinct
+  concussed players/season **90–183**, matching the known 113–179 range for 2015–25; and
+  **zero clean-zero season × focal-group cells** — the exact signature that defect presented as.
+- 71 new tests (**203 football tests**, 261 repo-wide), ruff clean.
+
+---
+
+## Entry 067 — medstaff stage 2: episodes, and a 2021 comparability break
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> Start stage 2
+>
+> [interrupted mid-probe to land the QB-breakout docs, then]
+>
+> resume stage 2 with the roster status signal
+
+**Response notes:**
+- **Plan rule changed before implementing, on measurement.** The plan said "any week with snaps
+  terminates an episode". Measured instead: players on `RES`/`INA`/`DEV`/`CUT` take a snap in
+  **~0.02%** of player-weeks, so weekly roster status separates played from did-not-play almost
+  perfectly — gsis-keyed, no crosswalk, back to 2002. `snap_counts` keys on `pfr_player_id`,
+  crosswalks at **81.7%** from 2012, and would have misread the **21%** of `ACT` player-weeks
+  with zero snaps: a healthy scratch or deep backup is **available**, not injured. Snaps deferred
+  to stage 3 as an intensity covariate.
+- **Episode rules.** Only an `ACT`-and-undesignated week terminates; `INA`/`RES`/bye all
+  continue, which absorbs report noise for free (listed weeks 5 and 7, inactive week 6 → one
+  spell, not two). Only an *impaired* week (real body part, or reserve) starts one, so a healthy
+  scratch never creates an episode.
+- **Two design calls the plan left open.** (a) **Concurrent injuries are not split** — the report
+  carries one primary part and clubs flip it weekly, so splitting would manufacture episodes far
+  more often than catch a real second injury; the spell keeps its opening group and sets
+  `group_changed`. (b) **Body part carries forward within a spell, never across one** — a global
+  forward-fill was written and then deleted, because it would let an unrelated week-10 IR stint
+  inherit a week-2 knee across a return, and long IR spells matter most.
+- **⚠️ THE FINDING — a 2021 comparability break, same shape as the cfbfastR flag defect.**
+  First run showed `used_reserve` at **2 episodes total across 2012–2019** then **1,059/season
+  from 2021**, and episodes jumping 2,106 → 3,385. IR was not invented in 2021: two
+  `rosters_weekly` fields are unpopulated earlier. `status_description_abbr` carries **0.0%**
+  R-codes for 2012–2015 (51% null in 2016), and `status == "INA"` is 2.8k rows across 2012–2019
+  vs 16.8k across 2021–2025 while `ACT` falls **0.86 → 0.59** — the gameday active/inactive split
+  is simply absent. **Fix:** reserve reads from `status` (stable 6–14% every season), never the
+  abbr codes; absence outcomes restricted to **2021–2025**. That window *is* the 5-year grading
+  window, and sits wholly inside the post-COVID 17-game era and post-2016 reporting regime — one
+  homogeneous regime, not a compromise. `roster_status_regime_table()` + tests pin both halves.
+- **⚠️ Reserve/COVID-19 (`R59`) excluded.** 2021 only, 725 player-weeks, **exactly zero** every
+  other season; carries `RES` without being an injury. Left in it pushed 2021's reserve share to
+  0.46 vs ~0.31 for 2022–25 — i.e. it would have made every club look worse at medicine in year
+  one of the five-year window. Also fixed a smaller leak where a stray `Illness`/`non_injury`
+  report row could label a reserve spell (63 episodes → 0).
+- **Result: 14,420 episodes / 221,313 player-weeks, 2021–2025**, now homogeneous (2,791–2,948
+  per season; reserve share 0.29–0.34; mean games missed 3.2–3.4). **451 episodes per club over
+  5 years** (336–564), sd 58 against Poisson 21 — **2.7× wider than chance**, which is the
+  dispersion stage 4 has to decompose.
+- **Recurrence at k=6 games: 9.3% overall.** Knee **13.4%** (n=1,250 returns) > ankle 9.9% >
+  back 8.0% > concussion **5.2%** > hip 5.0%. Concussion lowest is mechanistically right —
+  protocol-mandated clearance. Risk set is **returns, not episodes** (60.5% resolved); the clock
+  counts **games available**, not calendar weeks, so a week-17 return has two games of exposure
+  rather than a free pass.
+- **Known limitation recorded:** 21.6% of episodes have an `unknown` body part — spells that
+  opened on a bare reserve week and never picked up a report row. They count for availability but
+  are excluded from body-part analyses, which matters for stage 5.
+- 33 new tests, one per edge case (bye, trade, roster gap, practice squad, season boundary,
+  never-returns, group flip, severity, all recurrence horizons). **294 repo-wide**, ruff clean.
+- Removed `FIRST_MODEL_SEASON` rather than silence its unused-import warning: a constant named
+  "first model season" that is no longer the first model season is a trap.
+
+---
+
+## Entry 068 — medstaff stage 3: exposure, and a position-biased ID crosswalk
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> start stage 3
+
+**Response notes:**
+- **`src/medstaff/exposure/`** + `scripts/medstaff_exposure.py` + `REPORT_medstaff_exposure.md`.
+  Risk set = **130,139 player-weeks** (2021–2025) with confounders attached.
+- **Risk-set definition:** a week only counts as exposure if a new injury could have *started*
+  in it. Weeks inside an open spell are dropped (counting them turns one long absence into many
+  weeks of injury-free exposure), as are practice-squad weeks and byes.
+- **⚠️ THE FINDING — the ID crosswalk is position-biased.** `snap_counts` keys on
+  `pfr_player_id`; the two obvious crosswalk sources fail *specifically on linemen*:
+  `rosters_weekly.pfr_id` is null for **99.8% of OL rows** (vs 9–24% elsewhere), and `ids` is a
+  **fantasy** table that resolved **2 of 352** distinct linemen. Symptom that exposed it: OL mean
+  snap share came out **0.032** against QB 0.780 — linemen play nearly every offensive snap, so
+  it had to be wrong. **Why it mattered more than missing data:** position correlates with body
+  part, and body part is exactly what the stage-5 signature analysis compares, so position-biased
+  missingness would have arrived looking like a finding. **Fix:** registered `players`
+  (`load_players`), ~12% null for linemen and ~11% for skill players — unbiased. **OL snap
+  coverage 2.4% → 83.2%**, mean snap share 0.558. QB coverage is 47% and that is correct:
+  inactive backup weeks stay in the risk set (a scratch can still get hurt in practice) and have
+  no snap row.
+- **Surface is dirty free text:** `"grass "` with a trailing space is a distinct value from
+  `"grass"` (93 vs 612 rows) and `""` means missing. Normalised to grass/turf with turf brands
+  collapsed — brand is not an injury-risk distinction. 17 clubs play home on grass, 15 on turf.
+- **Prior injury history ships as its own table, deliberately.** It reaches back to **2009** from
+  the *report* (comparable across that span even though the roster fields are not) and is
+  **strictly prior seasons** so it cannot leak the outcome. It is the one covariate that is
+  partly the staff's own output — a poor system manufactures players who look fragile — so stage
+  4 must fit incidence **with and without** it and report the pair as a **bound**, not a point.
+- **Bug found by a test:** an all-null `birth_date` column arrives typed Null and raised
+  `- not allowed on date and null`; now cast explicitly to Date. Real data has 0.8% nulls mixed
+  in so it never surfaced in the live run — only a synthetic fixture caught it.
+- `years_exp` clipped at 22 (one 2023 roster row claims 29 — the row is real exposure, the number
+  is not). Coverage: surface 96.3%, home surface/rest/indoor 100%, age 99.3%, BMI 99.9%.
+- 26 new tests (**320 repo-wide**), ruff clean.
+
+---
+
+## Entry 069 — medstaff stage 4: expectation models, and a risk-set bug they exposed
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> start stage 4
+
+**Response notes:**
+- **`src/medstaff/expected/`** (`models.py` + `datasets.py`), `scripts/medstaff_expected.py`,
+  `REPORT_medstaff_expected.md`. Penalised discrete-time logistic hazard with splines on age and
+  week; **leave-one-team-out** folds; **club identity guarded out of the design matrix** (raises).
+- **The load-bearing test:** inject a synthetic club effect of known size, assert **LOTO recovers
+  it while random k-fold shrinks it**. LOTO is the more expensive scheme and the whole design
+  rests on it being necessary, so necessity is demonstrated rather than asserted.
+- **⚠️ BUG the first run exposed: incidence base rate came out 0.000.** The stage-3 risk set
+  excluded weeks inside an episode **including the onset week itself**, so the event week was
+  never at risk. In survival terms the event week is the **last at-risk week**. Fixed to exclude
+  only `onset_week+1 .. end_week`; risk set 130,139 → **144,552** player-weeks and base rate
+  0.000 → 0.100. Caught only because a zero base rate is obviously impossible — nothing errored.
+- **Results (LOTO, 2,000-draw nulls):** incidence 0.100 base / perm p **0.025** / intraclass
+  0.867 · duration 0.163 / **0.0005** / 0.882 · recurrence 0.018 / **0.058** / 0.440 ·
+  returns_at_all 0.545 / **0.0045** / 0.625.
+- **THE PATTERN: the evidence runs opposite to attributability.** Recurrence — most plausibly
+  owned by a medical staff, downstream of the return-to-play decision, least contaminated by
+  luck — is the **only component that fails its permutation test**. Incidence — *least*
+  attributable (conditioning, scheme, surface, luck) — separates clubs most strongly. Consistent
+  with clubs differing mainly in exposure and IR usage rather than medicine. A caution, not a
+  finding; stage 6 decides whether any of it is stable.
+- **The with/without-history bound is TIGHT** (intraclass 0.859 vs 0.867), so the §5.3 ambiguity
+  is not load-bearing in practice. Could not have been known in advance — it is why the bound was
+  built rather than a covariate choice being made.
+- **⚠️ Caveat added to the report: `intraclass` is NOT "share attributable to the medical
+  staff."** It only says the spread is not Poisson noise; the surviving variance can still be
+  roster construction, disclosure, scheme or stadium — and the deliberately restrained model
+  (§5.1) leaves uncaptured composition *in* the residual by design. Most likely misreading.
+- **Nulls:** whole-factor permutation (reassigns whole *players* to clubs) is the primary
+  inference — one test, no multiplicity. Per-club p-values use the **more conservative** of
+  independent-Bernoulli and **player-block bootstrap**; the block null is verified wider by test
+  when within-player weeks are correlated. Uncorrected p's reported with expected chance hits
+  stated inline.
+- Calibration tracks the diagonal for incidence and recurrence. Runtime ~6 min at 2,000 sims.
+- 22 new tests (**342 repo-wide**), ruff clean.
+
+---
+
+## Entry 070 — medstaff stage 6: reliability, and what actually persists
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> Do stage 6
+
+**Response notes:**
+- Run **before** the grades on purpose: a reader who stops here has the honest answer.
+  `src/medstaff/validate/`, `scripts/medstaff_reliability.py`, `REPORT_medstaff_reliability.md`.
+- **Two tests because they fail differently.** **Split-half** splits each club's **players**,
+  never its rows (a row split would put one fragile player on both sides and manufacture
+  agreement out of one man's hamstring), Spearman-Brown corrected. **Temporal** grades 2021–23
+  and tests 2024–25 — the harder test, and the one a reader cares about, since a grade is only
+  useful if it says something going forward.
+- **RESULT — 2 of 5 components pass the preregistered gate:**
+
+  | component | split-half | temporal | temporal p | perm p | gate |
+  |---|---|---|---|---|---|
+  | incidence (no hist) | 0.708 | 0.293 | 0.104 | 0.020 | FAIL — temporal |
+  | incidence (with hist) | 0.701 | 0.192 | 0.293 | 0.033 | FAIL — temporal |
+  | **duration** | 0.827 | **0.529** | 0.002 | 0.001 | **PASS** |
+  | recurrence | 0.414 | **0.078** | 0.670 | 0.057 | FAIL — temporal + permutation |
+  | **returns-at-all** | 0.664 | **0.397** | 0.024 | 0.003 | **PASS** |
+
+- **THE HEADLINE IS THE GAP BETWEEN THE TWO TESTS.** Split-half is high everywhere (0.41–0.83) —
+  the residuals are internally consistent, not measurement noise — but temporal is much lower.
+  For most components the residual is a property of **a period**, not a carry-forward property of
+  the club. Real, but not something to put on next season's board.
+- **What is stable is NOT medicine.** The two passing components — duration and returns-at-all —
+  are largely *how a club uses IR and times a return*: an operational/roster-policy signature.
+  **Recurrence, the one outcome most plausibly owned by a medical staff, is weakest on every
+  test.** Combined with stage 4 (where recurrence was also the only component failing its
+  permutation test), the consistent story is that clubs differ in availability *management*, not
+  in medicine.
+- **Consequence for stage 7, now written into the plan:** the board separates clubs by
+  **availability-management policy**, not quality of medicine — a narrower claim than "medical
+  staff grades" and the one the evidence supports.
+- **The gate LABELS, it does not suppress** (per the locked decision): grades publish either way,
+  failing components marked at every appearance rather than in a footnote.
+- **Removed hardcoded constants:** stage 6 first carried stage 4's permutation p-values as
+  retyped literals. Now recomputed from stage 4's own parquet — a retyped number goes stale
+  silently the first time the upstream stage is rerun.
+- 11 new tests (**353 repo-wide**), ruff clean. Runtime ~45s.
+
+---
+
+## Entry 071 — medstaff stage 5: the cross-group signature holds for concussion
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> start stage 5
+
+**Response notes:**
+- The user's own idea (Entry 063), now run properly. `src/medstaff/signature/`,
+  `scripts/medstaff_signature.py`, `REPORT_medstaff_signature.md`. Needed **body-part-specific
+  expectations**, which stage 4 did not produce (its incidence model predicts *any* onset) — so
+  five extra leave-one-team-out fits, one per focal part. ~4 min.
+- **RESULT — the preregistered primary hypothesis holds:**
+
+  | part | composition | p | rate | p | probe |
+  |---|---|---|---|---|---|
+  | **concussion** | **+0.437** | **0.012** | **+0.445** | **0.011** | 0.405 / 0.404 |
+  | back | +0.368 | 0.038 | +0.402 | 0.023 | 0.433 / 0.172 |
+  | ankle | +0.361 | 0.042 | +0.216 | 0.234 | 0.258 / 0.174 |
+  | knee | +0.197 | 0.279 | +0.224 | 0.218 | −0.027 / 0.335 |
+  | hip | +0.106 | 0.562 | +0.150 | 0.412 | 0.209 / 0.106 |
+
+- **Concussion clears α=0.05 in BOTH specs and is strongest in both.** Named in advance ⇒ tested
+  at 0.05, not the corrected 0.010 (applying the family correction to a preregistered primary
+  would discard the point of naming one). **It barely moved when the probe's crude denominator
+  was replaced with a proper exposure-adjusted model** — that stability is the strongest thing
+  that can be said for it. **Of the 4 exploratory parts, 0 clear 0.010.**
+- **⚠️ Fixed a preregistration error in my own report logic:** the first draft applied Bonferroni
+  to the primary hypothesis too, which contradicts the preregistration. Also fixed a generated
+  sentence that called concussion "the only part" clearing 0.05 in both specs and then listed two
+  (back does as well).
+- **The variance decomposition agrees via a different statistic:** `share_common` (club main
+  effect vs club×group interaction) is highest for **concussion 0.299** and lowest for **knee
+  0.089** — concussion's excess is the most spread across position groups, knee's the most
+  group-specific. Exactly the predicted ordering, from an independent statistic.
+- **The knee probe result did NOT replicate, and that is the probe being corrected** — its
+  rate-only 0.335 came from a disclosure-contaminated denominator (distinct listed players).
+  Properly adjusted, knee is weakly positive in both and significant in neither.
+- **Composition spec is disclosure-robust** by construction (a club that lists everyone inflates
+  numerator and denominator alike) — a real advantage over every level-based measure in the
+  project. Tested: composition must be invariant to overall level while rate must not be.
+- **`unknown` body parts (21.6% of episodes) are EXCLUDED, not pooled** — concentrated in long
+  absences, would swamp the parts compared.
+- **Coach-follows is power-bounded as designed:** only **4** coaches ran two clubs in the window.
+  Vrabel near-identical across TEN 0.073 / NE 0.074; the other three move both ways. At n=4 this
+  is the power bound reported instead of a result.
+- 14 new tests (**367 repo-wide**), ruff clean.
+
+---
+
+## Entry 072 — medstaff stage 7: the grades, on a forced-rank curve
+
+**Date:** 2026-08-03
+
+**Prompt (full text):**
+
+> Let's produce the grades. Top 3 are A, next 5 are B, next 8 are C, next 8 are D, next 8 are F.
+> After running these reports for a few years, we'll re-calibrate so that a certain score yields
+> a certain grade, rather than the tiered curve I established.
+
+**Response notes:**
+- **Final stage.** `src/medstaff/grades/` (compose + staff), `scripts/medstaff_grades.py`,
+  `REPORT_medstaff_grades.md`. 22 tests (**389 repo-wide**), ruff clean. Runs in ~2s.
+- **User-specified forced-rank quota: 3 A · 5 B · 8 C · 8 D · 8 F** — sums to exactly 32.
+  Implemented as `LETTER_QUOTAS`, with the **recalibration path built in from the start**:
+  `ABSOLUTE_BANDS` + `assign_letters(bands=...)` already accept an absolute score-to-grade table,
+  so the future switch is a parameter, not a rewrite. Tested both paths.
+- **Flagged, not argued:** a forced curve assigns three A's and eight F's to *any* input including
+  noise — it orders, it does not test. There is a test documenting exactly that. The user had
+  already anticipated it by asking for absolute thresholds later.
+- **The two separation numbers, which must be quoted together:**
+  **0 of 32** clubs are separable from the club immediately below them (adjacent-pair separation
+  is a strict test in a 32-club field), but **17 of 32** are separable from the **league average**.
+  So the extremes are real relative to the mean; the fine ordering is not. Added
+  `separated_from_average` after the adjacent-pair statistic came back empty and uninformative.
+- **17 of 32 get the same letter on the 3-year window** — the most direct stability check on the
+  board itself, and consistent with stage 6 finding most signal is period-specific.
+- **Weights ∝ measured split-half reliability** (self-limiting: a component with no signal gets
+  ~0 weight without anyone deciding it should). Reported beside the **attributability prior**,
+  which orders the components **almost exactly the other way round** — recurrence is most
+  attributable and least reliable, duration least attributable and most reliable. No way to
+  satisfy both; that tension is the honest content of the weights table.
+- **Board (5yr, 2021–25):** A = LA, CHI, CIN · F = BUF, DAL, GB, NE, MIA, SEA, KC, CLE.
+- **Report opens with stage 6's verdict**, not the letters: this grades a **team availability
+  system**, and stage 6 narrowed it further to **availability-management policy, not medicine**
+  (only duration and returns-at-all persist; recurrence does not).
+- Position-group cells shrunk toward their own club's value and **never ranked** — they ship in
+  the parquet rather than as a report table so they are not read as an ordering.
+- **No raw rate reaches the board** (tested) — the direct analogue of the sibling project's
+  no-raw-rate test.
+- `--staff-table` hook works and canonicalises relocated codes; without it the report says plainly
+  it is grading franchises, since no free trainer-by-season source exists.
+- **PROJECT COMPLETE: all 7 stages done.**
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
