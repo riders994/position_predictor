@@ -1,6 +1,6 @@
 # Medical-staff grades — Stage 3: exposure and confounders
 
-The risk set is **150,057 player-weeks** across 2021–2025, drawn from
+The risk set is **150,059 player-weeks** across 2021–2025, drawn from
 242,407 panel rows. Nothing here is an outcome and nothing here is a grade — this is the
 input side of the observed-minus-expected the grades are built from.
 
@@ -68,8 +68,8 @@ Per player-week, the surface actually played on:
 
 | surface | player_weeks |
 |---|---|
-| grass | 77119 |
-| turf | 67192 |
+| grass | 77118 |
+| turf | 67195 |
 | — | 5746 |
 
 Club home surfaces, which are a stadium property rather than a staff choice and the canonical
@@ -84,7 +84,7 @@ Short weeks (four or five days' rest — Thursday games):
 
 | short_week | player_weeks |
 |---|---|
-| no | 140413 |
+| no | 140415 |
 | yes | 9644 |
 
 ## 4. Who is exposed
@@ -97,7 +97,7 @@ Short weeks (four or five days' rest — Thursday games):
 | DL | 21036 | 26.839 | 0.457 |
 | LB | 20124 | 26.239 | 0.424 |
 | RB | 10436 | 25.888 | 0.314 |
-| — | 7867 | 25.971 | — |
+| — | 7869 | 25.971 | — |
 | QB | 6538 | 28.246 | 0.789 |
 | ST | 5635 | 28.994 | 0.000 |
 

@@ -23,8 +23,8 @@ in week 6 never "returned" in week 6.
 | impaired | 47320 |
 | practice_squad | 42825 |
 | out_other | 15767 |
-| bye | 13317 |
-| off_roster | 7870 |
+| bye | 13318 |
+| off_roster | 7869 |
 
 ## 2. ⚠️ Why the sample starts at 2021
 
@@ -159,8 +159,8 @@ stage-5 signature analysis:
 | censor_reason | episodes |
 |---|---|
 | season_end | 3391 |
-| off_roster | 96 |
-| team_change | 88 |
+| off_roster | 95 |
+| team_change | 89 |
 | practice_squad | 59 |
 
 Censoring is not neutral here: a club can look good on return-to-play by having unrecovered

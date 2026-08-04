@@ -18,25 +18,20 @@ reporting is protocol-mandated rather than discretionary, which makes it the lea
 disclosure-contaminated outcome in the project. The other four are **exploratory** and are
 labelled as such wherever they appear.
 
-**The primary hypothesis, concussion, holds.** Composition **+0.238**
-(p 0.190), rate **+0.340** (p 0.057) — it
-does not clear α = 0.05 in
-**both** specifications, and it is the **strongest part in both**. Because it was named in advance
-it is tested at 0.05 rather than the corrected level; applying the family correction to it would
-discard the point of preregistering one.
+The primary hypothesis, concussion: **does not hold**. Composition
+**+0.238** (p 0.190), rate **+0.340**
+(p 0.057). Because it was named in advance it is tested at 0.05 rather than the
+corrected level; applying the family correction to a preregistered primary would discard the point
+of naming one.
 
-It also replicates the exploratory probe closely — concussion was 0.405 / 0.404 there against
-**0.238 / 0.340** here, now under a properly
-exposure-adjusted model instead of the probe's crude denominator. That the number barely moved
-when the denominator was fixed is the strongest thing that can be said for it.
+Against the exploratory probe, which recorded concussion at 0.405 / 0.404 before this run:
+now **0.238 / 0.340** under a properly
+exposure-adjusted model. It moved by 0.167 in composition once the denominator was fixed, so the probe result was substantially an artifact of the crude denominator.
 
-0 parts clear an uncorrected 0.05 in **both** specifications
-() — but only concussion was named in advance, so the other
-is exploratory.
-
-**Of the four exploratory parts, 0 clear the corrected threshold
-(0.010) in either specification.** Back is the near miss — it is the only other part
-positive in both specs — and it is labelled exploratory, not a finding.
+Strongest part by composition is **ankle**; by rate, **back**.
+0 part(s) clear an uncorrected 0.05 in **both** specifications. **Of the four
+exploratory parts, 0 clear the corrected threshold (0.010)** in either
+specification.
 
 Spells with an unlabelled body part are **excluded, not pooled** (unknown, other, non_injury, illness).
 The `unknown` group alone is 21.6% of episodes — spells that opened on a bare reserve week and
@@ -121,12 +116,12 @@ for many coaches to change jobs and accumulate evidence at both.
 |---|---|---|---|
 | Frank Reich | IND | 119 | 0.101 |
 | Frank Reich | CAR | 97 | 0.041 |
-| Mike Vrabel | NE | 77 | 0.078 |
 | Mike Vrabel | TEN | 250 | 0.068 |
+| Mike Vrabel | NE | 77 | 0.078 |
 | Pete Carroll | LV | 50 | 0.060 |
 | Pete Carroll | SEA | 292 | 0.034 |
-| Sean Payton | NO | 53 | 0.057 |
 | Sean Payton | DEN | 147 | 0.034 |
+| Sean Payton | NO | 53 | 0.057 |
 
 ## 6. Reading this against stage 6
 

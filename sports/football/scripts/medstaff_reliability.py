@@ -121,6 +121,34 @@ def write_report(result, path, *, perm_lookup) -> Path:
     inc = summary[summary.component == "incidence_no_history"].iloc[0]
     n_pass = int((summary.gate == "PASS").sum())
 
+    passing = summary.loc[summary.gate == "PASS", "component"].tolist()
+    failing = summary.loc[summary.gate == "FAIL", "component"].tolist()
+    passing_str = ", ".join(passing) if passing else "none"
+    failing_str = ", ".join(failing) if failing else "none"
+    # Derived, not asserted: an earlier version hardcoded which pair passed and kept saying so
+    # after a bug fix changed it.
+    _policy = {"duration", "returns_at_all", "incidence_no_history", "incidence_with_history"}
+    if "recurrence" in passing:
+        stability_reading = (
+            "Recurrence — the outcome most plausibly owned by a medical staff — is among the "
+            "components that persist, so the board carries some genuine medical signal.")
+    elif passing and set(passing) <= _policy:
+        stability_reading = (
+            "**Recurrence, the one outcome most plausibly owned by a medical staff, is not among "
+            "them.** Everything that persists is about *exposure and how a club uses injured "
+            "reserve and times a return* — an operational and roster-policy signature. So the "
+            "defensible reading of the stage-7 board is that it separates clubs by "
+            "**availability-management policy**, not by quality of medicine. That is a narrower "
+            "claim than \"medical staff grades\", and it is the one the evidence supports.")
+    else:
+        stability_reading = (
+            "**No component clears the gate.** The board should be read as an ordering with no "
+            "demonstrated year-over-year stability behind it; the power bounds in §4 are the "
+            "reportable result.")
+
+    best_temporal = summary.loc[summary.temporal_r.idxmax(), "component"]
+    worst_temporal = summary.loc[summary.temporal_r.idxmin(), "component"]
+
     dur_frame = next(c["_frame"] for c in result["components"] if c["component"] == "duration")
     by_group = detectable_by_group(dur_frame)
     group_summary = (
@@ -177,19 +205,16 @@ could put on next season's board.
   (p {rec.temporal_p:.3f}), permutation {rec.permutation_p:.3f}. Whether injuries come back is
   the thing one would actually want to call medical quality, and it does not persist.
 - **Duration** — split-half {dur.split_half_r:.3f}, temporal **{dur.temporal_r:.3f}**
-  (p {dur.temporal_p:.3f}) — is the strongest, and **returns-at-all** is close behind.
+  (p {dur.temporal_p:.3f}).
+- **Strongest on the temporal test: {best_temporal}**; weakest: **{worst_temporal}**.
 - **Incidence** — *least* attributable to a training room — split-half {inc.split_half_r:.3f},
   temporal {inc.temporal_r:.3f} (p {inc.temporal_p:.3f}).
 
 ### What is actually stable
 
-The two components that pass are **duration** and **returns-at-all** — both of which are largely
-*how a club uses injured reserve and times a return*. That is an operational and roster-policy
-signature, and it is genuinely persistent. The component that is not stable is the medical one.
+The component(s) that pass: **{passing_str}**. What does *not* pass: **{failing_str}**.
 
-So the defensible reading of the stage-7 board is: it separates clubs by **availability
-management policy**, not by quality of medicine. That is a narrower claim than "medical staff
-grades" and it is the one the evidence supports.
+{stability_reading}
 
 ## 4. Power — what would have been findable
 

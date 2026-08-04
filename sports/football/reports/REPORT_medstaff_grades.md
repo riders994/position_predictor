@@ -7,16 +7,13 @@ every letter below bundles the athletic training staff, strength and conditionin
 science, the head coach's practice-intensity choices, the general manager's taste for durable
 players, and scheme. What is measurable is a **team availability system**.
 
-**Stage 6 narrowed it further.** Of five components, only **duration** and **returns-at-all**
-persist year over year — and both are largely *how a club uses injured reserve and times a
-return*. **Recurrence, the one outcome most plausibly owned by a medical staff, does not persist
-at all.** So the board below separates clubs by **availability-management policy**, not by
-quality of medicine.
+**Stage 6 narrowed it further.** Of five components, the ones that persist year over year are
+**incidence_no_history, duration**; the ones that do not are **incidence_with_history, recurrence, returns_at_all**. **Recurrence, the one outcome most plausibly owned by a medical staff, is not among them.** Everything that persists is about exposure and how a club uses injured reserve and times a return, so the board below separates clubs by **availability-management policy**, not by quality of medicine.
 
 | component | split_half_r | temporal_r | temporal_p | permutation_p |
 |---|---|---|---|---|
-| incidence_no_history | 0.722 | 0.348 | 0.051 | 0.004 |
-| incidence_with_history | 0.715 | 0.271 | 0.134 | 0.006 |
+| incidence_no_history | 0.723 | 0.343 | 0.054 | 0.004 |
+| incidence_with_history | 0.716 | 0.272 | 0.133 | 0.007 |
 | duration | 0.807 | 0.518 | 0.002 | 0.001 |
 | recurrence | 0.186 | -0.194 | 0.288 | 0.110 |
 | returns_at_all | 0.607 | 0.016 | 0.932 | 0.002 |
@@ -46,7 +43,7 @@ There is no way to satisfy both, and that tension is the honest content of this 
 
 | component | split_half_r | weight_reliability | weight_attributability_prior | gate |
 |---|---|---|---|---|
-| incidence_no_history | 0.722 | 0.311 | 0.200 | PASS |
+| incidence_no_history | 0.723 | 0.311 | 0.200 | PASS |
 | duration | 0.807 | 0.348 | 0.350 | PASS |
 | recurrence | 0.186 | 0.080 | 0.450 | FAIL |
 | returns_at_all | 0.607 | 0.261 | — | FAIL |
@@ -61,38 +58,38 @@ grade averages over more than one regime.
 
 | team | letter | score | score_sd | vs_average | separated_from_average | regime_changed | letter_3yr | score_3yr |
 |---|---|---|---|---|---|---|---|---|
-| LA | A | 2.235 | 0.477 | 2.222 | yes | no | A | 1.767 |
-| CHI | A | 1.768 | 0.477 | 1.755 | yes | yes | A | 1.350 |
-| ATL | A | 1.484 | 0.477 | 1.471 | yes | yes | C | 0.286 |
-| CIN | B | 1.345 | 0.477 | 1.331 | yes | no | A | 1.277 |
-| NO | B | 1.163 | 0.477 | 1.150 | yes | yes | C | 0.451 |
-| CAR | B | 1.127 | 0.477 | 1.114 | yes | yes | C | 0.480 |
-| IND | B | 1.022 | 0.477 | 1.008 | yes | yes | B | 0.972 |
-| PHI | B | 1.008 | 0.477 | 0.994 | yes | no | B | 1.026 |
-| DET | C | 0.810 | 0.477 | 0.796 | yes | no | B | 1.265 |
-| JAX | C | 0.798 | 0.477 | 0.784 | yes | yes | B | 0.944 |
-| MIN | C | 0.683 | 0.477 | 0.669 | yes | yes | C | 0.421 |
-| PIT | C | 0.678 | 0.477 | 0.665 | yes | no | C | 0.646 |
-| NYJ | C | 0.643 | 0.477 | 0.630 | yes | yes | D | -0.080 |
-| BAL | C | 0.420 | 0.477 | 0.407 | no | no | C | 0.425 |
-| ARI | C | 0.328 | 0.477 | 0.314 | no | yes | C | 0.694 |
-| HOU | C | 0.207 | 0.477 | 0.194 | no | yes | F | -0.852 |
-| TB | D | 0.170 | 0.477 | 0.156 | no | yes | D | -0.014 |
-| SF | D | 0.151 | 0.477 | 0.138 | no | no | D | -0.252 |
-| DEN | D | 0.129 | 0.477 | 0.116 | no | yes | B | 1.221 |
-| WAS | D | 0.101 | 0.477 | 0.088 | no | yes | D | -0.146 |
-| NYG | D | -0.223 | 0.477 | -0.237 | no | yes | D | -0.332 |
-| LAC | D | -0.315 | 0.477 | -0.329 | no | yes | D | -0.254 |
-| LV | D | -0.350 | 0.477 | -0.364 | no | yes | C | 0.432 |
-| TEN | D | -0.446 | 0.477 | -0.459 | no | yes | D | 0.127 |
-| DAL | F | -0.894 | 0.477 | -0.907 | yes | yes | D | -0.786 |
-| BUF | F | -0.958 | 0.477 | -0.972 | yes | no | F | -0.878 |
-| GB | F | -1.706 | 0.477 | -1.719 | yes | no | F | -1.444 |
-| NE | F | -1.950 | 0.477 | -1.963 | yes | yes | F | -1.628 |
-| MIA | F | -2.153 | 0.477 | -2.167 | yes | yes | F | -1.090 |
-| SEA | F | -2.191 | 0.477 | -2.204 | yes | yes | F | -1.147 |
-| CLE | F | -2.324 | 0.477 | -2.338 | yes | no | F | -2.358 |
-| KC | F | -2.330 | 0.477 | -2.343 | yes | no | F | -1.992 |
+| LA | A | 2.239 | 0.477 | 2.223 | yes | no | A | 1.770 |
+| CHI | A | 1.767 | 0.477 | 1.751 | yes | yes | A | 1.352 |
+| ATL | A | 1.483 | 0.477 | 1.467 | yes | yes | C | 0.286 |
+| CIN | B | 1.344 | 0.477 | 1.328 | yes | no | A | 1.274 |
+| NO | B | 1.174 | 0.477 | 1.158 | yes | yes | C | 0.458 |
+| CAR | B | 1.132 | 0.477 | 1.116 | yes | yes | C | 0.486 |
+| IND | B | 1.024 | 0.477 | 1.008 | yes | yes | B | 0.979 |
+| PHI | B | 1.004 | 0.477 | 0.988 | yes | no | B | 1.022 |
+| DET | C | 0.812 | 0.477 | 0.796 | yes | no | B | 1.268 |
+| JAX | C | 0.802 | 0.477 | 0.786 | yes | yes | B | 0.947 |
+| PIT | C | 0.687 | 0.477 | 0.671 | yes | no | C | 0.653 |
+| MIN | C | 0.683 | 0.477 | 0.667 | yes | yes | C | 0.418 |
+| NYJ | C | 0.646 | 0.477 | 0.630 | yes | yes | D | -0.078 |
+| BAL | C | 0.422 | 0.477 | 0.406 | no | no | C | 0.427 |
+| ARI | C | 0.335 | 0.477 | 0.319 | no | yes | C | 0.706 |
+| HOU | C | 0.206 | 0.477 | 0.190 | no | yes | F | -0.852 |
+| TB | D | 0.169 | 0.477 | 0.153 | no | yes | D | -0.010 |
+| SF | D | 0.152 | 0.477 | 0.136 | no | no | D | -0.251 |
+| DEN | D | 0.127 | 0.477 | 0.111 | no | yes | B | 1.215 |
+| WAS | D | 0.108 | 0.477 | 0.092 | no | yes | D | -0.145 |
+| NYG | D | -0.216 | 0.477 | -0.232 | no | yes | D | -0.325 |
+| LAC | D | -0.318 | 0.477 | -0.334 | no | yes | D | -0.256 |
+| LV | D | -0.342 | 0.477 | -0.358 | no | yes | C | 0.438 |
+| TEN | D | -0.450 | 0.477 | -0.467 | no | yes | D | 0.134 |
+| DAL | F | -0.885 | 0.477 | -0.901 | yes | yes | D | -0.781 |
+| BUF | F | -0.955 | 0.477 | -0.971 | yes | no | F | -0.875 |
+| GB | F | -1.706 | 0.477 | -1.722 | yes | no | F | -1.442 |
+| NE | F | -1.937 | 0.477 | -1.953 | yes | yes | F | -1.626 |
+| MIA | F | -2.147 | 0.477 | -2.163 | yes | yes | F | -1.084 |
+| SEA | F | -2.182 | 0.477 | -2.198 | yes | yes | F | -1.137 |
+| KC | F | -2.322 | 0.477 | -2.338 | yes | no | F | -1.983 |
+| CLE | F | -2.342 | 0.477 | -2.358 | yes | no | F | -2.369 |
 
 **21 of 32 clubs receive the same letter on the 3-year window**, which is the
 most direct stability check available on the board itself.
@@ -106,8 +103,8 @@ factor does most of the work and the ordering within a club is not interpretable
 | component | cells | shrinkage_k |
 |---|---|---|
 | duration | 256 | 0.474 |
-| incidence_no_history | 256 | 0.571 |
-| recurrence | 254 | 0.616 |
+| incidence_no_history | 256 | 0.572 |
+| recurrence | 254 | 0.615 |
 | returns_at_all | 256 | 0.448 |
 
 Full cell-level estimates with intervals ship in
