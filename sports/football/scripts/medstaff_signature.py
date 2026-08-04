@@ -159,6 +159,20 @@ def write_report(result, path: Path) -> Path:
     n_clear = int(((exploratory.comp_p < BONFERRONI)
                    | (exploratory.rate_p < BONFERRONI)).sum())
     both_specs = summary[(summary.comp_p < 0.05) & (summary.rate_p < 0.05)]
+    n_both = len(both_specs)
+    both_list = (" (" + ", ".join(both_specs.body_group) + ")") if n_both else ""
+    # Every interpretive claim below is derived, never asserted: an earlier version hardcoded
+    # "the primary hypothesis holds" and kept saying so after a bug fix reversed it.
+    verdict = ("**holds**" if max(primary.comp_p, primary.rate_p) < 0.05
+               else "**does not hold**" if min(primary.comp_p, primary.rate_p) >= 0.05
+               else "**is equivocal** — it clears 0.05 in one specification but not the other")
+    top_comp = summary.loc[summary.comp_off_def.idxmax(), "body_group"]
+    top_rate = summary.loc[summary.rate_off_def.idxmax(), "body_group"]
+    _moved = abs(primary.comp_off_def - 0.405)
+    probe_note = ("It barely moved when the denominator was fixed, which is the strongest thing "
+                  "that can be said for it." if _moved < 0.1 else
+                  f"It moved by {_moved:.3f} in composition once the denominator was fixed, so "
+                  f"the probe result was substantially an artifact of the crude denominator.")
 
     logo = pd.DataFrame(result["logo"])
     logo_primary = logo[logo.body_group == PRIMARY_PART][["dropped_group", "spearman", "n"]]
@@ -190,25 +204,20 @@ reporting is protocol-mandated rather than discretionary, which makes it the lea
 disclosure-contaminated outcome in the project. The other four are **exploratory** and are
 labelled as such wherever they appear.
 
-**The primary hypothesis, {PRIMARY_PART}, holds.** Composition **{primary.comp_off_def:+.3f}**
-(p {primary.comp_p:.3f}), rate **{primary.rate_off_def:+.3f}** (p {primary.rate_p:.3f}) — it
-{"clears" if max(primary.comp_p, primary.rate_p) < 0.05 else "does not clear"} α = 0.05 in
-**both** specifications, and it is the **strongest part in both**. Because it was named in advance
-it is tested at 0.05 rather than the corrected level; applying the family correction to it would
-discard the point of preregistering one.
+The primary hypothesis, {PRIMARY_PART}: {verdict}. Composition
+**{primary.comp_off_def:+.3f}** (p {primary.comp_p:.3f}), rate **{primary.rate_off_def:+.3f}**
+(p {primary.rate_p:.3f}). Because it was named in advance it is tested at 0.05 rather than the
+corrected level; applying the family correction to a preregistered primary would discard the point
+of naming one.
 
-It also replicates the exploratory probe closely — {PRIMARY_PART} was 0.405 / 0.404 there against
-**{primary.comp_off_def:.3f} / {primary.rate_off_def:.3f}** here, now under a properly
-exposure-adjusted model instead of the probe's crude denominator. That the number barely moved
-when the denominator was fixed is the strongest thing that can be said for it.
+Against the exploratory probe, which recorded {PRIMARY_PART} at 0.405 / 0.404 before this run:
+now **{primary.comp_off_def:.3f} / {primary.rate_off_def:.3f}** under a properly
+exposure-adjusted model. {probe_note}
 
-{len(both_specs)} parts clear an uncorrected 0.05 in **both** specifications
-({", ".join(both_specs.body_group)}) — but only {PRIMARY_PART} was named in advance, so the other
-is exploratory.
-
-**Of the four exploratory parts, {n_clear} clear the corrected threshold
-({BONFERRONI:.3f}) in either specification.** Back is the near miss — it is the only other part
-positive in both specs — and it is labelled exploratory, not a finding.
+Strongest part by composition is **{top_comp}**; by rate, **{top_rate}**.
+{n_both} part(s) clear an uncorrected 0.05 in **both** specifications{both_list}. **Of the four
+exploratory parts, {n_clear} clear the corrected threshold ({BONFERRONI:.3f})** in either
+specification.
 
 Spells with an unlabelled body part are **excluded, not pooled** ({", ".join(EXCLUDED_GROUPS)}).
 The `unknown` group alone is 21.6% of episodes — spells that opened on a bare reserve week and

@@ -2800,6 +2800,41 @@ on a QB's career mostly **is** the pick it spent, which is measured, not missing
 
 ---
 
+## Entry 075 — reports were interpolating numbers but hardcoding interpretation
+
+**Date:** 2026-08-04
+
+**Prompt (full text):**
+
+> Make sure the reports for this are up to date with the changes we made, then make a new PR
+
+**Response notes:**
+- **Found a systematic defect while checking, not a stale-file problem.** The reports are f-string
+  markdown specifically so "the prose cannot drift from the tables" — but they interpolated the
+  **numbers** while **hardcoding the interpretation**. After the Entry 073 bug fix the numbers
+  updated and the claims did not.
+- **Six false or self-contradictory claims across three reports**, each sitting next to a correct
+  number:
+  - signature: "The primary hypothesis, concussion, **holds**" (p 0.190 / 0.057 — it does not);
+    "it is the **strongest part in both**" (ankle leads composition 0.389 vs 0.238); "the number
+    **barely moved** when the denominator was fixed" (0.405 → 0.238); `"0 parts clear ... ()"` —
+    a dangling empty list; "Back is the **only** other part positive in both specs" (ankle is too)
+  - reliability: "The two components that pass are **duration** and **returns-at-all**" — after the
+    fix returns-at-all fails temporal (0.016); the pair is **incidence and duration**. Also
+    "returns-at-all is **close behind**".
+  - grades: the same wrong pair, in the section that frames the entire board.
+- **Fix: every interpretive claim is now derived**, never asserted — which hypothesis holds
+  (three-way: holds / does not hold / equivocal), which part leads each specification, which
+  components pass the gate, how far a result moved against its preregistration, and a
+  `stability_reading` that branches on whether recurrence is among the passing set. If a claim
+  cannot be computed from the frame, it does not belong in the prose. Recorded in
+  `MEDSTAFF_PLAN.md` §7.
+- **All seven reports regenerated** from current data. Verified by grepping the rendered markdown
+  for the old claim strings — clean.
+- No result changed; this was a reporting-truth defect, not an analysis one. 401 tests, ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

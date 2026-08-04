@@ -13,8 +13,8 @@ in another.
 
 | component | split_half_r | split_half_95CI | temporal_r | temporal_p | permutation_p | gate | failed_on |
 |---|---|---|---|---|---|---|---|
-| incidence_no_history | 0.722 | [0.56, 0.85] | 0.348 | 0.051 | 0.004 | PASS | — |
-| incidence_with_history | 0.715 | [0.55, 0.84] | 0.271 | 0.134 | 0.006 | FAIL | temporal |
+| incidence_no_history | 0.723 | [0.56, 0.85] | 0.343 | 0.054 | 0.004 | PASS | — |
+| incidence_with_history | 0.716 | [0.56, 0.84] | 0.272 | 0.133 | 0.007 | FAIL | temporal |
 | duration | 0.807 | [0.70, 0.90] | 0.518 | 0.002 | 0.001 | PASS | — |
 | recurrence | 0.186 | [-0.28, 0.56] | -0.194 | 0.288 | 0.110 | FAIL | split_half, temporal, permutation |
 | returns_at_all | 0.607 | [0.39, 0.76] | 0.016 | 0.932 | 0.002 | FAIL | temporal |
@@ -50,19 +50,16 @@ could put on next season's board.
   (p 0.288), permutation 0.110. Whether injuries come back is
   the thing one would actually want to call medical quality, and it does not persist.
 - **Duration** — split-half 0.807, temporal **0.518**
-  (p 0.002) — is the strongest, and **returns-at-all** is close behind.
-- **Incidence** — *least* attributable to a training room — split-half 0.722,
-  temporal 0.348 (p 0.051).
+  (p 0.002).
+- **Strongest on the temporal test: duration**; weakest: **recurrence**.
+- **Incidence** — *least* attributable to a training room — split-half 0.723,
+  temporal 0.343 (p 0.054).
 
 ### What is actually stable
 
-The two components that pass are **duration** and **returns-at-all** — both of which are largely
-*how a club uses injured reserve and times a return*. That is an operational and roster-policy
-signature, and it is genuinely persistent. The component that is not stable is the medical one.
+The component(s) that pass: **incidence_no_history, duration**. What does *not* pass: **incidence_with_history, recurrence, returns_at_all**.
 
-So the defensible reading of the stage-7 board is: it separates clubs by **availability
-management policy**, not by quality of medicine. That is a narrower claim than "medical staff
-grades" and it is the one the evidence supports.
+**Recurrence, the one outcome most plausibly owned by a medical staff, is not among them.** Everything that persists is about *exposure and how a club uses injured reserve and times a return* — an operational and roster-policy signature. So the defensible reading of the stage-7 board is that it separates clubs by **availability-management policy**, not by quality of medicine. That is a narrower claim than "medical staff grades", and it is the one the evidence supports.
 
 ## 4. Power — what would have been findable
 

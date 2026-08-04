@@ -185,6 +185,29 @@ def write_report(result, path: Path) -> Path:
     five = result["windows"]["5yr"]
     three = result["windows"]["3yr"]
 
+    # Derived from the reliability table rather than asserted — an earlier version named the
+    # passing components in prose and kept naming them after a bug fix changed which they were.
+    gate_pass = ((rel["split_half_r"] >= 0.30) & (rel["temporal_r"] >= 0.30)
+                 & (rel["permutation_p"] < 0.05))
+    passing = rel.loc[gate_pass, "component"].tolist()
+    failing = rel.loc[~gate_pass, "component"].tolist()
+    passing_str = ", ".join(passing) if passing else "none"
+    failing_str = ", ".join(failing) if failing else "none"
+    if "recurrence" in passing:
+        stability_reading = (
+            "Recurrence — the outcome most plausibly owned by a medical staff — is among them, so "
+            "the board carries some genuine medical signal.")
+    elif passing:
+        stability_reading = (
+            "**Recurrence, the one outcome most plausibly owned by a medical staff, is not among "
+            "them.** Everything that persists is about exposure and how a club uses injured "
+            "reserve and times a return, so the board below separates clubs by "
+            "**availability-management policy**, not by quality of medicine.")
+    else:
+        stability_reading = (
+            "**No component clears the gate**, so nothing below has demonstrated year-over-year "
+            "stability behind it.")
+
     n_sep = int(five["separated_from_next"].sum())
     n_avg = int(five["separated_from_average"].sum())
     quota_str = " · ".join(f"{n}×{ltr}" for ltr, n in LETTER_QUOTAS)
@@ -220,11 +243,8 @@ every letter below bundles the athletic training staff, strength and conditionin
 science, the head coach's practice-intensity choices, the general manager's taste for durable
 players, and scheme. What is measurable is a **team availability system**.
 
-**Stage 6 narrowed it further.** Of five components, only **duration** and **returns-at-all**
-persist year over year — and both are largely *how a club uses injured reserve and times a
-return*. **Recurrence, the one outcome most plausibly owned by a medical staff, does not persist
-at all.** So the board below separates clubs by **availability-management policy**, not by
-quality of medicine.
+**Stage 6 narrowed it further.** Of five components, the ones that persist year over year are
+**{passing_str}**; the ones that do not are **{failing_str}**. {stability_reading}
 
 {_table(rel[["component", "split_half_r", "temporal_r", "temporal_p", "permutation_p"]])}
 

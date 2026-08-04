@@ -530,6 +530,18 @@ Fitted out-of-fold with leave-one-team-out; **club identity is never a feature**
 
 ## 7. Reproducibility
 
+**⚠️ Interpolating numbers is not enough — interpret from the data too.** The reports are
+f-string markdown so the prose cannot drift from the tables, but an early version interpolated the
+*numbers* while hardcoding the *interpretation*. After the §2.7 fix the signature report still read
+"the primary hypothesis holds" and "it is the strongest part in both" while printing p 0.190 and a
+value ankle beat; the reliability and grades reports still named duration and returns-at-all as the
+passing pair after returns-at-all had dropped out. Six false or self-contradictory claims across
+three reports, all sitting next to correct numbers.
+
+Every interpretive claim is now **derived**: which hypothesis holds, which part leads each
+specification, which components pass the gate, how far a result moved against its preregistration.
+If a claim cannot be computed from the frame, it does not belong in the prose.
+
 Same conventions as the sibling projects: raw caches shared via `position_predictor.utils.io`,
 derived tables in `data/processed/medstaff_*.parquet`, reports committed and unversioned at
 `reports/REPORT_medstaff_*.md`, tests flat in `tests/test_medstaff_*.py` on synthetic fixtures
