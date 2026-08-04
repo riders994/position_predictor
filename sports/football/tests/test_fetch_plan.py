@@ -36,6 +36,19 @@ def test_season_clipping_respects_coverage():
     assert min(_clip_seasons(REGISTRY["seasonal"], seasons)) == 1999
 
 
+def test_medstaff_datasets_registered_with_coverage():
+    """The three datasets the medstaff project adds (see docs/MEDSTAFF_PLAN.md §2)."""
+    seasons = list(range(1999, 2026))
+    # the injury report starts 2009 — nflverse 404s below it
+    assert min(_clip_seasons(REGISTRY["injuries"], seasons)) == 2009
+    # weekly rosters reach further back and carry the IR/PUP status the spine needs
+    assert min(_clip_seasons(REGISTRY["rosters_weekly"], seasons)) == 2002
+    # schedules is a single all-seasons pull
+    assert _clip_seasons(REGISTRY["schedules"], seasons) == []
+    # none of them are heavy, so `make fetch` picks them up by default
+    assert not any(REGISTRY[n].large for n in ("injuries", "rosters_weekly", "schedules"))
+
+
 def test_dry_run_excludes_large_by_default():
     seasons = list(range(2010, 2026))
     results = {r.name: r for r in fetch_all(seasons, dry_run=True)}

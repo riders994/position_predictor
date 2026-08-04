@@ -1,0 +1,30 @@
+{
+  "name": "injuries",
+  "source": "nflverse/nflreadpy",
+  "note": "Weekly injury report: body part, game designation, practice status (2009+). NB report_status is ~half-null from 2016 (the league dropped 'Probable'); body part and practice_status are the regime-invariant columns.",
+  "seasons": [
+    2009,
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "min_season": 2009,
+  "pulled_at": "2026-08-03T10:43:10.377524+00:00",
+  "n_rows": 90752,
+  "n_cols": 17,
+  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/injuries.parquet",
+  "sha256": "1b5b8f407545f8fe3c96f41dead20d7f2ab660399d8c36ac586a6816bed8bdba"
+}

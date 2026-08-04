@@ -27,8 +27,9 @@ help:
 setup:
 	uv sync --all-extras
 
+# Fetch a subset with `make fetch DATASETS="injuries rosters_weekly schedules"`.
 fetch:
-	uv run python scripts/fetch_data.py --config $(CONFIG)
+	uv run python scripts/fetch_data.py --config $(CONFIG) $(if $(DATASETS),--datasets $(DATASETS),)
 
 build:
 	uv run python scripts/build_dataset.py --config $(CONFIG)

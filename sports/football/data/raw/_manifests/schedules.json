@@ -1,0 +1,12 @@
+{
+  "name": "schedules",
+  "source": "nflverse/nflreadpy",
+  "note": "Game context: stadium surface & roof (injury-risk confounders), rest days, and home/away head coach.",
+  "seasons": [],
+  "min_season": null,
+  "pulled_at": "2026-08-03T10:43:15.284485+00:00",
+  "n_rows": 7548,
+  "n_cols": 46,
+  "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/schedules.parquet",
+  "sha256": "4371f70acf539c7fe40e8f187832596be4fc0995d068b2c2644821a5a4259a3c"
+}
