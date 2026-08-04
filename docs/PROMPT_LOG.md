@@ -2758,6 +2758,48 @@ on a QB's career mostly **is** the pick it spent, which is measured, not missing
 
 ---
 
+## Entry 074 — end-of-season rest: verified excluded, and noted
+
+**Date:** 2026-08-04
+
+**Prompt (full text):**
+
+> How does this analysis handle end of season rest? Saquon famously rested when he could have
+> broken a rushing record due to the increased number of games.
+>
+> note that in the plan and prompt log
+
+**Response notes:**
+- **Why it matters:** resting starters is **systematically tied to team quality** — good clubs
+  clinch early and rest more — so counting it as absence would penalise exactly the clubs least
+  likely to have an availability problem. Not a random error; a directional one.
+- **It is excluded**, because `is_non_injury` is checked **first, on the raw string**, before any
+  body-part matching. 2021–25: **2,634 rest / coach's-decision rows, all `non_injury`**, and
+  **56 of them carry an injury-looking `report_status`** (Out/Doubtful/Questionable) that would
+  have been miscounted by a designation-keyed pipeline. Week 18 is the most common week (198).
+- **Worked case, Saquon Barkley 2024:** weeks 14/16/17 *"Not injury related - resting player"*;
+  **week 18 *"Not injury related - coach's decision"* while listed Doubtful / Limited practice**.
+  Both `report_status` and `practice_status` would have flagged him as injured. **Episodes
+  charged: 0.**
+- **Three checks beyond the single case:** `out_other` share flat across wk16/17/18
+  (0.068/0.067/0.065); episode onsets in wk18 **lower** than wk15–17 (571 vs 614–639); and the
+  decisive one — **team incidence residual with vs without week 18 correlates +0.991**. Also
+  Spearman(late-season rest weeks, incidence residual) = **−0.282 (p 0.118)**, n.s. and protective
+  if anything, consistent with resting teams being good teams.
+- **Residual limitations recorded, not hidden:** a player simultaneously nursing something real
+  *and* rested is listed with a genuine body part and IS counted — unseparable in this source, and
+  it concentrates in playoff teams; and rest weeks inside an already-open spell count toward
+  `games_missed`. Neither moves the board; the first would matter more if incidence were weighted
+  higher.
+- **The lesson, and its symmetry with Entry 073:** both turn on which field to trust.
+  `report_status`/`practice_status` would have miscounted the rested player; `rosters_weekly`
+  week-coverage miscounted whole-season absences. The body-part text was right in one case and the
+  roster wrong in the other — which is the argument for `sanity_checks()` running against **real
+  data** rather than against assumptions about it.
+- Documented as `MEDSTAFF_PLAN.md` §2.9. No code change — this was verification, and it passed.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
