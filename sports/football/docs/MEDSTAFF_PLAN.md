@@ -81,6 +81,36 @@ Over the same seasons the coalesced body part is **≤0.1%** null and `practice_
 **Every outcome is therefore built on those two**; `report_status` is used only as a severity
 refinement in a 2016+ sensitivity run, with a season-level `report_regime` control.
 
+### 2.7 ⚠️⚠️ Bye weeks were splitting every long absence (found after stage 7 shipped)
+
+`rosters_weekly` **omits bye weeks**. The episode builder read any missing week as the player
+leaving the roster, so one 18-week IR spell became two episodes — weeks 1–13 and 15–18 — with the
+first censored `off_roster`.
+
+Measured before the fix: **12,904 of 17,833 player-seasons** had an interior missing week, **96%
+of them entirely the club's bye**; **max `games_missed` in the entire dataset was 13** and **no
+episode reached 15 weeks**, despite 696 player-seasons with zero available weeks. 3,051 episodes
+(21%) were censored `off_roster`.
+
+**Why it survived four stages.** Central tendency looked healthy throughout — 3.3 games missed
+per spell, stable per-season counts, sensible censoring shares — and nothing was ever checked at
+the *extremes*. The evidence was printed and read past: `off_roster` censoring sat at 21% in the
+stage-2 report, which should have been obviously too high. And the bye test passed because its
+fixture supplied an explicit bye row; the whole defect was that real data has none, so the
+fixture encoded the wrong assumption rather than testing it.
+
+`sanity_checks()` now runs on **real data** at the end of stage 2 and fails loudly on: a longest
+spell below 15 games (a week-1 season-ender must approach season length), `off_roster` censoring
+above 5%, or any player-season with interior missing weeks. Each has a test asserting it fires on
+the shape the broken pipeline actually produced.
+
+`_fill_interior_weeks` materialises every interior missing week and labels it by whether the
+club actually played: no game means `BYE` and the spell continues; a game played means a real
+absence and the spell censors. Genuine releases still censor.
+
+**This changed the conclusions — see §6.7.** Nothing errored; it took the question "are we
+overlooking players who miss whole seasons?" to surface it.
+
 ### 2.6 ⚠️ The ID crosswalk is position-biased (found in stage 3)
 
 `snap_counts` keys on `pfr_player_id`, so using it needs a crosswalk to `gsis_id` — and the two
@@ -122,6 +152,21 @@ it per season, and there are tests pinning both halves.
 zero in every other season) and carries `RES` status without being an injury. Left in, it pushed
 2021's reserve share to 0.46 against ~0.31 for 2022–2025 and made every club look worse at
 medicine in the first year of the five-year window.
+
+### 2.8 Hamstring is its own group
+
+Split out of `soft_tissue_lower`, where it was **56% of the group on its own** (2,210 of 3,980
+report rows) and therefore invisible. Hamstring reinjury is the canonical rehab-quality marker in
+the sports-science literature, which makes it the most interesting single category for the
+**recurrence** component.
+
+It is deliberately **not** added to `FOCAL_GROUPS`: the signature analysis' five parts were
+preregistered, and adding a sixth after seeing results is exactly the fishing that preregistering
+guards against. Post-hoc hamstring concordance can be reported, labelled as such.
+
+Measured recurrence at 6 games: hamstring **8.3%** (751 returns) — mid-pack, below knee (14.4%)
+and shoulder (12.0%), and indistinguishable from the rest of `soft_tissue_lower` (8.3%). Worth
+recording precisely because the literature would predict it to stand out.
 
 ### 2.3 Body-part taxonomy
 
@@ -288,6 +333,33 @@ not fully independent (an old roster is old on both sides).
 **Stage 6 before stage 7 is deliberate.** The reliability verdict must exist before anything
 resembling a leaderboard does; stage 7 reads it and interpolates it into its own header, so the
 verdict cannot drift from the evidence. A reader who stops at stage 6 has the honest answer.
+
+### 6.7 ⚠️ What the bye-week fix changed (supersedes §6.3–6.6 below)
+
+The defect in §2.7 materially moved the results, and in one case reversed a headline.
+
+| | before | after |
+|---|---|---|
+| episodes | 14,420 | **12,280** |
+| max games missed | 13 | **17** |
+| episodes ≥14 games missed | 0 | **903** |
+| `off_roster` censoring | 3,051 | **95** |
+| `returns_at_all` base rate | 0.545 | **0.704** |
+
+**Stage 5's preregistered primary hypothesis no longer holds.** Concussion off/def concordance
+went **+0.437 (p 0.012) / +0.445 (p 0.011)** to **+0.238 (p 0.190) / +0.340 (p 0.057)** — it now
+clears 0.05 in *neither* specification. The earlier result was substantially an artifact of
+bye-splitting inflating body-part shares in a club-dependent way.
+
+**Stage 6's gate still passes 2 of 5, but a different two.** Incidence now passes
+(split-half 0.722, temporal 0.348, perm 0.004) and duration still does (0.807, 0.518, 0.001).
+**`returns_at_all` dropped out** — its temporal reliability collapsed from 0.397 to **0.016**.
+**Recurrence collapsed further**: split-half 0.414 → 0.186, temporal 0.078 → **−0.194**,
+permutation 0.058 → 0.110. The component most attributable to a medical staff is now null on
+every test.
+
+The reading is unchanged and slightly strengthened: what persists is **exposure and
+availability-management policy**, not medicine.
 
 ### 6.6 What stage 7 produced — the board
 

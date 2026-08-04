@@ -1,8 +1,8 @@
 # Medical-staff grades — Stage 2: episodes
 
-**14,420 injury episodes** across 2021–2025
+**12,280 injury episodes** across 2021–2025
 (excluding 2020), built from
-221,313 player-weeks.
+242,407 player-weeks.
 
 ## 1. How a spell is bounded
 
@@ -23,7 +23,8 @@ in week 6 never "returned" in week 6.
 | impaired | 47320 |
 | practice_squad | 42825 |
 | out_other | 15767 |
-| bye | 93 |
+| bye | 13317 |
+| off_roster | 7870 |
 
 ## 2. ⚠️ Why the sample starts at 2021
 
@@ -61,41 +62,55 @@ zero in every other season — and carries `RES` status without being an injury.
 pushed 2021's reserve share to 0.46 against ~0.31 for 2022–2025, making every club look worse
 at medicine in the first year of the five-year window.
 
-## 3. Episodes
+## 3. Sanity checks against the world
+
+Distributions can look healthy while the data is wrong. These check *extremes and impossibilities*
+on real data, because the bye-week defect (§2) survived four stages behind a perfectly reasonable
+mean of 3.3 games missed per spell.
+
+- longest spell: **17 games missed** (must approach season length)
+- `off_roster` censoring: **0.8%** (genuine in-season releases of
+  injured players are uncommon)
+- player-seasons with interior missing weeks: **0**
+
+**All clear.**
+
+## 4. Episodes
 
 | season | episodes | mean_games_missed | censored_share |
 |---|---|---|---|
-| 2021 | 2936 | 3.369 | 0.446 |
-| 2022 | 2791 | 3.314 | 0.461 |
-| 2023 | 2826 | 3.226 | 0.449 |
-| 2024 | 2919 | 3.401 | 0.455 |
-| 2025 | 2948 | 3.408 | 0.464 |
+| 2021 | 2503 | 3.972 | 0.281 |
+| 2022 | 2387 | 3.893 | 0.302 |
+| 2023 | 2436 | 3.760 | 0.301 |
+| 2024 | 2467 | 4.045 | 0.293 |
+| 2025 | 2487 | 4.054 | 0.304 |
 
 ### By body part
 
 | body_group | episodes | mean_games_missed | median_games_missed | ir_share |
 |---|---|---|---|---|
-| unknown | 2813 | 6.416 | 6.000 | 1.000 |
-| knee | 2057 | 2.982 | 2.000 | 0.214 |
-| soft_tissue_lower | 1950 | 2.650 | 2.000 | 0.154 |
-| ankle | 1684 | 2.527 | 2.000 | 0.129 |
-| shoulder | 1055 | 2.501 | 2.000 | 0.120 |
-| arm_hand | 886 | 2.558 | 2.000 | 0.139 |
-| foot | 731 | 2.763 | 2.000 | 0.142 |
-| concussion | 674 | 2.083 | 2.000 | 0.093 |
-| torso | 575 | 2.539 | 2.000 | 0.141 |
-| lower_leg | 562 | 2.899 | 2.000 | 0.210 |
-| back | 555 | 2.263 | 1.000 | 0.114 |
-| hip | 477 | 2.220 | 1.000 | 0.103 |
-| neck | 336 | 2.265 | 1.000 | 0.152 |
-| head_face | 37 | 1.784 | 1.000 | 0.081 |
-| other | 28 | 2.429 | 1.000 | 0.214 |
+| knee | 1879 | 3.692 | 2.000 | 0.221 |
+| ankle | 1562 | 2.955 | 2.000 | 0.131 |
+| unknown | 1524 | 9.961 | 10.000 | 1.000 |
+| shoulder | 998 | 2.949 | 2.000 | 0.123 |
+| hamstring | 911 | 3.392 | 2.000 | 0.189 |
+| soft_tissue_lower | 859 | 2.786 | 2.000 | 0.120 |
+| arm_hand | 816 | 3.012 | 2.000 | 0.137 |
+| foot | 676 | 3.209 | 2.000 | 0.149 |
+| concussion | 635 | 2.387 | 2.000 | 0.101 |
+| back | 538 | 2.665 | 1.000 | 0.113 |
+| torso | 535 | 3.071 | 2.000 | 0.142 |
+| lower_leg | 514 | 3.644 | 2.000 | 0.220 |
+| hip | 453 | 2.530 | 1.000 | 0.099 |
+| neck | 317 | 2.830 | 2.000 | 0.158 |
+| head_face | 36 | 2.639 | 1.000 | 0.111 |
+| other | 27 | 2.370 | 1.000 | 0.185 |
 
 **1 episodes (0.0%) cost zero games** — knocks that were listed but
 played through. They are kept, because incidence and recurrence both want them; the duration
 model is the one that conditions on missed time.
 
-**2,813 episodes (19.5%) have an `unknown` body part** — spells that opened on
+**1,524 episodes (12.4%) have an `unknown` body part** — spells that opened on
 a bare reserve week and never picked up a report row. Body part carries forward *within* a
 spell but never across one, so an unrelated later stint cannot inherit an earlier injury.
 
@@ -103,20 +118,20 @@ spell but never across one, so an unrelated later stint cannot inherit an earlie
 
 | position_group | episodes |
 |---|---|
-| DB | 3074 |
-| WR_TE | 2822 |
-| OL | 2560 |
-| LB | 2114 |
-| DL | 2045 |
-| RB | 1157 |
-| QB | 466 |
-| ST | 182 |
+| DB | 2667 |
+| WR_TE | 2399 |
+| OL | 2118 |
+| LB | 1807 |
+| DL | 1754 |
+| RB | 981 |
+| QB | 403 |
+| ST | 151 |
 
-## 4. Recurrence
+## 5. Recurrence
 
 Risk set is **returns, not episodes** — a spell that never resolved cannot recur, and counting
-it would score an unresolved injury as a clean outcome. **7,860 of 14,420 episodes
-(54.5%) resolved** and are at risk.
+it would score an unresolved injury as a clean outcome. **8,646 of 12,280 episodes
+(70.4%) resolved** and are at risk.
 
 The clock counts **games the player was available for**, not calendar weeks. A player returning
 in week 17 has two games of exposure, not six weeks of it; counting calendar time would score a
@@ -126,37 +141,37 @@ Overall, at the primary `k6` horizon:
 
 | returns | recurrences | rate |
 |---|---|---|
-| 7860 | 728 | 0.093 |
+| 8646 | 763 | 0.088 |
 
 Focal body parts — the five with a plausible common-cause mechanism, and the subject of the
 stage-5 signature analysis:
 
 | body_group | returns | recurrences | rate |
 |---|---|---|---|
-| knee | 1250 | 167 | 0.134 |
-| ankle | 1075 | 106 | 0.099 |
-| concussion | 445 | 23 | 0.052 |
-| back | 374 | 30 | 0.080 |
-| hip | 338 | 17 | 0.050 |
+| knee | 1398 | 201 | 0.144 |
+| ankle | 1209 | 123 | 0.102 |
+| concussion | 497 | 28 | 0.056 |
+| back | 409 | 32 | 0.078 |
+| hip | 370 | 20 | 0.054 |
 
-## 5. Censoring
+## 6. Censoring
 
 | censor_reason | episodes |
 |---|---|
-| season_end | 3378 |
-| off_roster | 3051 |
-| team_change | 82 |
-| practice_squad | 49 |
+| season_end | 3391 |
+| off_roster | 96 |
+| team_change | 88 |
+| practice_squad | 59 |
 
 Censoring is not neutral here: a club can look good on return-to-play by having unrecovered
 cases quietly censored, or by releasing injured players. Stage 4 therefore models
 "returns at all" as its own outcome rather than folding it into duration.
 
-## 6. Per-club dispersion
+## 7. Per-club dispersion
 
-Episodes per club range **336 → 564** (mean 451,
-sd 58). Poisson noise alone at this mean would give sd ≈ 21, so the
-spread is **2.7× wider than chance**.
+Episodes per club range **286 → 489** (mean 384,
+sd 52). Poisson noise alone at this mean would give sd ≈ 20, so the
+spread is **2.6× wider than chance**.
 
 That is the number this project exists to decompose — and most of it is not medicine. Roster
 age, position mix, snap exposure, surface, and disclosure behaviour all sit inside it. Nothing

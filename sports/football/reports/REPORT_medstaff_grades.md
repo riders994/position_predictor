@@ -15,11 +15,11 @@ quality of medicine.
 
 | component | split_half_r | temporal_r | temporal_p | permutation_p |
 |---|---|---|---|---|
-| incidence_no_history | 0.708 | 0.293 | 0.104 | 0.020 |
-| incidence_with_history | 0.701 | 0.192 | 0.293 | 0.033 |
-| duration | 0.827 | 0.529 | 0.002 | 0.001 |
-| recurrence | 0.414 | 0.078 | 0.670 | 0.057 |
-| returns_at_all | 0.664 | 0.397 | 0.024 | 0.003 |
+| incidence_no_history | 0.722 | 0.348 | 0.051 | 0.004 |
+| incidence_with_history | 0.715 | 0.271 | 0.134 | 0.006 |
+| duration | 0.807 | 0.518 | 0.002 | 0.001 |
+| recurrence | 0.186 | -0.194 | 0.288 | 0.110 |
+| returns_at_all | 0.607 | 0.016 | 0.932 | 0.002 |
 
 **The curve is a forced rank, by decision: 3×A · 5×B · 8×C · 8×D · 8×F.** It orders clubs; it does not test
 them. Three A's and eight F's are assigned whether or not any club is distinguishable from
@@ -28,7 +28,7 @@ mapping once several seasons of reports exist — the code already accepts one, 
 a parameter rather than a rewrite.
 
 **0 of 32 clubs are separable from the club ranked immediately below them** at 80%
-confidence, and **17 of 32 are separable from the league average**. Adjacent-pair
+confidence, and **21 of 32 are separable from the league average**. Adjacent-pair
 separation is a strict test in a 32-club field — neighbours are rarely distinguishable anywhere —
 so the second number is the one that says whether the extremes mean anything. Read the letters as
 an ordering with heavy overlap, not as five distinct tiers.
@@ -46,10 +46,10 @@ There is no way to satisfy both, and that tension is the honest content of this 
 
 | component | split_half_r | weight_reliability | weight_attributability_prior | gate |
 |---|---|---|---|---|
-| incidence_no_history | 0.708 | 0.271 | 0.200 | FAIL |
-| duration | 0.827 | 0.317 | 0.350 | PASS |
-| recurrence | 0.414 | 0.158 | 0.450 | FAIL |
-| returns_at_all | 0.664 | 0.254 | — | PASS |
+| incidence_no_history | 0.722 | 0.311 | 0.200 | PASS |
+| duration | 0.807 | 0.348 | 0.350 | PASS |
+| recurrence | 0.186 | 0.080 | 0.450 | FAIL |
+| returns_at_all | 0.607 | 0.261 | — | FAIL |
 
 ## 2. The board — 5-year window (2021–2025)
 
@@ -61,40 +61,40 @@ grade averages over more than one regime.
 
 | team | letter | score | score_sd | vs_average | separated_from_average | regime_changed | letter_3yr | score_3yr |
 |---|---|---|---|---|---|---|---|---|
-| LA | A | 2.140 | 0.449 | 2.114 | yes | no | A | 1.818 |
-| CHI | A | 2.010 | 0.449 | 1.984 | yes | yes | A | 1.635 |
-| CIN | A | 1.832 | 0.449 | 1.806 | yes | no | B | 1.324 |
-| NO | B | 1.461 | 0.449 | 1.436 | yes | yes | C | 0.752 |
-| PHI | B | 1.327 | 0.449 | 1.302 | yes | no | A | 1.419 |
-| ATL | B | 1.094 | 0.449 | 1.068 | yes | yes | D | -0.042 |
-| IND | B | 1.024 | 0.449 | 0.999 | yes | yes | C | 0.781 |
-| CAR | B | 0.948 | 0.449 | 0.922 | yes | yes | C | 0.266 |
-| JAX | C | 0.907 | 0.449 | 0.881 | yes | yes | B | 0.918 |
-| DET | C | 0.585 | 0.449 | 0.560 | no | no | B | 1.207 |
-| BAL | C | 0.581 | 0.449 | 0.556 | no | no | C | 0.509 |
-| PIT | C | 0.532 | 0.449 | 0.507 | no | no | C | 0.675 |
-| ARI | C | 0.494 | 0.449 | 0.469 | no | yes | C | 0.644 |
-| NYJ | C | 0.410 | 0.449 | 0.384 | no | yes | D | -0.293 |
-| MIN | C | 0.374 | 0.449 | 0.348 | no | yes | C | 0.297 |
-| SF | C | 0.361 | 0.449 | 0.336 | no | no | D | 0.053 |
-| DEN | D | 0.174 | 0.449 | 0.148 | no | yes | B | 1.200 |
-| LV | D | 0.135 | 0.449 | 0.109 | no | yes | B | 0.891 |
-| TB | D | 0.056 | 0.449 | 0.030 | no | yes | D | -0.159 |
-| HOU | D | -0.039 | 0.449 | -0.065 | no | yes | F | -0.983 |
-| WAS | D | -0.044 | 0.449 | -0.070 | no | yes | D | -0.106 |
-| TEN | D | -0.211 | 0.449 | -0.236 | no | yes | C | 0.308 |
-| NYG | D | -0.264 | 0.449 | -0.289 | no | yes | D | -0.430 |
-| LAC | D | -0.311 | 0.449 | -0.337 | no | yes | D | -0.215 |
-| BUF | F | -1.053 | 0.449 | -1.079 | yes | no | F | -1.222 |
-| DAL | F | -1.148 | 0.449 | -1.173 | yes | yes | D | -0.889 |
-| GB | F | -1.639 | 0.449 | -1.665 | yes | no | F | -1.548 |
-| NE | F | -1.744 | 0.449 | -1.770 | yes | yes | F | -1.455 |
-| MIA | F | -2.083 | 0.449 | -2.108 | yes | yes | F | -1.011 |
-| SEA | F | -2.190 | 0.449 | -2.216 | yes | yes | F | -1.188 |
-| KC | F | -2.380 | 0.449 | -2.406 | yes | no | F | -1.797 |
-| CLE | F | -2.520 | 0.449 | -2.546 | yes | no | F | -2.311 |
+| LA | A | 2.235 | 0.477 | 2.222 | yes | no | A | 1.767 |
+| CHI | A | 1.768 | 0.477 | 1.755 | yes | yes | A | 1.350 |
+| ATL | A | 1.484 | 0.477 | 1.471 | yes | yes | C | 0.286 |
+| CIN | B | 1.345 | 0.477 | 1.331 | yes | no | A | 1.277 |
+| NO | B | 1.163 | 0.477 | 1.150 | yes | yes | C | 0.451 |
+| CAR | B | 1.127 | 0.477 | 1.114 | yes | yes | C | 0.480 |
+| IND | B | 1.022 | 0.477 | 1.008 | yes | yes | B | 0.972 |
+| PHI | B | 1.008 | 0.477 | 0.994 | yes | no | B | 1.026 |
+| DET | C | 0.810 | 0.477 | 0.796 | yes | no | B | 1.265 |
+| JAX | C | 0.798 | 0.477 | 0.784 | yes | yes | B | 0.944 |
+| MIN | C | 0.683 | 0.477 | 0.669 | yes | yes | C | 0.421 |
+| PIT | C | 0.678 | 0.477 | 0.665 | yes | no | C | 0.646 |
+| NYJ | C | 0.643 | 0.477 | 0.630 | yes | yes | D | -0.080 |
+| BAL | C | 0.420 | 0.477 | 0.407 | no | no | C | 0.425 |
+| ARI | C | 0.328 | 0.477 | 0.314 | no | yes | C | 0.694 |
+| HOU | C | 0.207 | 0.477 | 0.194 | no | yes | F | -0.852 |
+| TB | D | 0.170 | 0.477 | 0.156 | no | yes | D | -0.014 |
+| SF | D | 0.151 | 0.477 | 0.138 | no | no | D | -0.252 |
+| DEN | D | 0.129 | 0.477 | 0.116 | no | yes | B | 1.221 |
+| WAS | D | 0.101 | 0.477 | 0.088 | no | yes | D | -0.146 |
+| NYG | D | -0.223 | 0.477 | -0.237 | no | yes | D | -0.332 |
+| LAC | D | -0.315 | 0.477 | -0.329 | no | yes | D | -0.254 |
+| LV | D | -0.350 | 0.477 | -0.364 | no | yes | C | 0.432 |
+| TEN | D | -0.446 | 0.477 | -0.459 | no | yes | D | 0.127 |
+| DAL | F | -0.894 | 0.477 | -0.907 | yes | yes | D | -0.786 |
+| BUF | F | -0.958 | 0.477 | -0.972 | yes | no | F | -0.878 |
+| GB | F | -1.706 | 0.477 | -1.719 | yes | no | F | -1.444 |
+| NE | F | -1.950 | 0.477 | -1.963 | yes | yes | F | -1.628 |
+| MIA | F | -2.153 | 0.477 | -2.167 | yes | yes | F | -1.090 |
+| SEA | F | -2.191 | 0.477 | -2.204 | yes | yes | F | -1.147 |
+| CLE | F | -2.324 | 0.477 | -2.338 | yes | no | F | -2.358 |
+| KC | F | -2.330 | 0.477 | -2.343 | yes | no | F | -1.992 |
 
-**17 of 32 clubs receive the same letter on the 3-year window**, which is the
+**21 of 32 clubs receive the same letter on the 3-year window**, which is the
 most direct stability check available on the board itself.
 
 ## 3. Position groups
@@ -105,10 +105,10 @@ factor does most of the work and the ordering within a club is not interpretable
 
 | component | cells | shrinkage_k |
 |---|---|---|
-| duration | 256 | 0.517 |
-| incidence_no_history | 256 | 0.646 |
-| recurrence | 253 | 0.633 |
-| returns_at_all | 256 | 0.464 |
+| duration | 256 | 0.474 |
+| incidence_no_history | 256 | 0.571 |
+| recurrence | 254 | 0.616 |
+| returns_at_all | 256 | 0.448 |
 
 Full cell-level estimates with intervals ship in
 `data/processed/medstaff_grades_positions.parquet` rather than as a table here, precisely so they

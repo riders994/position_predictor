@@ -108,18 +108,34 @@ class TestTeamChange:
 
 
 class TestRosterGap:
-    def test_weeks_off_the_roster_censor_the_spell(self):
+    """Gaps are resolved by ``build_panel`` now, which labels each missing week bye vs
+    off-roster; ``build_episodes`` just reads the state. See TestFillInteriorWeeks."""
+
+    def test_off_roster_weeks_censor_the_spell(self):
         """Released then re-signed: the club was not rehabbing him in between."""
         eps = episodes([
             week(1, "impaired", group="back"),
             week(2, "impaired", group="back"),
-            # weeks 3-5 absent from the roster entirely
-            week(6, "impaired", group="back"),
-            week(7, "available"),
+            week(3, "off_roster", played=True),
+            week(4, "off_roster", played=True),
+            week(5, "impaired", group="back"),
+            week(6, "available"),
         ])
         assert eps.height == 2
         assert eps.row(0, named=True)["censor_reason"] == CENSOR_OFF_ROSTER
         assert eps.row(0, named=True)["end_week"] == 2
+
+    def test_a_bye_inside_a_long_spell_does_not_split_it(self):
+        """The bug: a bye read as off-roster halved every long absence at the bye week."""
+        rows = ([week(w, "impaired", group="knee", reserve=True) for w in range(1, 14)]
+                + [week(14, "bye", played=False)]
+                + [week(w, "impaired", group="knee", reserve=True) for w in range(15, 19)])
+        eps = episodes(rows)
+        assert eps.height == 1, "one season-long spell, not two"
+        e = eps.row(0, named=True)
+        assert e["weeks_elapsed"] == 18 and e["games_missed"] == 17
+        assert e["n_byes"] == 1
+        assert e["censor_reason"] == CENSOR_SEASON_END
 
 
 class TestPracticeSquad:
@@ -326,3 +342,116 @@ class TestNonBodyGroups:
             week(3, "available"),
         ])
         assert eps.row(0, named=True)["body_group"] == "knee"
+
+
+class TestFillInteriorWeeks:
+    """`rosters_weekly` omits bye weeks; filling them is what keeps long absences whole."""
+
+    def _schedules(self, *, bye_week=14, team="KC", season=2023, weeks=19):
+        rows = []
+        for w in range(1, weeks):
+            if w == bye_week:
+                continue
+            rows.append({"season": season, "week": w, "game_type": "REG",
+                         "home_team": team, "away_team": "OPP"})
+        return pl.DataFrame(rows)
+
+    def _panel(self, weeks, *, team="KC", season=2023):
+        return pl.DataFrame([
+            {"season": season, "week": w, "gsis_id": "P1", "team": team, "game_type": "REG",
+             "on_practice_squad": False, "on_reserve": True, "designated": False,
+             "active": False, "team_played": True}
+            for w in weeks
+        ])
+
+    def test_missing_bye_week_is_filled_as_bye(self):
+        from medstaff.episodes.build import _fill_interior_weeks
+
+        panel = self._panel([w for w in range(1, 19) if w != 14])
+        out = _fill_interior_weeks(panel, self._schedules()).sort("week")
+        assert out.height == 18, "the missing week is materialised"
+        wk14 = out.filter(pl.col("week") == 14).row(0, named=True)
+        assert wk14["week_state"] == "bye"
+        assert wk14["team"] == "KC", "filled week inherits the club it was on"
+
+    def test_missing_week_the_club_played_is_off_roster(self):
+        from medstaff.episodes.build import _fill_interior_weeks
+
+        # week 9 missing, and the club DID play it -> a genuine absence, not a bye
+        panel = self._panel([w for w in range(1, 19) if w not in (9, 14)])
+        out = _fill_interior_weeks(panel, self._schedules()).sort("week")
+        states = dict(zip(out["week"].to_list(), out["week_state"].to_list()))
+        assert states[9] == "off_roster"
+        assert states[14] == "bye"
+
+    def test_real_rows_keep_a_null_state_for_the_normal_rules(self):
+        from medstaff.episodes.build import _fill_interior_weeks
+
+        panel = self._panel([w for w in range(1, 19) if w != 14])
+        out = _fill_interior_weeks(panel, self._schedules())
+        real = out.filter(pl.col("week") != 14)
+        assert real["week_state"].null_count() == real.height
+
+    def test_no_trailing_or_leading_weeks_are_invented(self):
+        """Only *interior* gaps are filled — a player who joined in week 10 has no weeks 1-9."""
+        from medstaff.episodes.build import _fill_interior_weeks
+
+        panel = self._panel([10, 11, 12, 13, 15, 16])
+        out = _fill_interior_weeks(panel, self._schedules())
+        assert out["week"].min() == 10 and out["week"].max() == 16
+
+
+class TestSanityChecks:
+    """Guards written *after* the bye-week defect survived four stages undetected.
+
+    Each asserts the check fires on the shape the broken pipeline actually produced — a guard
+    that has never been shown to catch anything is decoration.
+    """
+
+    def _load(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "medstaff_episodes", ROOT / "scripts" / "medstaff_episodes.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    def _panel(self, weeks):
+        return pl.DataFrame([{"season": 2023, "gsis_id": "P1", "week": w} for w in weeks])
+
+    def _episodes(self, *, max_games, off_roster_share=0.0, n=100):
+        rows = []
+        for i in range(n):
+            rows.append({
+                "games_missed": max_games if i == 0 else 2,
+                "censor_reason": "off_roster" if i < off_roster_share * n else None,
+            })
+        return pl.DataFrame(rows)
+
+    def test_truncated_absences_are_caught(self):
+        """The actual symptom: longest spell in five seasons was 13 games."""
+        mod = self._load()
+        out = mod.sanity_checks(self._panel(range(1, 19)),
+                                self._episodes(max_games=13))
+        assert any("truncated" in i for i in out["issues"])
+
+    def test_healthy_data_is_clear(self):
+        mod = self._load()
+        out = mod.sanity_checks(self._panel(range(1, 19)),
+                                self._episodes(max_games=17))
+        assert out["issues"] == []
+
+    def test_implausible_off_roster_rate_is_caught(self):
+        """21% of spells ended as 'player left the roster' and nobody noticed."""
+        mod = self._load()
+        out = mod.sanity_checks(self._panel(range(1, 19)),
+                                self._episodes(max_games=17, off_roster_share=0.21))
+        assert any("off_roster" in i for i in out["issues"])
+
+    def test_interior_panel_holes_are_caught(self):
+        """The root cause itself — a missing week the builder cannot interpret."""
+        mod = self._load()
+        out = mod.sanity_checks(self._panel([w for w in range(1, 19) if w != 14]),
+                                self._episodes(max_games=17))
+        assert out["player_seasons_with_holes"] == 1
+        assert any("interior missing weeks" in i for i in out["issues"])

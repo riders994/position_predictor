@@ -31,11 +31,11 @@ reaches the design matrix.
 
 | component | rows | base_rate | permutation_p | intraclass | signal_sd | min_detectable |
 |---|---|---|---|---|---|---|
-| incidence_no_history | 144552 | 0.100 | 0.024 | 0.867 | 48.101 | 36.882 |
-| incidence_with_history | 144552 | 0.100 | 0.039 | 0.859 | 46.357 | 36.708 |
-| duration | 48267 | 0.163 | 0.000 | 0.882 | 32.712 | 23.188 |
-| recurrence | 37859 | 0.018 | 0.057 | 0.440 | 4.007 | 8.779 |
-| returns_at_all | 14420 | 0.545 | 0.004 | 0.625 | 10.864 | 16.523 |
+| incidence_no_history | 150057 | 0.082 | 0.002 | 0.856 | 43.546 | 34.987 |
+| incidence_with_history | 150057 | 0.082 | 0.004 | 0.846 | 41.740 | 34.713 |
+| duration | 51455 | 0.168 | 0.000 | 0.849 | 28.342 | 23.153 |
+| recurrence | 42192 | 0.017 | 0.105 | 0.260 | 2.750 | 9.044 |
+| returns_at_all | 12280 | 0.704 | 0.001 | 0.630 | 8.256 | 12.212 |
 
 `permutation_p` is the **primary inference**: does club identity explain *any* variance in the
 residual? One test rather than 32, so there is no multiplicity problem. The null reassigns whole
@@ -58,7 +58,7 @@ to be distinguishable.
 the evidence.** Recurrence is the outcome most plausibly owned by a medical staff — it is
 downstream of the return-to-play decision and least contaminated by luck — and it is the **only
 component that does not clear its permutation test**
-(p 0.057, intraclass 0.440).
+(p 0.105, intraclass 0.260).
 Incidence is the component *least* attributable to a training room — conditioning, scheme,
 surface and luck — and it shows the strongest club separation.
 
@@ -74,8 +74,8 @@ neutral covariate. A club with a poor availability system *manufactures* players
 fragile, so history is partly its own output — adjusting for it adjusts away part of the effect
 being measured.
 
-- **without history** — intraclass **0.867** — the *upper* bound on the club effect
-- **with history** — intraclass **0.859** — the *lower* bound
+- **without history** — intraclass **0.856** — the *upper* bound on the club effect
+- **with history** — intraclass **0.846** — the *lower* bound
 
 The truth is inside that interval and this data cannot say where. Reporting either number alone
 would be a choice dressed as a measurement.
@@ -89,31 +89,31 @@ produces residuals that are model error rather than club effect.
 
 | decile | n | predicted | observed |
 |---|---|---|---|
-| 1 | 14456 | 0.017 | 0.021 |
-| 2 | 14456 | 0.027 | 0.031 |
-| 3 | 14455 | 0.035 | 0.043 |
-| 4 | 14455 | 0.044 | 0.051 |
-| 5 | 14455 | 0.054 | 0.066 |
-| 6 | 14455 | 0.066 | 0.074 |
-| 7 | 14455 | 0.082 | 0.081 |
-| 8 | 14455 | 0.108 | 0.085 |
-| 9 | 14455 | 0.196 | 0.135 |
-| 10 | 14455 | 0.368 | 0.411 |
+| 1 | 15006 | 0.006 | 0.009 |
+| 2 | 15006 | 0.021 | 0.024 |
+| 3 | 15006 | 0.030 | 0.033 |
+| 4 | 15006 | 0.038 | 0.048 |
+| 5 | 15006 | 0.048 | 0.052 |
+| 6 | 15006 | 0.060 | 0.069 |
+| 7 | 15006 | 0.074 | 0.076 |
+| 8 | 15005 | 0.095 | 0.077 |
+| 9 | 15005 | 0.145 | 0.101 |
+| 10 | 15005 | 0.302 | 0.329 |
 
 ### Recurrence
 
 | decile | n | predicted | observed |
 |---|---|---|---|
-| 1 | 3786 | 0.006 | 0.009 |
-| 2 | 3786 | 0.009 | 0.008 |
-| 3 | 3786 | 0.011 | 0.012 |
-| 4 | 3786 | 0.014 | 0.012 |
-| 5 | 3786 | 0.016 | 0.021 |
-| 6 | 3786 | 0.019 | 0.020 |
-| 7 | 3786 | 0.021 | 0.025 |
-| 8 | 3786 | 0.023 | 0.024 |
-| 9 | 3786 | 0.026 | 0.026 |
-| 10 | 3785 | 0.031 | 0.019 |
+| 1 | 4220 | 0.006 | 0.009 |
+| 2 | 4220 | 0.009 | 0.008 |
+| 3 | 4219 | 0.011 | 0.014 |
+| 4 | 4219 | 0.013 | 0.016 |
+| 5 | 4219 | 0.015 | 0.017 |
+| 6 | 4219 | 0.016 | 0.018 |
+| 7 | 4219 | 0.019 | 0.014 |
+| 8 | 4219 | 0.021 | 0.021 |
+| 9 | 4219 | 0.025 | 0.023 |
+| 10 | 4219 | 0.032 | 0.028 |
 
 ## 6. Club residuals
 
@@ -126,31 +126,31 @@ because a fragile player is fragile all season and his weeks are correlated.
 
 | team | n | observed | expected | diff | z_indep | p_used |
 |---|---|---|---|---|---|---|
-| LV | 1323 | 12 | 23.137 | -11.137 | -2.340 | 0.030 |
-| HOU | 1252 | 12 | 21.199 | -9.199 | -2.019 | 0.066 |
-| GB | 1126 | 12 | 21.196 | -9.196 | -2.020 | 0.066 |
-| ARI | 1245 | 15 | 23.696 | -8.696 | -1.807 | 0.122 |
-| SF | 1319 | 16 | 23.446 | -7.446 | -1.554 | 0.178 |
-| BAL | 1136 | 28 | 20.744 | 7.256 | 1.610 | 0.132 |
-| TB | 1189 | 28 | 19.741 | 8.259 | 1.878 | 0.108 |
-| TEN | 1328 | 33 | 23.875 | 9.125 | 1.888 | 0.078 |
-| LAC | 1154 | 31 | 21.464 | 9.536 | 2.081 | 0.070 |
-| SEA | 1528 | 39 | 25.979 | 13.021 | 2.581 | 0.016 |
+| LV | 1495 | 17 | 25.180 | -8.180 | -1.647 | 0.134 |
+| KC | 1339 | 14 | 21.128 | -7.128 | -1.566 | 0.150 |
+| GB | 1254 | 15 | 22.124 | -7.124 | -1.531 | 0.184 |
+| HOU | 1398 | 15 | 21.880 | -6.880 | -1.485 | 0.168 |
+| ARI | 1385 | 18 | 24.595 | -6.595 | -1.344 | 0.210 |
+| PHI | 1354 | 26 | 20.982 | 5.018 | 1.106 | 0.373 |
+| LAC | 1305 | 30 | 23.019 | 6.981 | 1.470 | 0.218 |
+| NYJ | 1245 | 28 | 20.893 | 7.107 | 1.571 | 0.152 |
+| CLE | 1593 | 33 | 25.103 | 7.897 | 1.592 | 0.178 |
+| SEA | 1749 | 43 | 28.468 | 14.532 | 2.751 | 0.012 |
 
 ### Duration
 
 | team | n | observed | expected | diff | z_indep | p_used |
 |---|---|---|---|---|---|---|
-| KC | 1387 | 250 | 345.150 | -95.150 | -7.488 | 0.008 |
-| BUF | 1314 | 219 | 279.952 | -60.952 | -4.893 | 0.096 |
-| MIA | 1844 | 298 | 348.332 | -50.332 | -3.627 | 0.170 |
-| CLE | 1962 | 281 | 329.045 | -48.045 | -3.457 | 0.152 |
-| NE | 1839 | 251 | 297.393 | -46.393 | -3.382 | 0.154 |
-| CIN | 1206 | 245 | 206.660 | 38.340 | 3.556 | 0.086 |
-| NYG | 1891 | 306 | 267.570 | 38.430 | 2.918 | 0.098 |
-| ARI | 1700 | 254 | 214.998 | 39.002 | 3.315 | 0.058 |
-| CAR | 1485 | 293 | 248.970 | 44.030 | 3.685 | 0.082 |
-| CHI | 1253 | 272 | 219.359 | 52.641 | 4.707 | 0.014 |
+| KC | 1484 | 275 | 354.052 | -79.052 | -6.205 | 0.032 |
+| BUF | 1404 | 247 | 310.896 | -63.896 | -5.153 | 0.058 |
+| MIA | 1973 | 331 | 376.724 | -45.724 | -3.284 | 0.188 |
+| NE | 1955 | 268 | 307.688 | -39.688 | -2.968 | 0.218 |
+| CLE | 2101 | 322 | 360.963 | -38.963 | -2.830 | 0.299 |
+| LA | 1202 | 219 | 187.660 | 31.340 | 3.101 | 0.180 |
+| ARI | 1817 | 281 | 246.996 | 34.004 | 2.885 | 0.102 |
+| NYG | 2011 | 336 | 295.778 | 40.222 | 3.055 | 0.146 |
+| CHI | 1319 | 283 | 239.699 | 43.301 | 3.830 | 0.056 |
+| CAR | 1581 | 317 | 268.889 | 48.111 | 4.029 | 0.052 |
 
 ## 7. The censoring guard
 
@@ -158,5 +158,5 @@ because a fragile player is fragile all season and his weeks are correlated.
 scores well on return-to-play simply by having its unrecovered cases quietly censored — the
 failure mode is gameable, so it is measured directly.
 
-Base rate: **0.545** of episodes resolved within the
-season; permutation p **0.004**.
+Base rate: **0.704** of episodes resolved within the
+season; permutation p **0.001**.

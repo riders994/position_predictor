@@ -92,7 +92,7 @@ its Questionables.
 
 ## 4. Body-part taxonomy
 
-16 groups populated from 292 distinct raw
+17 groups populated from 292 distinct raw
 strings. The five **focal** groups are those with a plausible common-cause mechanism — surface,
 practice contact policy, S&C programme, medical protocol — and are the subject of the
 cross-position-group signature analysis. Hamstring and shoulder are deliberately not focal:
@@ -112,10 +112,11 @@ All groups:
 | body_part_group | rows | share | focal |
 |---|---|---|---|
 | knee | 15117 | 0.173 | yes |
-| soft_tissue_lower | 13942 | 0.160 | no |
 | ankle | 11422 | 0.131 | yes |
+| hamstring | 7771 | 0.089 | no |
 | shoulder | 7026 | 0.081 | no |
 | non_injury | 6790 | 0.078 | no |
+| soft_tissue_lower | 6171 | 0.071 | no |
 | foot | 5631 | 0.065 | no |
 | arm_hand | 5547 | 0.064 | no |
 | concussion | 4103 | 0.047 | yes |

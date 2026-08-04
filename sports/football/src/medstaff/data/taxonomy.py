@@ -28,9 +28,17 @@ collapsing to ``hip`` — and it does that structurally, rather than depending o
 happen to be written in.
 
 ``FOCAL_GROUPS`` are the five with a plausible *common-cause* mechanism, and are the subject of
-the cross-position-group signature analysis (plan §4.8). Hamstring and shoulder are deliberately
-not focal: soft-tissue and contact-incidental injuries are individually driven, so a team-wide
-signature in them would have no mechanism to point at.
+the cross-position-group signature analysis (plan §4.8). Shoulder is deliberately not focal:
+contact-incidental injuries are individually driven, so a team-wide signature in one would have
+no mechanism to point at.
+
+**Hamstring is its own group, and is not focal — for two different reasons.** It is separated from
+``soft_tissue_lower`` because it is 56% of that group on its own (2,210 of 3,980 report rows) and
+because hamstring reinjury is the canonical rehab-quality marker in the sports-science literature,
+which makes it the single most interesting category for the *recurrence* component. It is kept out
+of ``FOCAL_GROUPS`` because the signature analysis' five parts were **preregistered** — adding a
+sixth after seeing results is exactly the fishing that preregistering guards against. Hamstring
+concordance can be reported, labelled post-hoc.
 """
 
 from __future__ import annotations
@@ -42,7 +50,8 @@ import re
 FOCAL_GROUPS = ("knee", "ankle", "back", "hip", "concussion")
 
 GROUPS = (
-    "concussion", "knee", "ankle", "foot", "lower_leg", "soft_tissue_lower", "hip",
+    "concussion", "knee", "ankle", "foot", "lower_leg", "hamstring", "soft_tissue_lower",
+    "hip",
     "back", "neck", "shoulder", "arm_hand", "torso", "head_face", "illness",
     "non_injury", "other",
 )
@@ -68,7 +77,7 @@ _RULES: tuple[tuple[str, str], ...] = (
     ("concussion", r"concussion"),
     ("concussion", r"\bhead\b"),
     ("soft_tissue_lower", r"hip\s*flexor"),
-    ("soft_tissue_lower", r"hamstring"),
+    ("hamstring", r"hamstring"),
     ("soft_tissue_lower", r"quadricep|\bquad\b"),
     ("soft_tissue_lower", r"\bgroin\b"),
     ("soft_tissue_lower", r"\bthigh\b"),
