@@ -105,18 +105,62 @@ uv run python scripts/keeper.py --input examples/keepers_example.csv [options]
 Input CSV columns: `player,pick` (optional `position`). RB/WR/QB only; TE/K/DST and unmatched names
 are listed as unscored.
 
-**`redraft.py`** — new-season draft board (top 20 QB / 50 RB / 75 WR). Checks nflverse has published
-the just-completed season, refreshes stale caches, then projects. Returning players within each
-top-N (rookie count estimated from market ADP).
+**`redraft.py`** — new-season draft boards, **one per league**. Checks nflverse has published the
+just-completed season, refreshes stale caches, projects once per scoring format, then values each
+league with the keeper tool's VORP engine. Returning players within each top-N (rookie count
+estimated from market ADP).
 ```bash
 make redraft SEASON=2026                              # or:
 uv run python scripts/redraft.py [options]
   --season 2026            # draft season (default: current calendar year)
   --no-refresh             # use the cache as-is (skip the fetch step)
-  --top-qb 20 --top-rb 50 --top-wr 75
-  --configs ...            --out reports/redraft_<season>.csv
+  --leagues config/leagues/my_2qb.yaml ...   # default: every shipped league
+  --top-qb 20 --top-rb 50 ...                # override the league-derived board depth
+  --bestball-lambda WR=0.3                   # override the fitted upside weight (default 0)
+  --top 60                 # rows in each report's overall-board section
+  --configs ...            --out-dir reports/
+# → reports/redraft_<season>_<league>.{md,csv} for each league
 ```
 Hard-stops (exit 1) if the feature season isn't published yet.
+
+### League configs
+
+A board is a projection seen through a league, so scoring and roster shape live in
+`config/leagues/*.yaml`:
+
+```yaml
+name: my_2qb
+label: "10-team 2QB half-PPR"
+scoring: half_ppr                # ppr | half_ppr | standard
+teams: 10
+starters: {QB: 2, RB: 2, WR: 2, TE: 1, FLEX: 1}
+flex_positions: [RB, WR]         # Underdog also allows TE
+roster_size: 16                  # sets board depth: teams x roster_size picks
+bestball: false
+```
+
+Shipped: `ppr_1qb` (12-team 1QB PPR — the historical default, unchanged), `my_2qb` (10-team 2QB
+half-PPR), `underdog_bestball` (12-team half-PPR, 3WR + TE-eligible flex, 18 rounds).
+
+Two things follow from the config:
+
+* **Scoring is a retrain, not a rescale.** Season PPG is the model's training target, so each
+  format gets its own dataset → features → fit, with artifacts namespaced (`football_rb` for PPR,
+  `football_rb_half_ppr` otherwise). The run is keyed on *format*, so leagues sharing one are
+  nearly free; the three shipped leagues cost two passes (~35 s total).
+* **Roster shape sets replacement level**, which is what makes positions comparable. A 10-team
+  2QB league starts 20 QBs instead of 12, which lifts the top QB from board slot ~17 to ~10.
+
+**`bestball_calibrate.py`** — re-fit the best-ball upside weight against history.
+```bash
+make bestball-calibrate                               # or:
+uv run python scripts/bestball_calibrate.py --league config/leagues/underdog_bestball.yaml
+# → reports/results/bestball_lambda_<league>.json + the lambda curve as CSV
+```
+Current answer is a **null result**: over 13 walk-forward season pairs (2012–2024) no position's
+volatility term beats λ=0 at p<0.05 (gains ≤ +0.003 Spearman). Weekly σ is ~0.90 rank-correlated
+with weekly mean at RB/WR/TE, so upside is mostly a restatement of quality. Best-ball boards
+therefore rank by projected PPG; `sigma` is reported as context only.
 
 **`postseason.py`** — after a season completes, grade model vs ECR vs ADP vs the actual finish.
 ```bash

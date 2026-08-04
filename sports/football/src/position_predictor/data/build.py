@@ -6,7 +6,8 @@ Turns the raw nflverse caches (Stage 1) into one tidy **player-season table** ke
 - season-*N* production aggregated from weekly box scores (games, PPR points, PPG, volume),
 - player attributes from the seasonal rosters, including **age-at-season-start** computed
   from birth date (not the roster's fuzzy ``age`` field),
-- the supervised **target** (``target_ppg_next``) = season *N+1* PPR PPG of the same player,
+- the supervised **target** (``target_ppg_next``) = season *N+1* PPG of the same player, in the
+  config's scoring format (``target.scoring``; PPR by default — see :mod:`..scoring`),
 - next-season **availability** (``games_next``, 0–17) for the eligibility step (§4.2) and the
   availability model (§4.3), with retirement folded in as a zero-availability outcome.
 
@@ -39,7 +40,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..scoring import DEFAULT_SCORING, reception_points, scoring_of
 from ..utils.io import DATA_INTERIM, DATA_RAW, read_parquet, write_parquet
+from ..utils.naming import artifact_stem
 from .snaps import load_player_season_snaps
 
 # Per-game box-score columns summed to a season total when present. Kept defensive:
@@ -96,11 +99,17 @@ class BuildResult:
     path: str
 
 
-def aggregate_player_seasons(weekly, *, regular_season_only: bool = True):
+def aggregate_player_seasons(weekly, *, regular_season_only: bool = True,
+                             scoring: str = DEFAULT_SCORING):
     """Aggregate per-game weekly rows into one row per ``(player_id, season)`` (all positions).
 
     Position filtering happens later via :func:`resolve_fantasy_eligibility`, so this keeps
     every player and carries ``position`` / ``position_group`` forward for that step.
+
+    ``scoring`` sets the league format the **target** is denominated in (see
+    :mod:`position_predictor.scoring`): ``fpts`` / ``ppg`` follow it, while ``ppr_points`` always
+    stays true full-PPR because it feeds *features* (``finish_ppr_rank``, ``ppr_per_touch``) and
+    the eligibility/EDA cutoffs, whose meaning shouldn't drift with a league setting.
     """
     import numpy as np
     import pandas as pd
@@ -110,7 +119,7 @@ def aggregate_player_seasons(weekly, *, regular_season_only: bool = True):
         df = df[df["season_type"] == "REG"]
 
     if df.empty:
-        return pd.DataFrame(columns=["player_id", "season", "games", "ppr_points", "ppg"])
+        return pd.DataFrame(columns=["player_id", "season", "games", "ppr_points", "fpts", "ppg"])
 
     sum_cols = [c for c in SEASON_SUM_COLS if c in df.columns]
     grouped = df.groupby(["player_id", "season"], as_index=False)
@@ -132,7 +141,19 @@ def aggregate_player_seasons(weekly, *, regular_season_only: bool = True):
 
     out["ppr_points"] = out["fantasy_points_ppr"] if "fantasy_points_ppr" in out.columns else np.nan
     out["touches"] = out.get("carries", 0) + out.get("receptions", 0)
-    out["ppg"] = np.where(out["games"] > 0, out["ppr_points"] / out["games"], np.nan)
+    # Season points under the league's scoring. nflverse's two totals differ by exactly one point
+    # per reception, so this is exact for every supported format (and reproduces `ppr_points`
+    # bit-for-bit under full PPR — the PPR pipeline is provably unchanged).
+    # Full PPR passes the nflverse total straight through rather than re-deriving it. The two are
+    # equal in exact arithmetic, but summing (points + receptions) per season differs from summing
+    # nflverse's per-week PPR total in the last ULP, and that is enough to flip a 2-decimal
+    # rounding boundary downstream. Passthrough keeps the PPR pipeline bit-identical to before.
+    rec_pt = reception_points(scoring)
+    if rec_pt == 1.0 or "fantasy_points" not in out.columns:
+        out["fpts"] = out["ppr_points"]
+    else:
+        out["fpts"] = out["fantasy_points"] + rec_pt * out.get("receptions", 0)
+    out["ppg"] = np.where(out["games"] > 0, out["fpts"] / out["games"], np.nan)
     return out
 
 
@@ -336,6 +357,7 @@ def build_dataset(config, *, position: str | None = None, horizon: int | None = 
     """
     position = position or config.require("experiment.position")
     horizon = horizon if horizon is not None else int(config.get("target.predict_horizon", 1))
+    scoring = scoring_of(config)
     games_grid = config.get("eligibility.candidate_games_played", [4, 6, 8, 10, 12])
     snap_grid = config.get("eligibility.candidate_snap_share", [0.30, 0.40, 0.50])
     latest_season = config.get("data.latest_completed_season")
@@ -345,7 +367,7 @@ def build_dataset(config, *, position: str | None = None, horizon: int | None = 
     sleeper = _maybe_read("sleeper_players.parquet")
     snaps = load_player_season_snaps()
 
-    df = aggregate_player_seasons(weekly)
+    df = aggregate_player_seasons(weekly, scoring=scoring)
     df = resolve_fantasy_eligibility(df, sleeper, position)
     df = df[df["is_eligible"]].drop(columns="is_eligible").reset_index(drop=True)
     df = attach_roster_attributes(df, rosters)
@@ -366,8 +388,7 @@ def build_dataset(config, *, position: str | None = None, horizon: int | None = 
     if not write:
         return df
 
-    sport = config.get("experiment.sport", "sport")
-    out_path = DATA_INTERIM / f"{sport}_{position}_player_seasons.parquet".lower()
+    out_path = DATA_INTERIM / f"{artifact_stem(config, position=position)}_player_seasons.parquet"
     write_parquet(df, out_path)
     seasons = sorted(int(s) for s in df["season"].unique())
     result = BuildResult(

@@ -17,33 +17,51 @@ from __future__ import annotations
 
 import re
 
-# Per-team started slots. QB depth is set by league format. TE gets a dedicated slot (standard 1-TE
-# leagues) and its own replacement level, but is NOT flex-eligible here — flex is filled from RB/WR.
+# Per-team started slots. ``--format`` on the keeper CLI is shorthand for a QB slot count:
+# superflex is the fractional 1.7 heuristic (a QB fills the flex most, but not all, of the time).
+# Leagues configured in ``config/leagues/*.yaml`` set every slot explicitly instead — see
+# :mod:`position_predictor.eval.league`.
 QB_SLOTS_PER_TEAM = {"1qb": 1.0, "sf": 1.7, "2qb": 2.0}
 DEFAULT_ROSTER = {"RB": 2, "WR": 2, "TE": 1, "FLEX": 1}   # excludes QB (set by format)
 FLEX_POS = ("RB", "WR")
 MODELED_POS = ("QB", "RB", "WR", "TE")
 
 
-def replacement_levels(proj, *, teams, fmt, roster=None):
+def roster_from_format(fmt, roster=None) -> dict:
+    """Fold the keeper CLI's ``1qb|sf|2qb`` shorthand into a full ``roster`` dict incl. QB."""
+    fmt = str(fmt).lower()
+    if fmt not in QB_SLOTS_PER_TEAM:
+        raise ValueError(f"format must be one of {sorted(QB_SLOTS_PER_TEAM)}; got {fmt!r}")
+    return {**(roster or DEFAULT_ROSTER), "QB": QB_SLOTS_PER_TEAM[fmt]}
+
+
+def replacement_levels(proj, *, teams, roster=None, fmt=None, flex_positions=FLEX_POS):
     """Projected-PPG replacement level per position for the given league.
 
     Replacement = the projected points of the **first non-starter** at each position once every
     started slot (dedicated + flex) is filled league-wide. Returns ``(replacement, starters)``.
+
+    ``roster`` is per-team started slots **including QB** (fractional counts allowed, for the
+    superflex heuristic). Passing ``fmt`` instead supplies the QB count from the ``1qb|sf|2qb``
+    shorthand — the keeper CLI's interface, kept working. ``flex_positions`` are the positions
+    eligible for the ``FLEX`` slots: most leagues run RB/WR, Underdog also allows TE, and that
+    alone moves the TE board.
     """
-    roster = roster or DEFAULT_ROSTER
-    fmt = fmt.lower()
-    if fmt not in QB_SLOTS_PER_TEAM:
-        raise ValueError(f"format must be one of {sorted(QB_SLOTS_PER_TEAM)}; got {fmt!r}")
+    if fmt is not None:
+        roster = roster_from_format(fmt, roster)
+    elif roster is None:
+        raise ValueError("replacement_levels needs either a roster dict or a fmt shorthand")
+    flex_positions = tuple(flex_positions)
+    unknown = [p for p in flex_positions if p not in MODELED_POS]
+    if unknown:
+        raise ValueError(f"flex_positions {unknown} are not modeled positions {list(MODELED_POS)}")
     pools = {p: sorted(proj.loc[proj["position"] == p, "proj_ppg"], reverse=True)
              for p in MODELED_POS}
-    starters = {"QB": round(teams * QB_SLOTS_PER_TEAM[fmt]),
-                "RB": teams * roster["RB"], "WR": teams * roster["WR"],
-                "TE": teams * roster.get("TE", 0)}
-    # Flex (RB/WR-eligible here): hand each slot to whichever position's next-best player is higher.
-    idx = {p: starters[p] for p in FLEX_POS}
-    for _ in range(teams * roster.get("FLEX", 0)):
-        cand = {p: pools[p][idx[p]] for p in FLEX_POS if idx[p] < len(pools[p])}
+    starters = {p: round(teams * roster.get(p, 0)) for p in MODELED_POS}
+    # Flex: hand each slot to whichever eligible position's next-best player is higher.
+    idx = {p: starters[p] for p in flex_positions}
+    for _ in range(round(teams * roster.get("FLEX", 0))):
+        cand = {p: pools[p][idx[p]] for p in flex_positions if idx[p] < len(pools[p])}
         if not cand:
             break
         best = max(cand, key=cand.get)
@@ -56,13 +74,22 @@ def replacement_levels(proj, *, teams, fmt, roster=None):
     return replacement, starters
 
 
-def build_board(proj, *, teams, fmt, roster=None):
-    """Add ``vorp`` + ``proj_overall_rank`` (1 = best keeper-board value). Returns
-    ``(board, replacement, starters)`` with the board sorted by VORP."""
-    replacement, starters = replacement_levels(proj, teams=teams, fmt=fmt, roster=roster)
+def build_board(proj, *, teams, roster=None, fmt=None, flex_positions=FLEX_POS,
+                value_col="proj_ppg"):
+    """Add ``vorp`` + ``proj_overall_rank`` (1 = best board value). Returns
+    ``(board, replacement, starters)`` with the board sorted by VORP.
+
+    ``value_col`` is the currency VORP is computed in — ``proj_ppg`` normally, or a format-
+    adjusted value such as bestball's upside-weighted PPG. Replacement is measured in the *same*
+    currency: comparing an upside-weighted number against a mean-PPG replacement level would add
+    the same bias to every player and change nothing but the scale.
+    """
     board = proj.copy()
-    board["vorp"] = (board["proj_ppg"]
-                     - board["position"].map(replacement).fillna(0.0)).round(2)
+    pools_src = board if value_col == "proj_ppg" else board.rename(
+        columns={"proj_ppg": "_mean_ppg", value_col: "proj_ppg"})
+    replacement, starters = replacement_levels(pools_src, teams=teams, roster=roster, fmt=fmt,
+                                               flex_positions=flex_positions)
+    board["vorp"] = (board[value_col] - board["position"].map(replacement).fillna(0.0)).round(2)
     board = board.sort_values("vorp", ascending=False).reset_index(drop=True)
     board["proj_overall_rank"] = range(1, len(board) + 1)
     return board, replacement, starters

@@ -1,0 +1,26 @@
+# League config — Underdog Best Ball Mania (paid bestball).
+# Differs from a home redraft league in three ways that all matter to the board:
+#   * 3 WR starters + a TE-eligible flex deepens the WR/TE pools, dropping both replacement
+#     levels and compressing the value of any single receiver.
+#   * 18 drafted players and no waivers/trades: every pick is a final answer, so the board runs
+#     deeper than a managed league's.
+#   * Best ball scores your best lineup each week, so week-to-week upside is worth real points
+#     and is priced in via `bestball: true` (see eval/bestball.py; the weight is fit from
+#     history, not assumed).
+
+name: underdog_bestball
+label: "Underdog Best Ball Mania (12-team, half-PPR)"
+
+scoring: half_ppr                # 0.5 pt / reception
+teams: 12
+
+starters:                        # 8 started slots per week
+  QB: 1
+  RB: 2
+  WR: 3
+  TE: 1
+  FLEX: 1
+flex_positions: [RB, WR, TE]     # Underdog's flex takes a TE — most home leagues' does not
+
+roster_size: 18                  # 18 rounds, no waivers; board depth = 12 x 18 = 216
+bestball: true

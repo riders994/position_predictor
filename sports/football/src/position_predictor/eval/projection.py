@@ -33,10 +33,10 @@ def project_position(config, *, model=None, combine=None, feature_season=None,
     from ..eras import load_eras
     from ..models.era_ensemble import EraEnsemble
     from ..utils.io import DATA_PROCESSED, REPORTS_DIR, ensure_dir, read_parquet
+    from ..utils.naming import artifact_stem
 
-    sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position")
-    stem = f"{sport}_{position}".lower()
+    stem = artifact_stem(config)
     seed = int(config.get("reproducibility.random_seed", 1729))
     horizon = int(config.get("target.predict_horizon", 1))
     model = model or config.get("projection.model", "ridge")

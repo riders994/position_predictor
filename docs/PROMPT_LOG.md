@@ -2835,6 +2835,58 @@ on a QB's career mostly **is** the pick it spent, which is measured, not missing
 
 ---
 
+## Entry 076 — redraft boards per league: half-PPR, 2QB, and Underdog bestball
+
+**Date:** 2026-08-04
+
+**Prompt (full text):**
+
+> Let's augment the redraft report. So far it's only PPR. Let's add half ppr. It's also only 1qb.
+> Let's make it so we can add a roster config as well. I currently am in a 2qb league. I also want
+> to explore paid bestball leagues on Underdog, which are 3wr instead of 2wr.
+
+**Response notes:**
+- **Scoring turned out not to be a display setting.** `ppg` *is* the supervised target
+  (`data/build.py` -> `target_ppg_next`), so half-PPR needs its own dataset -> features -> fit; it
+  cannot be rescaled from a PPR projection (that would need projected receptions, which the model
+  doesn't output). Cheap part: nflverse already caches `fantasy_points`, `fantasy_points_ppr` and
+  `receptions`, and the two totals differ by **exactly** one point per reception - verified
+  row-wise over all 476,156 weekly rows 1999-2025 (max deviation 3.6e-15, zero nulls) - so every
+  format is an exact recomputation with no new data.
+- **PPR is bit-identical to before.** New `scoring.py` + `utils/naming.artifact_stem` namespace
+  artifacts by format, PPR keeping the bare `football_rb` stem. First run showed 4 players off by
+  0.01: summing `(points + receptions)` per season differs from summing nflverse's per-week PPR
+  total in the last ULP, enough to flip a 2-decimal rounding boundary. Fixed by passing the PPR
+  total straight through instead of re-deriving it -> re-verified **0.00 max difference across all
+  136 baseline players**, ranks identical.
+- **Leagues are committed configs** (`config/leagues/{ppr_1qb,my_2qb,underdog_bestball}.yaml`).
+  `run_redraft` loops on *scoring format*, not league, so the three shipped leagues cost two
+  pipeline passes (~35 s), and redraft finally has a cross-position VORP board (it had none -
+  `proj_pos_rank` was within-position only). Generalised `keeper.replacement_levels` to take a
+  full roster incl. QB plus `flex_positions`, which is what Underdog's TE-eligible flex needs;
+  the `--format 1qb|sf|2qb` shorthand still works.
+- **Board depth had to become league-derived.** A fixed top-20 QB list is meaningless in a
+  10-team 2QB league where 20 QBs are *starters*; depth is now teams x slots x 1.75, floored at
+  the old defaults, then scaled so the positions together cover every pick (an 18-round Underdog
+  draft spends 216 picks - the first cut left the last three rounds unguided).
+- **Best ball: NULL RESULT, and that's the deliverable.** Defined realized best-ball value as
+  `max(0, weekly points - that week's marginal-starter score)` - downside truncated, upside
+  counted, computed straight from box scores with no roster simulation. Fitting
+  `proj_ppg + lambda*sigma` against it over 13 walk-forward season pairs gives **lambda = 0
+  everywhere**: gains <= +0.003 Spearman, p = 0.99/0.10/0.13/0.19 (QB/RB/WR/TE). Reproduced with
+  ceiling-week rate and weekly skew, several optimising at exactly 0. Mechanism: weekly sigma is
+  ~0.90 rank-correlated with weekly mean at RB/WR/TE. Practical read: **rank a bestball draft by
+  projected PPG; don't pay up for spike-week reputations.** Kept the machinery +
+  `--bestball-lambda` override so it can be re-tested when the model changes.
+- Boards behave as predicted: half-PPR costs WRs 3.02 PPG on average, TEs 2.20, RBs 1.75, QBs
+  0.00; 2QB lifts the top QB from board slot 17 -> 10 (QBs in the top 24: 2 -> 8); Underdog's 3WR
+  + TE-flex drops RB/WR replacement from 11.5/11.4 to 8.9/9.1.
+- ECR/ADP benchmarks stay PPR-1QB-locked (no free half-PPR or 2QB source), and per the standing
+  rule they remain benchmark-only - never blended into a model number.
+- 464 tests (was 401 at Entry 075 -> +63), ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
