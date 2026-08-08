@@ -273,12 +273,13 @@ def run_eda(config, *, write: bool = True):
 
     from ..eras import load_eras
     from ..utils.io import DATA_PROCESSED, REPORTS_DIR, ensure_dir, read_parquet
+    from ..utils.naming import artifact_stem
 
     sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position")
     eras = load_eras(config)
 
-    stem = f"{sport}_{position}".lower()
+    stem = artifact_stem(config)
     df = read_parquet(DATA_PROCESSED / f"{stem}_features.parquet")
     block_columns = json.load(
         open(DATA_PROCESSED / f"{stem}_feature_blocks.json"))

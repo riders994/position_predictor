@@ -28,6 +28,7 @@ from ..eras import (assign_era, feature_columns_for_era, load_eras,
 from ..models.baselines import BASELINES
 from ..models.era_ensemble import EraEnsemble
 from ..models.zoo import make_availability_estimator
+from ..utils.naming import artifact_stem
 from .metrics import availability_metrics, ranking_metrics, regression_metrics
 
 TARGET = "target"
@@ -93,7 +94,7 @@ def run_experiment(config, *, write: bool = True, models=None, windows=None,
         windows = windows[:2]
 
     eras = load_eras(config)
-    stem = f"{sport}_{position}".lower()
+    stem = artifact_stem(config)
     df = read_parquet(DATA_PROCESSED / f"{stem}_features.parquet").rename(
         columns={"target_ppg_next": TARGET})
     block_columns = json.load(open(DATA_PROCESSED / f"{stem}_feature_blocks.json"))

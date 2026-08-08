@@ -4,7 +4,7 @@
 
 CONFIG ?= config/football_rb.yaml
 
-.PHONY: help setup fetch build features eligibility eda benchmark experiment report progress project redraft postseason handcuff clean test lint
+.PHONY: help setup fetch build features eligibility eda benchmark experiment report progress project redraft bestball-calibrate postseason handcuff clean test lint
 
 help:
 	@echo "Targets:"
@@ -19,7 +19,8 @@ help:
 	@echo "  report       build metrics tables + figures -> reports/"
 	@echo "  progress     cross-version progress report -> reports/versions/"
 	@echo "  project      project upcoming season -> reports/projections_<stem>.csv"
-	@echo "  redraft      check/fetch/project new-season draft board (QB/RB/WR) -> reports/redraft_<season>.csv"
+	@echo "  redraft      new-season draft board per league config -> reports/redraft_<season>_<league>.{md,csv}"
+	@echo "  bestball-calibrate  re-fit the best-ball upside weight -> reports/results/bestball_lambda_*.json"
 	@echo "  postseason   grade model/ECR/ADP vs actual finish -> reports/postseason_<season>.{md,csv}"
 	@echo "  handcuff     RB backups to draft by starter risk (or QB injury-risk list w/ CONFIG=...qb) -> reports/handcuff_<pos>_<season>.{md,csv}"
 	@echo "  test / lint  pytest / ruff"
@@ -58,9 +59,14 @@ progress:
 project:
 	uv run python scripts/project.py --config $(CONFIG)
 
-# Redraft draft board across all positions; override season with `make redraft SEASON=2026`.
+# Redraft draft boards, one per league in config/leagues/. Override with
+# `make redraft SEASON=2026 LEAGUES="config/leagues/my_2qb.yaml"`.
 redraft:
-	uv run python scripts/redraft.py $(if $(SEASON),--season $(SEASON),)
+	uv run python scripts/redraft.py $(if $(SEASON),--season $(SEASON),) $(if $(LEAGUES),--leagues $(LEAGUES),)
+
+# Re-fit the best-ball upside weight against history; `make bestball-calibrate LEAGUE=...`.
+bestball-calibrate:
+	uv run python scripts/bestball_calibrate.py $(if $(LEAGUE),--league $(LEAGUE),)
 
 # Postseason report grading model/ECR/ADP vs actuals; `make postseason SEASON=2024`.
 postseason:

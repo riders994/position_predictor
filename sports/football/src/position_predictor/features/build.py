@@ -19,8 +19,8 @@ from __future__ import annotations
 
 # Quantitative-only (PROJECT_PLAN §5): no qualitative inputs anywhere in this module.
 
-PROCESSED_NAME = "{sport}_{position}_features.parquet"
-BLOCKMAP_NAME = "{sport}_{position}_feature_blocks.json"
+PROCESSED_NAME = "{stem}_features.parquet"
+BLOCKMAP_NAME = "{stem}_feature_blocks.json"
 
 
 def _div(df, num, den):
@@ -497,11 +497,12 @@ def build_features(config, *, write: bool = True):
 
     from ..utils.io import (DATA_INTERIM, DATA_PROCESSED, DATA_RAW, ensure_dir,
                             read_parquet, write_parquet)
+    from ..utils.naming import artifact_stem
 
-    sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position")
+    stem = artifact_stem(config)
 
-    interim = DATA_INTERIM / f"{sport}_{position}_player_seasons.parquet".lower()
+    interim = DATA_INTERIM / f"{stem}_player_seasons.parquet"
     df = read_parquet(interim)
 
     def _raw(name):
@@ -561,8 +562,8 @@ def build_features(config, *, write: bool = True):
     if not write:
         return df, block_columns
 
-    out_path = DATA_PROCESSED / PROCESSED_NAME.format(sport=sport, position=position).lower()
-    map_path = DATA_PROCESSED / BLOCKMAP_NAME.format(sport=sport, position=position).lower()
+    out_path = DATA_PROCESSED / PROCESSED_NAME.format(stem=stem)
+    map_path = DATA_PROCESSED / BLOCKMAP_NAME.format(stem=stem)
     write_parquet(df, out_path)
     ensure_dir(DATA_PROCESSED)
     with open(map_path, "w") as fh:

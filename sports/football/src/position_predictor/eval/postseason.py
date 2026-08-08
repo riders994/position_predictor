@@ -25,6 +25,7 @@ from ..eval.metrics import ranking_metrics
 from ..eval.projection import project_position
 from ..eval.redraft import _override_season
 from ..features.build import build_features
+from ..utils.naming import artifact_stem
 
 # How far back to auto-probe for the latest fully-published completed season.
 _AUTODETECT_LOOKBACK = 3
@@ -85,9 +86,8 @@ def _position_report(cfg, season: int):
     from ..data.adp import build_adp_benchmark
     from ..utils.io import DATA_EXTERNAL, DATA_PROCESSED, read_parquet
 
-    sport = cfg.get("experiment.sport", "sport")
     position = cfg.require("experiment.position").upper()
-    stem = f"{sport}_{position}".lower()
+    stem = artifact_stem(cfg)
     g_star = int(cfg.get("eligibility.chosen_games_played", 4))
     k_tiers = tuple(cfg.get("metrics.precision_at_k_tiers", [12, 24, 36]))
 

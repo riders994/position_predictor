@@ -1,0 +1,21 @@
+# League config — 12-team full-PPR 1QB redraft.
+# This is the shape every redraft board implicitly used before league configs existed, so it is
+# the backward-compatibility baseline: its projections must match the pre-league-config board
+# exactly (see docs/USAGE.md, and the regression check in tests/test_scoring.py).
+
+name: ppr_1qb
+label: "12-team 1QB PPR"
+
+scoring: ppr                     # 1 pt / reception
+teams: 12
+
+starters:                        # per team, per week
+  QB: 1
+  RB: 2
+  WR: 2
+  TE: 1
+  FLEX: 1
+flex_positions: [RB, WR]         # standard flex — TE is not flex-eligible here
+
+roster_size: 16                  # drafted players per team; sets the cross-position board depth
+bestball: false
