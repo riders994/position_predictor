@@ -15,7 +15,7 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | WR | 36 | 11.39 |
 | TE | 12 | 9.83 |
 
-## Overall board (top 60 of 179)
+## Overall board (top 60 of 180)
 
 | # | player | pos | pos rank | proj PPG | VORP |
 |---|---|---|---|---|---|
@@ -108,9 +108,9 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 20 | Brock Purdy | 13.74 | -1.72 | 133 |
 | 21 | Daniel Jones | 13.72 | -1.74 | 134 |
 | 22 | Aaron Rodgers | 13.69 | -1.77 | 135 |
-| 23 | Bryce Young | 13.11 | -2.35 | 147 |
+| 23 | Bryce Young | 13.11 | -2.35 | 149 |
 
-### RB — 54 returning players (top 58 − 4 rookies)
+### RB — 52 returning players (top 55 − 3 rookies)
 
 | pos rank | player | proj PPG | VORP | overall |
 |---|---|---|---|---|
@@ -151,25 +151,23 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 35 | Chuba Hubbard | 9.98 | -1.49 | 129 |
 | 36 | Tyjae Spears | 9.69 | -1.78 | 136 |
 | 37 | Kyle Monangai | 9.38 | -2.09 | 141 |
-| 38 | James Conner | 9.21 | -2.26 | 145 |
-| 39 | Aaron Jones | 9.14 | -2.33 | 146 |
-| 40 | Woody Marks | 8.85 | -2.62 | 153 |
-| 41 | Najee Harris | 8.68 | -2.79 | 155 |
-| 42 | Jacory Croskey-Merritt | 8.50 | -2.97 | 157 |
-| 43 | Kimani Vidal | 8.31 | -3.16 | 158 |
-| 44 | Kareem Hunt | 8.20 | -3.27 | 159 |
-| 45 | Dylan Sampson | 8.09 | -3.38 | 162 |
-| 46 | Audric Estimé | 8.05 | -3.42 | 165 |
-| 47 | Blake Corum | 8.04 | -3.43 | 166 |
-| 48 | Jordan Mason | 7.85 | -3.62 | 169 |
-| 49 | Trey Benson | 7.79 | -3.68 | 170 |
-| 50 | Austin Ekeler | 7.41 | -4.06 | 175 |
-| 51 | Devin Singletary | 7.39 | -4.08 | 176 |
-| 52 | Devin Neal | 7.36 | -4.11 | 177 |
-| 53 | Brian Robinson | 7.29 | -4.18 | 178 |
-| 54 | Tyler Allgeier | 7.20 | -4.27 | 179 |
+| 38 | James Conner | 9.21 | -2.26 | 146 |
+| 39 | Aaron Jones | 9.14 | -2.33 | 148 |
+| 40 | Woody Marks | 8.85 | -2.62 | 156 |
+| 41 | Najee Harris | 8.68 | -2.79 | 159 |
+| 42 | Jacory Croskey-Merritt | 8.50 | -2.97 | 161 |
+| 43 | Kimani Vidal | 8.31 | -3.16 | 162 |
+| 44 | Kareem Hunt | 8.20 | -3.27 | 163 |
+| 45 | Dylan Sampson | 8.09 | -3.38 | 166 |
+| 46 | Audric Estimé | 8.05 | -3.42 | 169 |
+| 47 | Blake Corum | 8.04 | -3.43 | 170 |
+| 48 | Jordan Mason | 7.85 | -3.62 | 173 |
+| 49 | Trey Benson | 7.79 | -3.68 | 174 |
+| 50 | Austin Ekeler | 7.41 | -4.06 | 178 |
+| 51 | Devin Singletary | 7.39 | -4.08 | 179 |
+| 52 | Devin Neal | 7.36 | -4.11 | 180 |
 
-### WR — 76 returning players (top 84 − 8 rookies)
+### WR — 75 returning players (top 83 − 8 rookies)
 
 | pos rank | player | proj PPG | VORP | overall |
 |---|---|---|---|---|
@@ -232,25 +230,24 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 57 | Jayden Higgins | 9.52 | -1.87 | 138 |
 | 58 | Elic Ayomanor | 9.40 | -1.99 | 139 |
 | 59 | Cooper Kupp | 9.25 | -2.14 | 142 |
-| 60 | Jayden Reed | 9.01 | -2.38 | 148 |
-| 61 | Kayshon Boutte | 8.93 | -2.46 | 149 |
-| 62 | Ricky Pearsall | 8.88 | -2.51 | 150 |
-| 63 | Chimere Dike | 8.84 | -2.55 | 151 |
-| 64 | Jalen Coker | 8.83 | -2.56 | 152 |
-| 65 | Travis Hunter | 8.61 | -2.78 | 154 |
-| 66 | Marquise Brown | 8.50 | -2.89 | 156 |
-| 67 | Xavier Legette | 8.06 | -3.33 | 160 |
-| 68 | Matthew Golden | 8.04 | -3.35 | 161 |
-| 69 | Pat Bryant | 8.01 | -3.38 | 163 |
-| 70 | DeMario Douglas | 7.99 | -3.40 | 164 |
-| 71 | Dontayvion Wicks | 7.93 | -3.46 | 167 |
-| 72 | Marvin Mims Jr. | 7.85 | -3.54 | 168 |
-| 73 | Calvin Ridley | 7.70 | -3.69 | 171 |
-| 74 | Adonai Mitchell | 7.52 | -3.87 | 172 |
-| 75 | Darnell Mooney | 7.48 | -3.91 | 173 |
-| 76 | Jalen McMillan | 7.47 | -3.92 | 174 |
+| 60 | Jayden Reed | 9.01 | -2.38 | 150 |
+| 61 | Kayshon Boutte | 8.93 | -2.46 | 152 |
+| 62 | Ricky Pearsall | 8.88 | -2.51 | 153 |
+| 63 | Chimere Dike | 8.84 | -2.55 | 154 |
+| 64 | Jalen Coker | 8.83 | -2.56 | 155 |
+| 65 | Travis Hunter | 8.61 | -2.78 | 158 |
+| 66 | Marquise Brown | 8.50 | -2.89 | 160 |
+| 67 | Xavier Legette | 8.06 | -3.33 | 164 |
+| 68 | Matthew Golden | 8.04 | -3.35 | 165 |
+| 69 | Pat Bryant | 8.01 | -3.38 | 167 |
+| 70 | DeMario Douglas | 7.99 | -3.40 | 168 |
+| 71 | Dontayvion Wicks | 7.93 | -3.46 | 171 |
+| 72 | Marvin Mims Jr. | 7.85 | -3.54 | 172 |
+| 73 | Calvin Ridley | 7.70 | -3.69 | 175 |
+| 74 | Adonai Mitchell | 7.52 | -3.87 | 176 |
+| 75 | Darnell Mooney | 7.48 | -3.91 | 177 |
 
-### TE — 26 returning players (top 27 − 1 rookies)
+### TE — 30 returning players (top 31 − 1 rookies)
 
 | pos rank | player | proj PPG | VORP | overall |
 |---|---|---|---|---|
@@ -280,4 +277,8 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 24 | Jonnu Smith | 7.83 | -2.00 | 140 |
 | 25 | Mason Taylor | 7.66 | -2.17 | 143 |
 | 26 | Evan Engram | 7.59 | -2.24 | 144 |
+| 27 | Chig Okonkwo | 7.58 | -2.25 | 145 |
+| 28 | T.J. Hockenson | 7.51 | -2.32 | 147 |
+| 29 | David Njoku | 7.39 | -2.44 | 151 |
+| 30 | AJ Barner | 7.20 | -2.63 | 157 |
 

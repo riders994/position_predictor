@@ -45,18 +45,35 @@ def test_replacement_levels_flex_allocation_and_first_non_starter():
     assert repl["WR"] == 15      # pool[3]
 
 
-def test_te_dedicated_slot_replacement():
-    # TE gets its own slot + replacement level but is NOT flex-eligible (flex stays RB/WR).
-    proj = pd.concat([_proj(), pd.DataFrame(
+def _with_te(values):
+    return pd.concat([_proj(), pd.DataFrame(
         [dict(player_id=f"TE{i}", player_name=f"T {i}", position="TE",
               proj_ppg=v, proj_pos_rank=i + 1)
-         for i, v in enumerate([16, 13, 11, 9, 7])])], ignore_index=True)
+         for i, v in enumerate(values)])], ignore_index=True)
+
+
+def test_te_dedicated_slot_replacement():
+    """TE has its own slot and replacement level. Flex is TE-eligible by default, but these TEs
+    are all worse than the next RB/WR, so they win no flex slots here."""
     roster = {"RB": 1, "WR": 1, "TE": 1, "FLEX": 1}
-    repl, starters = replacement_levels(proj, teams=2, fmt="1qb", roster=roster)
-    # TE: 2 teams * 1 slot = 2 started -> replacement = 3rd TE (11). Flex untouched by TE.
+    repl, starters = replacement_levels(_with_te([16, 13, 11, 9, 7]), teams=2, fmt="1qb",
+                                        roster=roster)
+    # TE: 2 teams * 1 slot = 2 started -> replacement = 3rd TE (11).
     assert starters["TE"] == 2
     assert repl["TE"] == 11       # pool[2]
     assert starters["RB"] == 3 and starters["WR"] == 3
+
+
+def test_elite_tes_win_flex_slots_and_lower_te_replacement():
+    """The reason TE-flex eligibility matters: TEs good enough to beat the marginal RB/WR take
+    flex slots, pushing the league deeper into the TE pool and lifting every TE's value."""
+    roster = {"RB": 1, "WR": 1, "TE": 1, "FLEX": 1}
+    proj = _with_te([30, 28, 26, 24, 9])          # top TEs outscore the next RB/WR
+    te_flex, s_te = replacement_levels(proj, teams=2, roster={**roster, "QB": 1})
+    rb_wr, s_rb_wr = replacement_levels(proj, teams=2, roster={**roster, "QB": 1},
+                                        flex_positions=("RB", "WR"))
+    assert s_te["TE"] > s_rb_wr["TE"]             # TEs took flex slots
+    assert te_flex["TE"] < rb_wr["TE"]            # deeper pool -> lower replacement -> more VORP
 
 
 def test_format_changes_qb_depth():

@@ -134,13 +134,20 @@ label: "10-team 2QB half-PPR"
 scoring: half_ppr                # ppr | half_ppr | standard
 teams: 10
 starters: {QB: 2, RB: 2, WR: 2, TE: 1, FLEX: 1}
-flex_positions: [RB, WR]         # Underdog also allows TE
+flex_positions: [RB, WR, TE]     # TE-eligible is the default; say [RB, WR] to opt out
 roster_size: 16                  # sets board depth: teams x roster_size picks
 bestball: false
 ```
 
 Shipped: `ppr_1qb` (12-team 1QB PPR — the historical default, unchanged), `my_2qb` (10-team 2QB
-half-PPR), `underdog_bestball` (12-team half-PPR, 3WR + TE-eligible flex, 18 rounds).
+half-PPR), `underdog_bestball` (12-team half-PPR, 3WR, 18 rounds). All three run a TE-eligible
+flex.
+
+Note that TE-flex eligibility is currently **inert** at these projections: every team
+already starts a dedicated TE, so the flex contest is TE13+ against RB25+/WR25+, and the
+TE pool falls off far faster (TE13 ~9.8 PPG vs the marginal flex RB/WR ~11.5-12.5). No TE
+wins a flex slot, so no replacement level moves. It would only bite in a league with no
+dedicated TE slot, or if the TE pool got much deeper.
 
 Two things follow from the config:
 

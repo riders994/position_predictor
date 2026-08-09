@@ -23,7 +23,11 @@ import re
 # :mod:`position_predictor.eval.league`.
 QB_SLOTS_PER_TEAM = {"1qb": 1.0, "sf": 1.7, "2qb": 2.0}
 DEFAULT_ROSTER = {"RB": 2, "WR": 2, "TE": 1, "FLEX": 1}   # excludes QB (set by format)
-FLEX_POS = ("RB", "WR")
+# TE is flex-eligible by default: every league in config/leagues/ runs a TE-eligible flex, and it
+# is the common modern setting. It matters — an elite TE winning flex slots pushes the league
+# deeper into the TE pool, which lowers TE replacement level and lifts every TE's VORP. Leagues
+# whose flex is RB/WR-only must say so explicitly (`flex_positions: [RB, WR]`).
+FLEX_POS = ("RB", "WR", "TE")
 MODELED_POS = ("QB", "RB", "WR", "TE")
 
 

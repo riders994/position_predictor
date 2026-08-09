@@ -20,7 +20,7 @@ starters:                        # 8 started slots per week
   WR: 3
   TE: 1
   FLEX: 1
-flex_positions: [RB, WR, TE]     # Underdog's flex takes a TE — most home leagues' does not
+flex_positions: [RB, WR, TE]     # TE is flex-eligible (true of every league here)
 
 roster_size: 18                  # 18 rounds, no waivers; board depth = 12 x 18 = 216
 bestball: true

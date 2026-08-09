@@ -36,7 +36,7 @@ class LeagueConfig:
     scoring: str
     teams: int
     starters: dict[str, int]
-    flex_positions: tuple[str, ...] = ("RB", "WR")
+    flex_positions: tuple[str, ...] = ("RB", "WR", "TE")
     roster_size: int = 16
     bestball: bool = False
     top_n: dict[str, int] = field(default_factory=dict)   # explicit per-position depth overrides
@@ -88,7 +88,9 @@ def league_from_dict(data: dict, *, name: str | None = None) -> LeagueConfig:
     if not any(starters[p] for p in MODELED_POS):
         raise ValueError(f"league {name!r}: no dedicated starter slots at any modeled position")
 
-    flex = tuple(str(p).upper() for p in data.get("flex_positions", ("RB", "WR")))
+    # Defaults to TE-eligible (see keeper.FLEX_POS); RB/WR-only leagues say so.
+    flex = tuple(str(p).upper() for p in data.get("flex_positions",
+                                                  ("RB", "WR", "TE")))
     unknown = [p for p in flex if p not in MODELED_POS]
     if unknown:
         raise ValueError(f"league {name!r}: flex_positions {unknown} are not modeled "

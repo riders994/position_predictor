@@ -17,7 +17,7 @@ starters:                        # per team, per week
   WR: 2
   TE: 1
   FLEX: 1
-flex_positions: [RB, WR]
+flex_positions: [RB, WR, TE]     # TE is flex-eligible (true of every league here)
 
 roster_size: 16                  # drafted players per team; sets the cross-position board depth
 bestball: false
