@@ -102,6 +102,7 @@ uv run python scripts/keeper.py --input examples/keepers_example.csv [options]
   --format 1qb|sf|2qb      # QB format shorthand; only without --league
   --configs ...            # per-position configs (default QB/RB/WR/TE)
   --out reports/keeper_board[_<league>].csv
+# → reports/keeper_board[_<league>].{md,csv}
 ```
 Input CSV columns: `player,pick` (optional `position`). Covers QB/RB/WR/TE; K/DST and unmatched
 names are listed as unscored.

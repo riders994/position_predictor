@@ -15,7 +15,9 @@ Scope: QB/RB/WR/TE (the modeled positions). K/DST and unmatched names are report
 """
 from __future__ import annotations
 
+import math
 import re
+from dataclasses import dataclass, field
 
 # Per-team started slots. ``--format`` on the keeper CLI is shorthand for a QB slot count:
 # superflex is the fractional 1.7 heuristic (a QB fills the flex most, but not all, of the time).
@@ -160,3 +162,101 @@ def evaluate_keepers(board, picks):
     matched["pos_rank"] = matched["position"] + matched["proj_pos_rank"].astype(int).astype(str)
     matched["keep"] = matched["surplus"] > 0
     return matched.sort_values("surplus", ascending=False).reset_index(drop=True), unmatched
+
+
+@dataclass
+class KeeperResult:
+    """Everything one keeper run produced — the inputs to :func:`render_markdown`."""
+
+    season: int
+    label: str                                  # human league description for the header
+    teams: int
+    ranked: object = None                       # keepers with pick/surplus/keep, best-first
+    unmatched: object = None                    # names with no projection
+    replacement: dict = field(default_factory=dict)
+    starters: dict = field(default_factory=dict)
+    scoring: str = "ppr"
+    slot_summary: str = ""                      # e.g. "2QB / 2RB / 2WR / 1TE / 1FLEX"
+    league_name: str | None = None              # None when run from --teams/--format
+
+
+def slot_summary(roster: dict) -> str:
+    """``1QB / 2RB / 2WR / 1TE / 1FLEX`` from a roster dict, for report headers.
+
+    Mirrors :meth:`eval.league.LeagueConfig.slot_summary` so a board run from the
+    ``--teams``/``--format`` shorthand still states the shape it assumed. Fractional counts (the
+    superflex 1.7 heuristic) are printed as-is rather than rounded into a lie.
+    """
+    parts = []
+    for pos in (*MODELED_POS, "FLEX"):
+        n = roster.get(pos, 0)
+        if not n:
+            continue
+        parts.append(f"{int(n) if float(n).is_integer() else n}{pos}")
+    return " / ".join(parts)
+
+
+def pick_round(pick, teams: int):
+    """The draft round a pick number falls in — keeper costs are argued about in rounds."""
+    try:
+        return max(1, math.ceil(float(pick) / teams))
+    except (TypeError, ValueError):
+        return None
+
+
+def render_markdown(result: KeeperResult) -> str:
+    """Render a keeper board to markdown (the same content the CSV carries, ranked)."""
+    lines = [f"# Keeper Board — {result.season} · {result.label}", ""]
+    slots = f" · {result.slot_summary}" if result.slot_summary else ""
+    lines.append(f"_{result.teams}-team · **{result.scoring.replace('_', ' ')}**{slots}._")
+    lines.append("")
+    lines.append("_A keeper costs you the pick you drafted him at, so_ "
+                 "**`surplus = pick paid − projected board slot`**_. Positive means the player is "
+                 "worth more than the pick you'd spend; negative means you should re-draft him "
+                 "later (or let him go). Model-only — ECR/ADP are benchmarks, never blended in._")
+    lines.append("")
+
+    ranked = result.ranked
+    if ranked is None or len(ranked) == 0:
+        lines.append("_None of the input players matched a projection._")
+    else:
+        keeps = ranked[ranked["keep"]]
+        lines.append(f"## Verdict — keep {len(keeps)} of {len(ranked)}")
+        lines.append("")
+        lines.append("| | player | pos | proj PPG | board slot | pick (round) | surplus |")
+        lines.append("|---|---|---|---|---|---|---|")
+        for _, r in ranked.iterrows():
+            rnd = pick_round(r["pick"], result.teams)
+            pick_str = f"{int(r['pick'])} (rd {rnd})" if rnd else str(r["pick"])
+            mark = "**KEEP**" if r["keep"] else "pass"
+            lines.append(
+                f"| {mark} | {r['player_name']} | {r['pos_rank']} | {r['proj_ppg']:.2f} | "
+                f"{int(r['proj_overall_rank'])} | {pick_str} | {r['surplus']:+.0f} |")
+        lines.append("")
+
+    if result.replacement:
+        lines.append("## Replacement level")
+        lines.append("")
+        lines.append("_The first non-starter at each position once every league-wide slot "
+                     "(dedicated + flex) is filled. It is what makes a QB and a WR comparable._")
+        lines.append("")
+        lines.append("| position | started league-wide | replacement PPG |")
+        lines.append("|---|---|---|")
+        for pos in MODELED_POS:
+            if pos in result.replacement:
+                lines.append(f"| {pos} | {result.starters.get(pos, 0)} | "
+                             f"{result.replacement[pos]:.2f} |")
+        lines.append("")
+
+    unmatched = result.unmatched
+    if unmatched is not None and len(unmatched):
+        lines.append("## Unscored")
+        lines.append("")
+        lines.append("_No model projection — K/DST, or the name didn't match._")
+        lines.append("")
+        lines.append("| player | pick |")
+        lines.append("|---|---|")
+        for _, r in unmatched.iterrows():
+            lines.append(f"| {r['player']} | {r['pick']} |")
+        lines.append("")
+    return "\n".join(lines) + "\n"

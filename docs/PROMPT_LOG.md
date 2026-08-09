@@ -2982,6 +2982,32 @@ on a QB's career mostly **is** the pick it spent, which is measured, not missing
 
 ---
 
+## Entry 081 — markdown report for the keeper tool
+
+**Date:** 2026-08-09
+
+**Prompt (full text):**
+
+> Add markdown for keeper
+
+**Response notes:**
+- `eval/keeper.py` gains `KeeperResult` + `render_markdown`, following the
+  postseason/handcuff/redraft pattern, so keeper output is viewable on GitHub instead of living
+  only in a CSV and terminal scrollback. Writes `reports/keeper_board[_<league>].md` next to the
+  CSV (the `.md` is committed; `.gitignore` only excludes `keeper_board*.csv`).
+- Report content is the decision, not a data dump: a **Verdict — keep N of M** table with an
+  explicit KEEP/pass marker per player, the pick expressed in **rounds** as well as pick number
+  (keeper costs get argued about in rounds), the replacement-level table that explains why a QB
+  and a WR are comparable at all, and an Unscored section so unmatched names are never silently
+  dropped.
+- Added `slot_summary(roster)` mirroring `LeagueConfig.slot_summary` so a board run from the
+  `--teams`/`--format` shorthand still states the roster shape it assumed — the markdown is a
+  shareable artifact and shouldn't hide its own assumptions. Fractional superflex prints as
+  `1.7QB` rather than rounding into a lie.
+- 481 tests (+6), ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

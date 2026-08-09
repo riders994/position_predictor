@@ -25,7 +25,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 import pandas as pd  # noqa: E402
 
-from position_predictor.eval.keeper import build_board, evaluate_keepers  # noqa: E402
+from position_predictor.eval.keeper import (  # noqa: E402
+    KeeperResult,
+    build_board,
+    evaluate_keepers,
+    render_markdown,
+    roster_from_format,
+    slot_summary,
+)
 from position_predictor.eval.league import load_league  # noqa: E402
 from position_predictor.eval.projection import project_positions  # noqa: E402
 from position_predictor.utils.config import Config  # noqa: E402
@@ -74,6 +81,8 @@ def main() -> int:
         fmt = args.format or "1qb"
         roster, flex, scoring = None, None, None
         label = f"{teams}-team {fmt} PPR"
+        # State the assumed shape in the report even without a league config.
+        shorthand_slots = slot_summary(roster_from_format(fmt))
 
     picks = pd.read_csv(args.input)
     picks.columns = [c.strip().lower() for c in picks.columns]
@@ -108,7 +117,19 @@ def main() -> int:
         print(f"Prioritized keepers (surplus = pick − projected board slot; {season} proj):\n")
         print(show.to_string(index=False))
         ranked.to_csv(out, index=False)
-        print(f"\n[keeper] wrote {out}")
+
+    result = KeeperResult(
+        season=season, label=label, teams=teams, ranked=ranked, unmatched=unmatched,
+        replacement=replacement, starters=starters,
+        scoring=league.scoring if league else "ppr",
+        slot_summary=league.slot_summary() if league else shorthand_slots,
+        league_name=league.name if league else None)
+    md_path = out.with_suffix(".md")
+    md_path.write_text(render_markdown(result))
+    if not ranked.empty:
+        print(f"\n[keeper] wrote {out.name} + {md_path.name}")
+    else:
+        print(f"[keeper] wrote {md_path.name}")
 
     if not unmatched.empty:
         print("\nUnscored (no model projection — K/DST or name not matched):")

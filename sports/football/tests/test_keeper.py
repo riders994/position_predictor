@@ -173,3 +173,76 @@ def test_roster_from_format_shim_still_supplies_qb_slots():
 def test_replacement_levels_requires_a_roster_or_format():
     with pytest.raises(ValueError, match="needs either a roster dict or a fmt"):
         replacement_levels(_proj(), teams=12)
+
+
+# -- markdown rendering -------------------------------------------------------------------
+
+def _keeper_result(**over):
+    from position_predictor.eval.keeper import KeeperResult
+
+    board, replacement, starters = build_board(_proj(), teams=2, fmt="1qb", roster=ROSTER)
+    ranked, unmatched = evaluate_keepers(board, pd.DataFrame([
+        dict(player="W 0", pick=40),        # cheap keep -> positive surplus
+        dict(player="Q 3", pick=5),         # expensive -> negative
+        dict(player="Nobody At All", pick=99),
+    ]))
+    base = dict(season=2026, label="2-team 1qb PPR", teams=2, ranked=ranked,
+                unmatched=unmatched, replacement=replacement, starters=starters)
+    return KeeperResult(**{**base, **over})
+
+
+def test_render_markdown_has_the_decision_table_and_context():
+    from position_predictor.eval.keeper import render_markdown
+
+    md = render_markdown(_keeper_result())
+    assert md.startswith("# Keeper Board — 2026 · 2-team 1qb PPR")
+    assert "surplus = pick paid − projected board slot" in md
+    assert "## Verdict — keep 1 of 2" in md
+    assert "**KEEP** | W 0" in md and "| pass | Q 3" in md
+    assert "## Replacement level" in md
+    # Unmatched names are surfaced, never silently dropped.
+    assert "## Unscored" in md and "Nobody At All" in md
+    assert md.endswith("\n")
+
+
+def test_render_markdown_shows_pick_rounds():
+    from position_predictor.eval.keeper import render_markdown
+
+    md = render_markdown(_keeper_result())
+    assert "40 (rd 20)" in md        # pick 40 in a 2-team league is round 20
+
+
+def test_render_markdown_reports_league_scoring_and_slots():
+    from position_predictor.eval.keeper import render_markdown
+
+    md = render_markdown(_keeper_result(scoring="half_ppr",
+                                        slot_summary="2QB / 2RB / 2WR / 1TE / 1FLEX",
+                                        label="10-team 2QB half-PPR"))
+    assert "**half ppr**" in md
+    assert "2QB / 2RB / 2WR / 1TE / 1FLEX" in md
+
+
+def test_render_markdown_handles_no_matches():
+    from position_predictor.eval.keeper import render_markdown
+
+    md = render_markdown(_keeper_result(ranked=pd.DataFrame(), unmatched=pd.DataFrame()))
+    assert "None of the input players matched a projection" in md
+
+
+def test_pick_round():
+    from position_predictor.eval.keeper import pick_round
+
+    assert pick_round(1, 12) == 1
+    assert pick_round(12, 12) == 1
+    assert pick_round(13, 12) == 2
+    assert pick_round(None, 12) is None
+
+
+def test_slot_summary_from_a_roster_dict():
+    from position_predictor.eval.keeper import roster_from_format, slot_summary
+
+    assert slot_summary({"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1}) \
+        == "1QB / 2RB / 2WR / 1TE / 1FLEX"
+    assert slot_summary({"RB": 2, "WR": 2}) == "2RB / 2WR"      # zero/absent slots omitted
+    # The superflex heuristic is fractional; print it rather than round it into a lie.
+    assert slot_summary(roster_from_format("sf")).startswith("1.7QB")
