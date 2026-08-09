@@ -152,3 +152,44 @@ def test_injury_risk_list_empty_when_no_starters():
     risk = pd.DataFrame({"player_id": ["a"], "pred_games_next": [8.0],
                          "exp_games_missed": [9.0], "miss_share": [0.5]})
     assert build_injury_risk_list(proj, risk, top_starters=32).empty
+
+
+# -- scoring ------------------------------------------------------------------------------
+
+def test_results_default_to_ppr_and_carry_the_format():
+    from position_predictor.eval.handcuff import HandcuffResult, InjuryRiskResult
+
+    assert HandcuffResult(board=None, backtest=None, signal="s", winner="w", season=2026,
+                          cutoff=4).scoring == "ppr"
+    assert InjuryRiskResult(risk_list=None, backtest=None, signal="s", winner="w", season=2026,
+                            cutoff=4, n_starters=0, scoring="half_ppr").scoring == "half_ppr"
+
+
+def test_markdown_states_the_scoring_format():
+    """The board is a shareable artifact; it must say which currency it's denominated in."""
+    import pandas as pd
+
+    from position_predictor.eval.handcuff import (
+        HandcuffResult,
+        InjuryRiskResult,
+        render_injury_markdown,
+        render_markdown,
+    )
+
+    board = pd.DataFrame([dict(rank=1, handcuff="B", handcuff_pos_rank=40, starter="A",
+                               starter_pos_rank=3, starter_exp_games_missed=3.0,
+                               contingent_upside=2.5, handcuff_value=8.0)])
+    res = HandcuffResult(board=board, backtest=pd.DataFrame(), signal="s", winner="s",
+                         season=2026, cutoff=4, scoring="half_ppr")
+    assert "**half ppr**" in render_markdown(res)
+
+    # Build the risk list with the real function so the fixture can't drift from its columns.
+    proj = pd.DataFrame({"player_id": list("ab"), "player_name": ["QBa", "QBb"],
+                         "position": ["QB"] * 2, "proj_ppg": [18.0, 17.0],
+                         "proj_pos_rank": [1, 2]})
+    risk = pd.DataFrame({"player_id": list("ab"), "pred_games_next": [5.0, 12.0],
+                         "exp_games_missed": [12.0, 5.0], "miss_share": [0.7, 0.29]})
+    ires = InjuryRiskResult(risk_list=build_injury_risk_list(proj, risk, top_starters=2),
+                            backtest=pd.DataFrame(), signal="s", winner="s",
+                            season=2026, cutoff=7, n_starters=2, scoring="standard")
+    assert "**standard**" in render_injury_markdown(ires, position="QB")

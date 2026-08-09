@@ -32,7 +32,6 @@ and floored at the historical defaults so a 1QB board never gets shallower than 
 
 from __future__ import annotations
 
-import copy
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -56,7 +55,7 @@ DEPTH_PER_STARTER = 1.75
 # board used before league configs existed, so the default output is unchanged.
 DEFAULT_LEAGUE = {"name": "ppr_1qb", "label": "12-team 1QB PPR", "scoring": DEFAULT_SCORING,
                   "teams": 12, "starters": {"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1},
-                  "flex_positions": ["RB", "WR"], "roster_size": 16}
+                  "flex_positions": ["RB", "WR", "TE"], "roster_size": 16}
 # PFR draft-class position → our fantasy position.
 _DRAFT_POS_TO_FANTASY = {"QB": "QB", "RB": "RB", "FB": "RB", "WR": "WR", "TE": "TE"}
 
@@ -129,21 +128,17 @@ def _override_season(config: Config, feature_season: int) -> Config:
     Keeps the committed YAML untouched while letting the build clamp the censoring boundary to the
     season we want as the live-board feature season (``data/build.py`` clamps to the min of this
     and the max season actually present)."""
-    data = copy.deepcopy(config.data)
-    data.setdefault("data", {})["latest_completed_season"] = int(feature_season)
-    return Config(data, path=config.path)
+    return config.with_overrides({"data.latest_completed_season": int(feature_season)})
 
 
 def _override_scoring(config: Config, scoring: str) -> Config:
     """A copy of ``config`` with ``target.scoring`` pinned to ``scoring``.
 
-    Same deepcopy trick as :func:`_override_season`: the committed per-position YAML stays as the
-    canonical PPR experiment, while a run can build any format's dataset/features/model beside it
-    (artifacts are namespaced by :func:`utils.naming.artifact_stem`, so nothing is overwritten).
+    Same trick as :func:`_override_season`: the committed per-position YAML stays as the canonical
+    PPR experiment, while a run can build any format's dataset/features/model beside it (artifacts
+    are namespaced by :func:`utils.naming.artifact_stem`, so nothing is overwritten).
     """
-    data = copy.deepcopy(config.data)
-    data.setdefault("target", {})["scoring"] = scoring
-    return Config(data, path=config.path)
+    return config.with_overrides({"target.scoring": scoring})
 
 
 def _rookie_market_context(draft_season: int):

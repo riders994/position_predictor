@@ -136,3 +136,27 @@ def test_alternate_scoring_gets_its_own_stem():
 
 def test_stem_accepts_an_explicit_position():
     assert artifact_stem(_config("half_ppr"), position="WR") == "football_wr_half_ppr"
+
+
+# -- config overrides (how serving tools re-point an experiment config) --------------------
+
+def test_with_overrides_sets_dotted_keys_without_touching_the_original():
+    cfg = _config()
+    out = cfg.with_overrides({"target.scoring": "half_ppr",
+                              "data.latest_completed_season": 2025})
+    assert out.get("target.scoring") == "half_ppr"
+    assert out.get("data.latest_completed_season") == 2025
+    assert cfg.get("target.scoring") is None          # original untouched
+    assert cfg.get("data.latest_completed_season") == 2024
+    assert out.get("experiment.position") == "RB"     # everything else carried over
+
+
+def test_with_overrides_creates_missing_intermediate_sections():
+    cfg = Config({"experiment": {"sport": "football", "position": "RB"}})
+    out = cfg.with_overrides({"target.scoring": "standard"})
+    assert out.get("target.scoring") == "standard"
+
+
+def test_with_overrides_drives_the_artifact_stem():
+    assert artifact_stem(_config().with_overrides({"target.scoring": "half_ppr"})) \
+        == "football_rb_half_ppr"

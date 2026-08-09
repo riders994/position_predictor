@@ -39,8 +39,23 @@ def test_ppr_1qb_is_the_historical_default_shape():
     lg = load_league("config/leagues/ppr_1qb.yaml")
     assert (lg.scoring, lg.teams) == ("ppr", 12)
     assert lg.starters["QB"] == 1 and lg.starters["WR"] == 2
-    assert lg.flex_positions == ("RB", "WR")
+    assert lg.flex_positions == ("RB", "WR", "TE")
     assert not lg.bestball
+
+
+def test_every_shipped_league_has_a_te_eligible_flex():
+    """All of the user's leagues run a TE-eligible flex; regressing this quietly changes TE
+    replacement level and so every TE's value."""
+    for lg in load_leagues(SHIPPED):
+        assert "TE" in lg.flex_positions, lg.name
+
+
+def test_flex_eligibility_defaults_to_te_eligible():
+    assert league_from_dict(_base()).flex_positions == ("RB", "WR", "TE")
+
+
+def test_rb_wr_only_flex_can_still_be_requested():
+    assert league_from_dict(_base(flex_positions=["RB", "WR"])).flex_positions == ("RB", "WR")
 
 
 def test_my_2qb_league():

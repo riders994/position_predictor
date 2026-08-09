@@ -61,8 +61,8 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 40 | Chris Olave | WR | WR11 | 12.00 | 1.81 |
 | 41 | Tetairoa McMillan | WR | WR12 | 11.93 | 1.74 |
 | 42 | Caleb Williams | QB | QB13 | 15.45 | 1.73 |
-| 43 | Tee Higgins | WR | WR13 | 11.85 | 1.66 |
-| 44 | Josh Jacobs | RB | RB16 | 11.98 | 1.66 |
+| 43 | Josh Jacobs | RB | RB16 | 11.98 | 1.66 |
+| 44 | Tee Higgins | WR | WR13 | 11.85 | 1.66 |
 | 45 | Harold Fannin Jr. | TE | TE3 | 9.86 | 1.61 |
 | 46 | Kenneth Walker III | RB | RB17 | 11.89 | 1.57 |
 | 47 | Zay Flowers | WR | WR14 | 11.72 | 1.53 |
@@ -71,14 +71,14 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 50 | Jayden Daniels | QB | QB15 | 15.08 | 1.36 |
 | 51 | TreVeyon Henderson | RB | RB18 | 11.65 | 1.33 |
 | 52 | Colston Loveland | TE | TE5 | 9.47 | 1.22 |
-| 53 | Omarion Hampton | RB | RB20 | 11.40 | 1.08 |
-| 54 | Bucky Irving | RB | RB19 | 11.40 | 1.08 |
+| 53 | Bucky Irving | RB | RB19 | 11.40 | 1.08 |
+| 54 | Omarion Hampton | RB | RB20 | 11.40 | 1.08 |
 | 55 | Malik Nabers | WR | WR15 | 11.22 | 1.03 |
 | 56 | Travis Kelce | TE | TE6 | 9.23 | 0.98 |
 | 57 | Jordan Love | QB | QB16 | 14.67 | 0.95 |
 | 58 | C.J. Stroud | QB | QB17 | 14.66 | 0.94 |
-| 59 | Wan'Dale Robinson | WR | WR16 | 11.13 | 0.94 |
-| 60 | Davante Adams | WR | WR17 | 11.13 | 0.94 |
+| 59 | Davante Adams | WR | WR17 | 11.13 | 0.94 |
+| 60 | Wan'Dale Robinson | WR | WR16 | 11.13 | 0.94 |
 
 ## By position
 
@@ -106,17 +106,17 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 18 | Sam Darnold | 14.07 | 0.35 | 70 |
 | 19 | Joe Burrow | 14.06 | 0.34 | 71 |
 | 20 | Brock Purdy | 13.75 | 0.03 | 79 |
-| 21 | Daniel Jones | 13.72 | 0.00 | 84 |
+| 21 | Daniel Jones | 13.72 | 0.00 | 81 |
 | 22 | Aaron Rodgers | 13.68 | -0.04 | 87 |
 | 23 | Bryce Young | 13.09 | -0.63 | 102 |
 | 24 | Kyler Murray | 12.83 | -0.89 | 106 |
 | 25 | Justin Fields | 12.63 | -1.09 | 116 |
 | 26 | Tyler Shough | 12.24 | -1.48 | 129 |
-| 27 | Tua Tagovailoa | 12.14 | -1.58 | 134 |
+| 27 | Tua Tagovailoa | 12.14 | -1.58 | 133 |
 | 28 | Cam Ward | 12.07 | -1.65 | 136 |
 | 29 | Marcus Mariota | 11.65 | -2.07 | 145 |
 | 30 | J.J. McCarthy | 11.50 | -2.22 | 149 |
-| 31 | Mac Jones | 11.33 | -2.39 | 155 |
+| 31 | Mac Jones | 11.33 | -2.39 | 154 |
 
 ### RB — 44 returning players (top 50 − 5 rookies)
 
@@ -137,37 +137,37 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 13 | Saquon Barkley | 12.51 | 2.19 | 32 |
 | 14 | Javonte Williams | 12.45 | 2.13 | 34 |
 | 15 | Travis Etienne | 12.22 | 1.90 | 37 |
-| 16 | Josh Jacobs | 11.98 | 1.66 | 44 |
+| 16 | Josh Jacobs | 11.98 | 1.66 | 43 |
 | 17 | Kenneth Walker III | 11.89 | 1.57 | 46 |
 | 18 | TreVeyon Henderson | 11.65 | 1.33 | 51 |
-| 20 | Omarion Hampton | 11.40 | 1.08 | 53 |
-| 19 | Bucky Irving | 11.40 | 1.08 | 54 |
+| 19 | Bucky Irving | 11.40 | 1.08 | 53 |
+| 20 | Omarion Hampton | 11.40 | 1.08 | 54 |
 | 21 | Jaylen Warren | 10.75 | 0.43 | 66 |
 | 22 | J.K. Dobbins | 10.63 | 0.31 | 73 |
 | 23 | Tony Pollard | 10.61 | 0.29 | 74 |
 | 24 | Quinshon Judkins | 10.55 | 0.23 | 75 |
 | 25 | Cam Skattebo | 10.32 | 0.00 | 82 |
-| 26 | Rico Dowdle | 10.29 | -0.03 | 86 |
-| 27 | Zach Charbonnet | 10.08 | -0.24 | 93 |
+| 26 | Rico Dowdle | 10.29 | -0.03 | 85 |
+| 27 | Zach Charbonnet | 10.08 | -0.24 | 92 |
 | 28 | Rhamondre Stevenson | 10.05 | -0.27 | 95 |
 | 29 | RJ Harvey | 9.62 | -0.70 | 103 |
 | 30 | David Montgomery | 9.49 | -0.83 | 105 |
 | 31 | Rachaad White | 9.43 | -0.89 | 107 |
 | 32 | Kenneth Gainwell | 9.38 | -0.94 | 109 |
 | 33 | Tyrone Tracy Jr. | 9.38 | -0.94 | 110 |
-| 35 | Chuba Hubbard | 8.94 | -1.38 | 124 |
-| 34 | Alvin Kamara | 8.94 | -1.38 | 125 |
-| 36 | Kyle Monangai | 8.57 | -1.75 | 138 |
+| 34 | Alvin Kamara | 8.94 | -1.38 | 124 |
+| 35 | Chuba Hubbard | 8.94 | -1.38 | 125 |
+| 36 | Kyle Monangai | 8.57 | -1.75 | 137 |
 | 37 | Tyjae Spears | 8.39 | -1.93 | 143 |
 | 38 | James Conner | 8.31 | -2.01 | 144 |
 | 39 | Aaron Jones | 8.14 | -2.18 | 148 |
 | 40 | Najee Harris | 8.03 | -2.29 | 151 |
 | 41 | Woody Marks | 7.99 | -2.33 | 152 |
-| 42 | Jacory Croskey-Merritt | 7.93 | -2.39 | 154 |
+| 42 | Jacory Croskey-Merritt | 7.93 | -2.39 | 155 |
 | 43 | Kimani Vidal | 7.61 | -2.71 | 158 |
 | 44 | Kareem Hunt | 7.51 | -2.81 | 160 |
 
-### WR — 61 returning players (top 75 − 11 rookies)
+### WR — 61 returning players (top 75 − 12 rookies)
 
 | pos rank | player | proj PPG | VORP | overall |
 |---|---|---|---|---|
@@ -183,11 +183,11 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 10 | A.J. Brown | 12.06 | 1.87 | 39 |
 | 11 | Chris Olave | 12.00 | 1.81 | 40 |
 | 12 | Tetairoa McMillan | 11.93 | 1.74 | 41 |
-| 13 | Tee Higgins | 11.85 | 1.66 | 43 |
+| 13 | Tee Higgins | 11.85 | 1.66 | 44 |
 | 14 | Zay Flowers | 11.72 | 1.53 | 47 |
 | 15 | Malik Nabers | 11.22 | 1.03 | 55 |
-| 16 | Wan'Dale Robinson | 11.13 | 0.94 | 59 |
-| 17 | Davante Adams | 11.13 | 0.94 | 60 |
+| 17 | Davante Adams | 11.13 | 0.94 | 59 |
+| 16 | Wan'Dale Robinson | 11.13 | 0.94 | 60 |
 | 18 | Jameson Williams | 11.07 | 0.88 | 62 |
 | 19 | DeVonta Smith | 10.87 | 0.68 | 63 |
 | 20 | Ladd McConkey | 10.70 | 0.51 | 64 |
@@ -197,12 +197,12 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 24 | Courtland Sutton | 10.52 | 0.33 | 72 |
 | 25 | DK Metcalf | 10.40 | 0.21 | 76 |
 | 26 | Brian Thomas Jr. | 10.35 | 0.16 | 77 |
-| 27 | Quentin Johnston | 10.19 | 0.00 | 81 |
-| 28 | Garrett Wilson | 10.16 | -0.03 | 85 |
+| 27 | Quentin Johnston | 10.19 | 0.00 | 83 |
+| 28 | Garrett Wilson | 10.16 | -0.03 | 86 |
 | 29 | Michael Wilson | 10.15 | -0.04 | 88 |
 | 30 | Alec Pierce | 10.14 | -0.05 | 89 |
 | 31 | Michael Pittman | 10.04 | -0.15 | 91 |
-| 32 | Jaylen Waddle | 9.95 | -0.24 | 92 |
+| 32 | Jaylen Waddle | 9.95 | -0.24 | 93 |
 | 33 | Jordan Addison | 9.71 | -0.48 | 97 |
 | 34 | Marvin Harrison Jr. | 9.69 | -0.50 | 98 |
 | 35 | Jakobi Meyers | 9.63 | -0.56 | 100 |
@@ -213,8 +213,8 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 40 | Josh Downs | 9.05 | -1.14 | 117 |
 | 41 | Romeo Doubs | 9.02 | -1.17 | 118 |
 | 42 | Luther Burden III | 9.01 | -1.18 | 119 |
-| 43 | Jauan Jennings | 8.93 | -1.26 | 120 |
-| 44 | Deebo Samuel Sr. | 8.93 | -1.26 | 121 |
+| 44 | Deebo Samuel Sr. | 8.93 | -1.26 | 120 |
+| 43 | Jauan Jennings | 8.93 | -1.26 | 121 |
 | 45 | Troy Franklin | 8.88 | -1.31 | 122 |
 | 46 | Terry McLaurin | 8.84 | -1.35 | 123 |
 | 47 | Jerry Jeudy | 8.80 | -1.39 | 126 |
@@ -222,7 +222,7 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 49 | Mike Evans | 8.73 | -1.46 | 128 |
 | 50 | Christian Watson | 8.67 | -1.52 | 131 |
 | 51 | DJ Moore | 8.64 | -1.55 | 132 |
-| 52 | Tyreek Hill | 8.44 | -1.75 | 137 |
+| 52 | Tyreek Hill | 8.44 | -1.75 | 138 |
 | 53 | Chris Godwin Jr. | 8.44 | -1.75 | 139 |
 | 55 | Rashid Shaheed | 8.30 | -1.89 | 140 |
 | 54 | Tre Tucker | 8.30 | -1.89 | 141 |
@@ -247,7 +247,7 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 8 | George Kittle | 8.66 | 0.41 | 67 |
 | 9 | Oronde Gadsden II | 8.33 | 0.08 | 78 |
 | 10 | Hunter Henry | 8.27 | 0.02 | 80 |
-| 11 | Sam LaPorta | 8.25 | 0.00 | 83 |
+| 11 | Sam LaPorta | 8.25 | 0.00 | 84 |
 | 12 | Tucker Kraft | 8.12 | -0.13 | 90 |
 | 13 | Dalton Kincaid | 8.00 | -0.25 | 94 |
 | 14 | Dallas Goedert | 7.95 | -0.30 | 96 |
@@ -257,7 +257,7 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 18 | Pat Freiermuth | 7.22 | -1.03 | 113 |
 | 19 | Dalton Schultz | 7.18 | -1.07 | 115 |
 | 20 | Cade Otton | 6.77 | -1.48 | 130 |
-| 21 | Brenton Strange | 6.67 | -1.58 | 133 |
+| 21 | Brenton Strange | 6.67 | -1.58 | 134 |
 | 22 | Theo Johnson | 6.63 | -1.62 | 135 |
 | 23 | Jake Ferguson | 6.34 | -1.91 | 142 |
 | 24 | Mason Taylor | 6.15 | -2.10 | 147 |
