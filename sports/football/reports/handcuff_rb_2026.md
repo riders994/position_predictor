@@ -1,6 +1,6 @@
 # Handcuff Board — 2026 (RB)
 
-_Model-only (ECR/ADP are benchmarks, never inputs). A handcuff's **contingent upside** = (starter − backup projected PPG) × the starter's projected miss share._
+_Scoring: **ppr**. Model-only (ECR/ADP are benchmarks, never inputs). A handcuff's **contingent upside** = (starter − backup projected PPG) × the starter's projected miss share._
 
 ## Risk signal (leak-safe backtest)
 
@@ -36,4 +36,9 @@ Chosen: **`availability_model`** (best clears-cutoff AUC at g\*=4; `winner`=`ava
 | 18 | Kyle Monangai (37) | D'Andre Swift (12) | 3.6 | 0.95 | 10.33 |
 | 19 | Dylan Sampson (45) | Quinshon Judkins (24) | 4.2 | 0.83 | 8.92 |
 | 20 | Rachaad White (31) | Bucky Irving (20) | 5.7 | 0.70 | 11.33 |
+| 21 | Tyjae Spears (36) | Tony Pollard (22) | 4.7 | 0.53 | 10.22 |
+| 22 | Zach Charbonnet (28) | Kenneth Walker III (16) | 4.2 | 0.52 | 11.48 |
+| 23 | Chuba Hubbard (35) | Rico Dowdle (26) | 3.4 | 0.28 | 10.26 |
+| 24 | Rhamondre Stevenson (27) | TreVeyon Henderson (18) | 2.8 | 0.27 | 11.46 |
+| 25 | Tyrone Tracy Jr. (32) | Cam Skattebo (23) | 4.3 | 0.25 | 10.83 |
 

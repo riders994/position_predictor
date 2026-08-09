@@ -200,6 +200,31 @@ uv run python scripts/postseason.py [options]
 # → reports/postseason_<season>.{md,csv}
 ```
 
+**`handcuff.py`** — which backups to draft, driven by measured starter injury risk. RB mode ranks
+handcuffs by *contingent upside* (PPG the backup gains if the starter misses time × how likely
+that is); QB/other mode emits a projected-starter injury-risk list instead.
+```bash
+make handcuff                                         # or:
+uv run python scripts/handcuff.py [options]
+  --config config/football_qb.yaml   # QB injury-risk list instead of the RB board
+  --season 2026                      # draft season (default: upcoming)
+  --scoring half_ppr                 # board in another format (default: PPR)
+  --league config/leagues/my_2qb.yaml  # take the scoring from a league instead
+  --signal ...                       # override the backtest-chosen risk signal
+  --top 25 / --top-starters 32
+# → reports/handcuff_<pos>_<season>[_<scoring>].{md,csv}
+```
+
+**Scoring changes who the handcuff is, not just the numbers.** The handcuff is whichever backup
+projects highest on that team, so halving reception value reorders pass-catching backs against
+early-down ones. On the 2026 board, PPR → half-PPR changes the *identified* handcuff for 2 of 27
+starters (James Cook: Ty Johnson → Ray Davis; Derrick Henry: Justice Hill → Keaton Mitchell),
+moves 19 of 25 handcuff ranks, and drops mean contingent upside from 1.29 to 1.14 PPG.
+
+Handcuff takes a *scoring format*, not a league: it compares a starter to his own backup, so
+roster shape and replacement level never enter. PPR keeps the historical filename; other formats
+get a suffix so boards don't clobber each other.
+
 ---
 
 ## Notes

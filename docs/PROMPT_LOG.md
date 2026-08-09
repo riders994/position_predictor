@@ -3008,6 +3008,40 @@ on a QB's career mostly **is** the pick it spent, which is measured, not missing
 
 ---
 
+## Entry 082 — handcuff tool adjustable to half-PPR
+
+**Date:** 2026-08-09
+
+**Prompt (full text):**
+
+> Fixup handcuff.py to be adjustable to half ppr
+
+**Response notes:**
+- Mostly a CLI lever: `_board_with_risk` already routed through `artifact_stem(config)` and
+  `project_position(config, ...)` after the Stage-2 namespacing work, so both were already
+  scoring-aware. Added `--scoring {ppr,half_ppr,standard}` and `--league` (which contributes only
+  its scoring), `ensure_features` so a format's artifacts build on first use, `scoring` carried on
+  `HandcuffResult`/`InjuryRiskResult` and printed in both markdown headers, and a filename suffix
+  for non-PPR formats so boards don't clobber (PPR keeps the historical name).
+- **Handcuff takes a scoring format, not a league** — deliberately. It compares a starter to his
+  own backup, so roster shape and replacement level never enter the calculation.
+- **I wrote a wrong claim and the data caught it.** The first draft of the docstring said scoring
+  "only shifts *how much* upside a handcuff carries, not who the handcuff is — the starter/backup
+  pairing is a depth-chart fact." False: the handcuff is whichever backup *projects* highest, so
+  halving reception value can hand the role to a different player. On the 2026 board it changes
+  the identified handcuff for 2 of 27 starters — James Cook's moves from pass-catching Ty Johnson
+  to Ray Davis, Derrick Henry's from Justice Hill to Keaton Mitchell. Corrected in the module and
+  script docstrings and documented in USAGE.
+- Other measured effects: 19 of 25 handcuff ranks move (max 4 slots), and mean contingent upside
+  falls 1.29 -> 1.14 PPG because receptions are worth less, which compresses the starter-backup
+  gap the whole tool is built on.
+- Housekeeping surfaced by the run: the committed RB reports were named `handcuff_2026.*` while
+  the code has been emitting `handcuff_rb_2026.*` — stale artifacts from an older naming scheme.
+  Replaced them. Also added the missing handcuff section to docs/USAGE.md (it was absent entirely).
+- 483 tests (+2), ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
