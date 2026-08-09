@@ -90,7 +90,16 @@ def build_board(proj, *, teams, roster=None, fmt=None, flex_positions=FLEX_POS,
     replacement, starters = replacement_levels(pools_src, teams=teams, roster=roster, fmt=fmt,
                                                flex_positions=flex_positions)
     board["vorp"] = (board[value_col] - board["position"].map(replacement).fillna(0.0)).round(2)
-    board = board.sort_values("vorp", ascending=False).reset_index(drop=True)
+    # VORP is rounded to 2dp, so ties are common (~1 pair per 20 players on a real board). Sorting
+    # on VORP alone leaves them to pandas' non-stable quicksort, which reorders tied players
+    # between otherwise identical runs. Break ties explicitly — higher raw projection first, then
+    # player_id — so a board is reproducible and two runs diff cleanly.
+    order = [("vorp", False), (value_col, False), ("player_id", True)]
+    seen: set[str] = set()
+    keys = [(c, asc) for c, asc in order
+            if c in board.columns and not (c in seen or seen.add(c))]
+    board = board.sort_values([c for c, _ in keys], ascending=[asc for _, asc in keys])
+    board = board.reset_index(drop=True)
     board["proj_overall_rank"] = range(1, len(board) + 1)
     return board, replacement, starters
 

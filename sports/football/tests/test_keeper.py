@@ -79,6 +79,26 @@ def test_build_board_vorp_and_overall_rank():
     assert board["vorp"].is_monotonic_decreasing
 
 
+def test_build_board_breaks_vorp_ties_deterministically():
+    """VORP is rounded to 2dp so ties are common; pandas' default sort is not stable, which
+    reordered tied players between otherwise identical runs. Ties break on projection, then id."""
+    proj = pd.DataFrame([
+        # Three RBs landing on the same VORP; input order is deliberately scrambled.
+        dict(player_id="RBb", player_name="b", position="RB", proj_ppg=20.0, proj_pos_rank=2),
+        dict(player_id="RBa", player_name="a", position="RB", proj_ppg=20.0, proj_pos_rank=1),
+        dict(player_id="RBc", player_name="c", position="RB", proj_ppg=25.0, proj_pos_rank=3),
+        dict(player_id="RBd", player_name="d", position="RB", proj_ppg=10.0, proj_pos_rank=4),
+    ])
+    board, _, _ = build_board(proj, teams=2, roster={"RB": 1, "QB": 0})
+    # Equal VORP -> equal proj_ppg -> player_id ascending.
+    assert list(board["player_id"]) == ["RBc", "RBa", "RBb", "RBd"]
+
+    # Shuffling the input must not change the board.
+    shuffled = build_board(proj.iloc[::-1].reset_index(drop=True),
+                           teams=2, roster={"RB": 1, "QB": 0})[0]
+    assert list(shuffled["player_id"]) == list(board["player_id"])
+
+
 def test_resolve_players_normalises_and_flags_unmatched():
     board = pd.DataFrame([
         dict(player_id="x", player_name="A.J. Brown", position="WR",

@@ -1,12 +1,12 @@
 {
   "name": "ids",
   "source": "nflverse/nflreadpy",
-  "note": "Cross-source player ID crosswalk.",
+  "note": "Cross-source player ID crosswalk (fantasy positions only \u2014 carries essentially no offensive linemen; see `players` for a complete one).",
   "seasons": [],
   "min_season": null,
-  "pulled_at": "2026-06-23T16:55:23.094155+00:00",
-  "n_rows": 12462,
+  "pulled_at": "2026-08-09T03:50:06.143639+00:00",
+  "n_rows": 12470,
   "n_cols": 35,
   "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/ids.parquet",
-  "sha256": "cac25f44861e8f9e175415ce6c36ca13b20c5dc85db0641327c97806ea443d8a"
+  "sha256": "3a6dd7f2528e7d0614b01677bb5625d50c0f03ba6ddff495adab6f8ab9126fe7"
 }
