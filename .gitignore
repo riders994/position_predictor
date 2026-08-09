@@ -22,7 +22,7 @@ sports/*/reports/results/*
 # Regenerable serving-output CSVs (projections / keeper board / redraft board / postseason).
 # The human-readable report .md files ARE committed so they're viewable on GitHub (public).
 sports/*/reports/projections_*.csv
-sports/*/reports/keeper_board.csv
+sports/*/reports/keeper_board*.csv
 sports/*/reports/redraft_*.csv
 sports/*/reports/postseason_*.csv
 !sports/*/reports/**/.gitkeep

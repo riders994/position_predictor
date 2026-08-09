@@ -142,7 +142,7 @@ def resolve_players(board, picks):
             row = by_norm[near[0]] if near else None
         if row is None:
             unmatched.append({"player": p["player"], "pick": p.get("pick"),
-                              "reason": "no projection (TE/K/DST or name not matched)"})
+                              "reason": "no projection (K/DST or name not matched)"})
             continue
         rec = row.to_dict()
         rec["pick"] = p["pick"]

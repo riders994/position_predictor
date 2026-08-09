@@ -97,13 +97,32 @@ uv run python scripts/project.py --config config/football_rb.yaml [--model ridge
 surplus = pick paid − projected board slot).
 ```bash
 uv run python scripts/keeper.py --input examples/keepers_example.csv [options]
-  --teams 12               # league size (8–16)
-  --format 1qb|sf|2qb      # QB format (superflex = sf)
-  --configs ...            # per-position configs (default RB/WR/QB)
-  --out reports/keeper_board.csv
+  --league config/leagues/my_2qb.yaml   # scoring + teams + slots (recommended)
+  --teams 12               # league size (8–16); only without --league
+  --format 1qb|sf|2qb      # QB format shorthand; only without --league
+  --configs ...            # per-position configs (default QB/RB/WR/TE)
+  --out reports/keeper_board[_<league>].csv
 ```
-Input CSV columns: `player,pick` (optional `position`). RB/WR/QB only; TE/K/DST and unmatched names
-are listed as unscored.
+Input CSV columns: `player,pick` (optional `position`). Covers QB/RB/WR/TE; K/DST and unmatched
+names are listed as unscored.
+
+**Pass `--league`.** It sets both halves of the valuation — the scoring format decides the
+projections (a real retrain against that format's target) and the roster shape decides replacement
+level. Without it you get full PPR and a 12-team 1QB/2RB/2WR/1TE/1FLEX shape, which is the right
+answer for exactly one league. `--teams`/`--format` are rejected alongside `--league` rather than
+silently half-overriding it. The format's artifacts are built automatically on first use.
+
+How much it matters, on the same keeper list (`examples/keepers_example.csv`):
+
+| player | PPR 1QB surplus | 10-team 2QB half-PPR surplus |
+|---|---|---|
+| Bo Nix | +56 keep | **+89 keep** |
+| Jayden Daniels | −2 **don't keep** | **+45 keep** |
+| Brian Thomas Jr. | +10 **keep** | **−5 don't keep** |
+| Sam LaPorta | −14 don't keep | −24 don't keep |
+
+Two of eight recommendations flip. The QBs gain because 20 QBs start instead of 12 (replacement QB
+15.5 → 13.7 PPG); the receivers lose because half-PPR takes a point off every reception.
 
 **`redraft.py`** — new-season draft boards, **one per league**. Checks nflverse has published the
 just-completed season, refreshes stale caches, projects once per scoring format, then values each

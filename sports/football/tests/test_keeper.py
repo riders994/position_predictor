@@ -144,3 +144,32 @@ def test_evaluate_keepers_surplus_and_sort():
     assert ranked.iloc[0]["surplus"] > ranked.iloc[1]["surplus"]
     assert ranked.iloc[0]["keep"] and not ranked.iloc[-1]["keep"]
     assert ranked.iloc[0]["pos_rank"] == "WR1"
+
+
+# -- league wiring ------------------------------------------------------------------------
+
+def test_league_config_drives_the_board():
+    """A league's roster/flex must reach replacement_levels — the whole point of --league."""
+    from position_predictor.eval.league import load_league
+
+    lg = load_league("config/leagues/my_2qb.yaml")
+    proj = _with_te([16, 13, 11, 9, 7])
+    _, starters = replacement_levels(proj, teams=lg.teams, roster=lg.starters,
+                                     flex_positions=lg.flex_positions)
+    assert starters["QB"] == 20        # 10 teams x 2 dedicated QB slots
+    assert starters["TE"] == 10        # 10 teams x 1
+
+
+def test_roster_from_format_shim_still_supplies_qb_slots():
+    from position_predictor.eval.keeper import roster_from_format
+
+    assert roster_from_format("2qb")["QB"] == 2.0
+    assert roster_from_format("sf")["QB"] == 1.7
+    assert roster_from_format("1qb", {"RB": 3})["RB"] == 3      # caller's roster is preserved
+    with pytest.raises(ValueError, match="format must be one of"):
+        roster_from_format("3qb")
+
+
+def test_replacement_levels_requires_a_roster_or_format():
+    with pytest.raises(ValueError, match="needs either a roster dict or a fmt"):
+        replacement_levels(_proj(), teams=12)

@@ -92,9 +92,10 @@ def test_run_redraft_full_n_without_rookie_adjustment(stub_pipeline):
         draft_season=DRAFT_SEASON, refresh=False, rookie_context=(None, {}, "no market"))
     assert res.ready
     counts = res.board.groupby("position").size().to_dict()
-    # League-derived depth for 12-team 1QB, then scaled so the four positions together cover
-    # all 12*16 = 192 picks: QB 23, RB 58, WR 84 (TE 27 isn't requested here).
-    assert counts == {"QB": 23, "RB": 58, "WR": 84}
+    # League-derived depth for 12-team 1QB with a TE-eligible flex (the flex share splits three
+    # ways), scaled so the four positions together cover all 12*16 = 192 picks:
+    # QB 23, RB 55, WR 83 (TE 31 isn't requested here).
+    assert counts == {"QB": 23, "RB": 55, "WR": 83}
     assert (res.board["proj_season"] == DRAFT_SEASON).all()
 
 

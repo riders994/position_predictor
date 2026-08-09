@@ -47,6 +47,29 @@ class Config:
     def data(self) -> dict[str, Any]:
         return self._data
 
+    def with_overrides(self, overrides: dict[str, Any]) -> "Config":
+        """A deep copy of this config with the given dotted keys replaced.
+
+        Serving tools re-point an experiment config at a different season or scoring format
+        without touching the committed YAML, which stays the canonical description of the
+        experiment. Intermediate dicts are created as needed, so a key the YAML never had
+        (``target.scoring`` on an older config) can still be set.
+        """
+        import copy
+
+        data = copy.deepcopy(self._data)
+        for dotted_key, value in overrides.items():
+            parts = dotted_key.split(".")
+            node = data
+            for part in parts[:-1]:
+                nxt = node.get(part)
+                if not isinstance(nxt, dict):
+                    nxt = {}
+                    node[part] = nxt
+                node = nxt
+            node[parts[-1]] = value
+        return Config(data, path=self.path)
+
     def seasons(self) -> list[int]:
         """Inclusive list of seasons [earliest_season .. latest_completed_season]."""
         start = int(self.require("data.earliest_season"))

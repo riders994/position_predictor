@@ -2234,6 +2234,101 @@ on a QB's career mostly **is** the pick it spent, which is measured, not missing
 
 ---
 
+## Entry 077 — regenerate the redraft reports per league
+
+**Date:** 2026-08-09
+
+**Prompt (full text):**
+
+> regenerate the report, make it generate one per league
+
+**Response notes:**
+- Ambiguous target, resolved by inspection: `REPORT_football_*.md` is a *model-quality* report
+  (walk-forward CV, market head-to-head), and a league doesn't change model quality — per-scoring
+  would be the meaningful axis there, not per-league. So "the report" = the redraft board, which
+  already writes per-league files; the actionable part was regenerating and clearing the stale
+  single-board `reports/redraft_2026.csv` (git-ignored, untracked, superseded).
+- **Found a real bug doing it.** Diffing the fresh run against the committed one showed tied
+  players swapping places. VORP is rounded to 2dp so ties are common (~1 pair per 20 players), and
+  `sort_values("vorp")` uses pandas' non-stable quicksort — identical inputs produced different
+  `proj_overall_rank`. Ties now break on projection, then `player_id`. Verified two back-to-back
+  runs are byte-identical for all three leagues.
+- Underdog moved 198 -> 197 players: the rookie count is read live from the ECR board and the
+  market shifted one WR rookie into the top-N. Projections unchanged.
+
+---
+
+## Entry 078 — could the keeper tool infer a league from its input?
+
+**Date:** 2026-08-09
+
+**Prompt (full text):**
+
+> What about the keeper tool? Would I need to specify a league or would it be able to infer from
+> the roster structure of the input?
+
+**Response notes:**
+- Answered: you must specify. The keeper input is `player,pick` — your keeper *candidates*, five
+  rows in the example — which carries no team count, no starter slots, and no scoring. Pick
+  numbers weakly bound league size at best, and keeper leagues distort draft slots by construction
+  (kept players vacate their picks). Even a full-roster export would yield teams/roster_size/slots
+  but never scoring.
+- Surfaced the real gap the question exposed: keeper couldn't take a league at all, so it was
+  pinned to `DEFAULT_ROSTER` and — worse — full-PPR projections, i.e. a confident board in the
+  wrong currency for both of the user's half-PPR leagues. Wired up in Entry 080.
+
+---
+
+## Entry 079 — TE is flex-eligible in every league
+
+**Date:** 2026-08-09
+
+**Prompt (full text):**
+
+> Is FLEX not TE eligible right now? It should be, all of my leagues accept TE for flex
+
+**Response notes:**
+- My error: I asked about Underdog's flex and confirmed TE there, then assumed "standard" RB/WR
+  for `ppr_1qb` and `my_2qb` without checking. Corrected all three configs and flipped the code
+  defaults (`keeper.FLEX_POS`, `LeagueConfig.flex_positions`, `redraft.DEFAULT_LEAGUE`) so the
+  keeper tool and any new league YAML are TE-eligible unless they opt out.
+- **Honest impact: nil.** No replacement level and no VORP changed in any league. Every team
+  already starts a dedicated TE, so the flex contest is TE13+ vs RB25+/WR25+, and the TE pool
+  falls off much faster — marginal TE ~9.8/8.25/8.00 PPG vs marginal flex RB/WR ~11.5/10.7/10.3.
+  No TE is ever good enough to take a flex slot. It would only bite with no dedicated TE slot, or
+  a materially deeper TE pool.
+- The one visible effect is depth bookkeeping: the flex share splits three ways instead of two, so
+  the PPR board lists 30 TEs instead of 26 (RB 54->52, WR 76->75). Projections byte-identical.
+
+---
+
+## Entry 080 — keeper tool wired to league configs
+
+**Date:** 2026-08-09
+
+**Prompt (full text):**
+
+> yes, wire the keeper tool up to leagues
+
+**Response notes:**
+- `scripts/keeper.py` takes `--league config/leagues/*.yaml`, which sets both halves of the
+  valuation: scoring (the projections are retrained against that format's target, not rescaled)
+  and roster shape (replacement level). `--teams`/`--format` still work alone but are **rejected**
+  alongside `--league` — silently half-overriding a league config is how you get a confident board
+  for the wrong league.
+- `project_positions(..., scoring=...)` re-points the per-position configs, and `ensure_features`
+  builds a format's dataset/features on first use so keeper is self-sufficient on a fresh checkout.
+- Added `Config.with_overrides(dotted_dict)` and rewrote `_override_season`/`_override_scoring` on
+  top of it. This wasn't just tidying: `projection.py` needed the override and importing it from
+  `eval.redraft` would have been circular (redraft imports `project_position`).
+- **It changes real advice.** Same keeper list, PPR-1QB vs the 10-team 2QB half-PPR league:
+  Jayden Daniels -2 (don't keep) -> +45 (keep); Brian Thomas Jr. +10 (keep) -> -5 (don't keep);
+  Bo Nix +56 -> +89. Two of eight recommendations flip. QBs gain (20 started vs 12, replacement
+  15.5 -> 13.7 PPG); receivers lose a point per reception.
+- 475 tests, ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

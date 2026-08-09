@@ -562,6 +562,24 @@ Resolved (2026-08-04, league configs):
   projected PPG.** Machinery kept (`eval/bestball.py`, `scripts/bestball_calibrate.py`) so the
   finding can be re-tested when the projection model changes.
 
+Resolved (2026-08-09, league configs cont.):
+- **TE is flex-eligible everywhere.** All of the user's leagues run a TE-eligible flex; the
+  RB/WR-only default was my assumption, not theirs. Measured impact is nil: no replacement level
+  or VORP moved, because every team already starts a dedicated TE, so the flex contest is TE13+
+  against RB25+/WR25+ and the TE pool falls off far faster (TE13 ~9.8 PPG vs the marginal flex
+  RB/WR ~11.5–12.5). It would only bite with no dedicated TE slot, or a much deeper TE pool.
+- **Keeper is league-aware** (`--league config/leagues/*.yaml`), which matters more than the flex
+  question: it sets both the scoring the projections are trained on *and* the roster shape that
+  sets replacement level. On the sample keeper list, 2 of 8 recommendations flip between PPR-1QB
+  and the 10-team 2QB half-PPR league (Jayden Daniels −2 → +45; Brian Thomas Jr. +10 → −5).
+  `--teams`/`--format` are rejected alongside `--league` rather than half-overriding it.
+- **Boards are reproducible.** VORP is rounded to 2dp so ties are common, and pandas' default
+  sort isn't stable — identical runs reordered tied players. Ties now break on projection, then
+  `player_id`; two back-to-back runs are byte-identical.
+- `Config.with_overrides` replaces the duplicated deepcopy trick in `_override_season` /
+  `_override_scoring`, so `project_positions(..., scoring=...)` could re-point configs without a
+  circular import on `eval.redraft`.
+
 **The football project is functionally complete.** All remaining work is optional improvement /
 enrichment only — tracked in §13.
 
