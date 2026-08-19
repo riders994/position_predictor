@@ -5,14 +5,13 @@
 > Sibling project to the fantasy-rank predictor in the same `sports/football` tree.
 > Decision trail: [`PROMPT_LOG.md`](./PROMPT_LOG.md).
 
-> **⏸️ Shelved — code is on the `qb-late-breakout` branch, not on `primary`.**
-> All seven stages are complete and the findings are final; this plan, the decision trail
-> (`PROMPT_LOG.md` entries 055–061) and the stage reports (`reports/REPORT_qb_breakout_*.md`)
-> are landed here so the provenance and results are not stranded on an unmerged branch.
-> **`src/qb_breakout/`, `scripts/qb_breakout_*.py` and the 103 tests are not present on
-> `primary`** — check out `qb-late-breakout` to run anything. Resuming is a deliberate choice,
-> not a default: the honest next step is a higher-frequency outcome (snaps / starts /
-> per-season points), not more factors. See §5.2.
+> **⏸️ Shelved — parked, not unfinished. All of it is on `primary`.**
+> All seven stages are complete and the findings are final. This plan, the decision trail
+> (`PROMPT_LOG.md` entries 055–061), the stage reports (`reports/REPORT_qb_breakout_*.md`),
+> `src/qb_breakout/`, `scripts/qb_breakout_*.py` and the 103 tests are all on `primary` —
+> nothing needs checking out to run it. Resuming is a deliberate choice, not a default: the
+> honest next step is a higher-frequency outcome (snaps / starts / per-season points), not
+> more factors. See §5.2.
 
 ---
 
