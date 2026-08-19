@@ -22,7 +22,7 @@ end-of-season ranking.
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| Scoring format | **PPR** (1 pt / reception) | User's league format; receiving volume matters most here. |
+| Scoring format | **PPR** for the modelling work; PPR / half-PPR / standard selectable per league at serving time (§12.x) | PPR is the reference format the experiments were tuned on. Draft boards are built per league config, and since PPG *is* the training target, each format is its own dataset → features → fit rather than a rescale. |
 | Target metric | **Next-season points-per-game (PPG)** → derived rank | Removes raw injury/availability noise from the *prediction* target; rank is computed from predicted PPG. |
 | Ranking eligibility | Players who clear a **games-played / snap-share cutoff** | A high-PPG / low-games player still has value if they clear the bar. The cutoff is **derived analytically** (its own pipeline step), never hardcoded. |
 | Player scope | **Returning players only** (≥1 prior NFL season) | Clean feature set from NFL history. Rookies (CFB/draft data) are **out of scope — not pursued**. |
@@ -536,6 +536,49 @@ Resolved (2026-06-17 → 06-23, since RB v3):
   data now **1999–2025**, 2025 season added. Schema-neutral (verified — see §2.1).
 - **Serving tools shipped:** project, keeper-league, redraft-league, postseason-grading (merged) +
   handcuff-selection (2026-06-27, branch `handcuff-tool`).
+
+Resolved (2026-08-04, league configs):
+- **Scoring is a retrain, not a rescale.** `ppg` *is* the supervised target (`target_ppg_next`),
+  so half-PPR/standard boards need their own dataset → features → fit. nflverse already gives us
+  `fantasy_points` (standard), `fantasy_points_ppr` and `receptions`, and the two totals differ by
+  exactly one point per reception (verified row-wise over all 476,156 weekly rows 1999–2025, max
+  deviation 3.6e-15), so every format is an exact recomputation with no new data. Artifacts are
+  namespaced by `utils/naming.artifact_stem` — PPR keeps the bare `football_rb` stem, so the PPR
+  board is **bit-identical** to before (verified: 0.00 max difference across 136 players).
+- **`ppr_points` deliberately stays true PPR.** It feeds *features* (`finish_ppr_rank`,
+  `ppr_per_touch`) and the eligibility/EDA cutoffs, whose meaning shouldn't drift with a league
+  setting. Only the target is scoring-aware; predicting a half-PPR target from PPR-denominated
+  production features is fine — the feature set already carries `receptions`/`targets`.
+- **Leagues are committed configs** (`config/leagues/*.yaml`), and the redraft run is keyed on
+  *scoring format* so leagues sharing a format share one pipeline pass. Board depth is derived
+  from teams × started slots (a fixed top-20 QB list is meaningless in a 10-team 2QB league where
+  20 QBs are starters) and scaled so the positions together cover every pick in the draft.
+- **Best-ball upside: NULL RESULT.** Fitting `bestball_ppg = proj_ppg + λ·σ` against realized
+  best-ball value over 13 walk-forward season pairs (2012–2024) gives λ = 0 at every position —
+  the Spearman-vs-λ curve is flat to ~0.003 and nothing clears p<0.05 (QB p=0.99, RB 0.10, WR
+  0.13, TE 0.19). Reproduced with two other upside measures (ceiling-week rate, weekly skew),
+  several optimising at exactly zero. Mechanism: weekly σ is ~0.90 rank-correlated with weekly
+  mean at RB/WR/TE, so "upside" is mostly a restatement of "good". **Rank best-ball boards by
+  projected PPG.** Machinery kept (`eval/bestball.py`, `scripts/bestball_calibrate.py`) so the
+  finding can be re-tested when the projection model changes.
+
+Resolved (2026-08-09, league configs cont.):
+- **TE is flex-eligible everywhere.** All of the user's leagues run a TE-eligible flex; the
+  RB/WR-only default was my assumption, not theirs. Measured impact is nil: no replacement level
+  or VORP moved, because every team already starts a dedicated TE, so the flex contest is TE13+
+  against RB25+/WR25+ and the TE pool falls off far faster (TE13 ~9.8 PPG vs the marginal flex
+  RB/WR ~11.5–12.5). It would only bite with no dedicated TE slot, or a much deeper TE pool.
+- **Keeper is league-aware** (`--league config/leagues/*.yaml`), which matters more than the flex
+  question: it sets both the scoring the projections are trained on *and* the roster shape that
+  sets replacement level. On the sample keeper list, 2 of 8 recommendations flip between PPR-1QB
+  and the 10-team 2QB half-PPR league (Jayden Daniels −2 → +45; Brian Thomas Jr. +10 → −5).
+  `--teams`/`--format` are rejected alongside `--league` rather than half-overriding it.
+- **Boards are reproducible.** VORP is rounded to 2dp so ties are common, and pandas' default
+  sort isn't stable — identical runs reordered tied players. Ties now break on projection, then
+  `player_id`; two back-to-back runs are byte-identical.
+- `Config.with_overrides` replaces the duplicated deepcopy trick in `_override_season` /
+  `_override_scoring`, so `project_positions(..., scoring=...)` could re-point configs without a
+  circular import on `eval.redraft`.
 
 **The football project is functionally complete.** All remaining work is optional improvement /
 enrichment only — tracked in §13.

@@ -545,9 +545,10 @@ response. Maintained for **reproducibility and decision provenance**.
 
 ---
 
-## Entry 076 — basketball port and football focal additions: both blocked on data, recorded
+## Entry 083 — basketball port and football focal additions: both blocked on data, recorded
 
-**Date:** 2026-08-04
+**Date:** 2026-08-04 *(authored before entries 076–082; renumbered from 076 to 083 on merge,
+so the number ordering is merge order, not authoring order)*
 
 **Prompt (full text):**
 

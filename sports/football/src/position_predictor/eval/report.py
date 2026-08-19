@@ -6,6 +6,7 @@ no modeling — so the report always reflects the latest experiment run.
 """
 
 from __future__ import annotations
+from ..utils.naming import artifact_stem
 
 
 def _git_provenance():
@@ -47,7 +48,7 @@ def build_report(config, *, write: bool = True):
     sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position")
     g_star = int(config.get("eligibility.chosen_games_played", 4))
-    stem = f"{sport}_{position}".lower()
+    stem = artifact_stem(config)
     results_dir = REPORTS_DIR / "results"
 
     agg = _read(results_dir, stem, "ranking_aggregate")

@@ -14,6 +14,7 @@ import re
 import pandas as pd
 
 from .report import _fmt
+from ..utils.naming import artifact_stem
 
 
 def _version_key(v: str):
@@ -65,7 +66,7 @@ def build_progress(config, *, write: bool = True):
 
     sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position")
-    stem = f"{sport}_{position}".lower()
+    stem = artifact_stem(config)
     versions_dir = REPORTS_DIR / "versions" / stem
     if not versions_dir.exists():
         return None

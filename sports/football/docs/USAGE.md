@@ -97,26 +97,97 @@ uv run python scripts/project.py --config config/football_rb.yaml [--model ridge
 surplus = pick paid − projected board slot).
 ```bash
 uv run python scripts/keeper.py --input examples/keepers_example.csv [options]
-  --teams 12               # league size (8–16)
-  --format 1qb|sf|2qb      # QB format (superflex = sf)
-  --configs ...            # per-position configs (default RB/WR/QB)
-  --out reports/keeper_board.csv
+  --league config/leagues/my_2qb.yaml   # scoring + teams + slots (recommended)
+  --teams 12               # league size (8–16); only without --league
+  --format 1qb|sf|2qb      # QB format shorthand; only without --league
+  --configs ...            # per-position configs (default QB/RB/WR/TE)
+  --out reports/keeper_board[_<league>].csv
+# → reports/keeper_board[_<league>].{md,csv}
 ```
-Input CSV columns: `player,pick` (optional `position`). RB/WR/QB only; TE/K/DST and unmatched names
-are listed as unscored.
+Input CSV columns: `player,pick` (optional `position`). Covers QB/RB/WR/TE; K/DST and unmatched
+names are listed as unscored.
 
-**`redraft.py`** — new-season draft board (top 20 QB / 50 RB / 75 WR). Checks nflverse has published
-the just-completed season, refreshes stale caches, then projects. Returning players within each
-top-N (rookie count estimated from market ADP).
+**Pass `--league`.** It sets both halves of the valuation — the scoring format decides the
+projections (a real retrain against that format's target) and the roster shape decides replacement
+level. Without it you get full PPR and a 12-team 1QB/2RB/2WR/1TE/1FLEX shape, which is the right
+answer for exactly one league. `--teams`/`--format` are rejected alongside `--league` rather than
+silently half-overriding it. The format's artifacts are built automatically on first use.
+
+How much it matters, on the same keeper list (`examples/keepers_example.csv`):
+
+| player | PPR 1QB surplus | 10-team 2QB half-PPR surplus |
+|---|---|---|
+| Bo Nix | +56 keep | **+89 keep** |
+| Jayden Daniels | −2 **don't keep** | **+45 keep** |
+| Brian Thomas Jr. | +10 **keep** | **−5 don't keep** |
+| Sam LaPorta | −14 don't keep | −24 don't keep |
+
+Two of eight recommendations flip. The QBs gain because 20 QBs start instead of 12 (replacement QB
+15.5 → 13.7 PPG); the receivers lose because half-PPR takes a point off every reception.
+
+**`redraft.py`** — new-season draft boards, **one per league**. Checks nflverse has published the
+just-completed season, refreshes stale caches, projects once per scoring format, then values each
+league with the keeper tool's VORP engine. Returning players within each top-N (rookie count
+estimated from market ADP).
 ```bash
 make redraft SEASON=2026                              # or:
 uv run python scripts/redraft.py [options]
   --season 2026            # draft season (default: current calendar year)
   --no-refresh             # use the cache as-is (skip the fetch step)
-  --top-qb 20 --top-rb 50 --top-wr 75
-  --configs ...            --out reports/redraft_<season>.csv
+  --leagues config/leagues/my_2qb.yaml ...   # default: every shipped league
+  --top-qb 20 --top-rb 50 ...                # override the league-derived board depth
+  --bestball-lambda WR=0.3                   # override the fitted upside weight (default 0)
+  --top 60                 # rows in each report's overall-board section
+  --configs ...            --out-dir reports/
+# → reports/redraft_<season>_<league>.{md,csv} for each league
 ```
 Hard-stops (exit 1) if the feature season isn't published yet.
+
+### League configs
+
+A board is a projection seen through a league, so scoring and roster shape live in
+`config/leagues/*.yaml`:
+
+```yaml
+name: my_2qb
+label: "10-team 2QB half-PPR"
+scoring: half_ppr                # ppr | half_ppr | standard
+teams: 10
+starters: {QB: 2, RB: 2, WR: 2, TE: 1, FLEX: 1}
+flex_positions: [RB, WR, TE]     # TE-eligible is the default; say [RB, WR] to opt out
+roster_size: 16                  # sets board depth: teams x roster_size picks
+bestball: false
+```
+
+Shipped: `ppr_1qb` (12-team 1QB PPR — the historical default, unchanged), `my_2qb` (10-team 2QB
+half-PPR), `underdog_bestball` (12-team half-PPR, 3WR, 18 rounds). All three run a TE-eligible
+flex.
+
+Note that TE-flex eligibility is currently **inert** at these projections: every team
+already starts a dedicated TE, so the flex contest is TE13+ against RB25+/WR25+, and the
+TE pool falls off far faster (TE13 ~9.8 PPG vs the marginal flex RB/WR ~11.5-12.5). No TE
+wins a flex slot, so no replacement level moves. It would only bite in a league with no
+dedicated TE slot, or if the TE pool got much deeper.
+
+Two things follow from the config:
+
+* **Scoring is a retrain, not a rescale.** Season PPG is the model's training target, so each
+  format gets its own dataset → features → fit, with artifacts namespaced (`football_rb` for PPR,
+  `football_rb_half_ppr` otherwise). The run is keyed on *format*, so leagues sharing one are
+  nearly free; the three shipped leagues cost two passes (~35 s total).
+* **Roster shape sets replacement level**, which is what makes positions comparable. A 10-team
+  2QB league starts 20 QBs instead of 12, which lifts the top QB from board slot ~17 to ~10.
+
+**`bestball_calibrate.py`** — re-fit the best-ball upside weight against history.
+```bash
+make bestball-calibrate                               # or:
+uv run python scripts/bestball_calibrate.py --league config/leagues/underdog_bestball.yaml
+# → reports/results/bestball_lambda_<league>.json + the lambda curve as CSV
+```
+Current answer is a **null result**: over 13 walk-forward season pairs (2012–2024) no position's
+volatility term beats λ=0 at p<0.05 (gains ≤ +0.003 Spearman). Weekly σ is ~0.90 rank-correlated
+with weekly mean at RB/WR/TE, so upside is mostly a restatement of quality. Best-ball boards
+therefore rank by projected PPG; `sigma` is reported as context only.
 
 **`postseason.py`** — after a season completes, grade model vs ECR vs ADP vs the actual finish.
 ```bash
@@ -128,6 +199,31 @@ uv run python scripts/postseason.py [options]
   --configs ...            --out reports/postseason_<season>.md
 # → reports/postseason_<season>.{md,csv}
 ```
+
+**`handcuff.py`** — which backups to draft, driven by measured starter injury risk. RB mode ranks
+handcuffs by *contingent upside* (PPG the backup gains if the starter misses time × how likely
+that is); QB/other mode emits a projected-starter injury-risk list instead.
+```bash
+make handcuff                                         # or:
+uv run python scripts/handcuff.py [options]
+  --config config/football_qb.yaml   # QB injury-risk list instead of the RB board
+  --season 2026                      # draft season (default: upcoming)
+  --scoring half_ppr                 # board in another format (default: PPR)
+  --league config/leagues/my_2qb.yaml  # take the scoring from a league instead
+  --signal ...                       # override the backtest-chosen risk signal
+  --top 25 / --top-starters 32
+# → reports/handcuff_<pos>_<season>[_<scoring>].{md,csv}
+```
+
+**Scoring changes who the handcuff is, not just the numbers.** The handcuff is whichever backup
+projects highest on that team, so halving reception value reorders pass-catching backs against
+early-down ones. On the 2026 board, PPR → half-PPR changes the *identified* handcuff for 2 of 27
+starters (James Cook: Ty Johnson → Ray Davis; Derrick Henry: Justice Hill → Keaton Mitchell),
+moves 19 of 25 handcuff ranks, and drops mean contingent upside from 1.29 to 1.14 PPG.
+
+Handcuff takes a *scoring format*, not a league: it compares a starter to his own backup, so
+roster shape and replacement level never enter. PPR keeps the historical filename; other formats
+get a suffix so boards don't clobber each other.
 
 ---
 

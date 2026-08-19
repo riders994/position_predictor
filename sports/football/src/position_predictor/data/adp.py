@@ -102,10 +102,10 @@ def build_adp_benchmark(config, season: int, name_id_map: dict, *, write: bool =
     """
     from ..eval.keeper import _norm
     from ..utils.io import DATA_EXTERNAL, ensure_dir
+    from ..utils.naming import artifact_stem
 
-    sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position").upper()
-    stem = f"{sport}_{position}".lower()
+    stem = artifact_stem(config)
 
     source = "FFC"
     try:
