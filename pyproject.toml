@@ -60,6 +60,7 @@ build-backend = "hatchling.build"
 packages = [
     "sports/football/src/position_predictor",
     "sports/football/src/medstaff",
+    "sports/football/src/qb_breakout",
     "sports/basketball/src/nba_archetypes",
 ]
 

@@ -3042,6 +3042,70 @@ on a QB's career mostly **is** the pick it spent, which is measured, not missing
 
 ---
 
+## Entry 084 — branch audit: what can be scrapped, what needs merging
+
+**Date:** 2026-08-19
+
+**Prompt (full text):**
+
+> There are a lot of open branches right now. Use subagents to audit them all. Which are committed and can be scrapped? Which represent in-flight projects that need to be finished? Which are done and need to be merged? etc etc
+
+**Response notes:**
+- 27 local / 29 remote branches, but the clutter was mostly an illusion: 19 remote-tracking refs
+  were stale pointers to GitHub branches deleted after their PRs merged. `git fetch --prune`
+  cleared them. **23 of 27 local branches were strict ancestors of `origin/primary` with an empty
+  three-dot diff** - zero unique content.
+- Three parallel subagents: one per unmerged branch, one sweeping the merged cohort for stranded
+  work. The sweep agent caught **its own methodology error** and redid the check - because every
+  candidate is an ancestor of primary, `git merge-base origin/primary <branch>` returns the branch
+  tip itself, so the "files added then deleted" diff was vacuous and reported a false all-clear.
+  Correct method: find the earliest merge carrying the branch (`git rev-list --ancestry-path`),
+  use `merge-base $M^1 <branch>` as the fork point.
+- That surfaced 7 branches with added files absent from primary - **all** relocations from the
+  `repo-reorg` merge (`config/` -> `sports/football/config/`), plus `handcuff_2026.*` ->
+  `handcuff_rb_2026.*`. Every basename verified present. No revert commits on primary at all.
+- `air-yards-receiving` is labelled "REJECTED, kept dormant" but **did** merge (PR #5): the model
+  change was backed out, the dormant capability kept. `add_air_yards()` is live at
+  `features/build.py:91`. Nothing stranded anywhere.
+- PR numbering confirmed the shape: #1-#29 all merged **except #23** (qb-late-breakout).
+  `injury-data-scope` branched after #27 and never had a PR opened.
+- **Nothing is genuinely in-flight.** Every branch is either merged or a completed project
+  awaiting a merge. Also found local `primary` 8 commits behind `origin/primary`.
+- The finding that mattered: commit `6da0566` deliberately landed the qb_breakout **docs without
+  the code**, leaving primary publishing findings whose implementation wasn't there and telling
+  readers to check out a branch to run anything.
+
+---
+
+## Entry 085 — branch cleanup, and preparing the two outstanding merges
+
+**Date:** 2026-08-19
+
+**Prompt (full text):**
+
+> Added gh, do the full cleanup and prep the merges
+
+**Response notes:**
+- Snapshotted all refs before touching anything. Fast-forwarded `primary` to `c8911d8`, then
+  deleted the 23 merged local branches with `git branch -d` (not `-D`) so git itself would refuse
+  anything unmerged - all 23 went cleanly. Deleted `shelf/qb-late-breakout` with `-D` after
+  verifying its SHA was identical to `origin/qb-late-breakout`, and deleted the 7 merged remote
+  branches. **27 local -> 3, 29 remote -> 3.**
+- Merged `origin/primary` into `qb-late-breakout`. The 6 conflicts were exactly the ones Entry 066
+  predicted, and its pre-recorded resolution held: take primary's side everywhere except
+  `pyproject.toml`, where both `src/qb_breakout` and `src/medstaff` must stay in the wheel
+  packages. Zero conflicts in any source, script, or test file.
+- **539 tests pass** on the merged tree (103 qb_breakout + primary's suite), ruff clean.
+- Un-shelved the location claims that the merge makes false: the `QB_BREAKOUT_PLAN.md` banner and
+  the README section both said the code was on a branch and not on primary. Rewrote both to say
+  shelved means *parked, not unfinished*, and restored the `scripts/qb_breakout_*.py` run block
+  that primary had dropped only because the scripts weren't there.
+- `gh` is installed but unauthenticated, so branches were pushed over SSH and the PRs left for
+  `gh auth login`.
+
+---
+
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

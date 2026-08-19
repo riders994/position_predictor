@@ -1,0 +1,12 @@
+{
+  "source": "ESPN core API /v2/sports/football/leagues/college-football/recruiting/{year}/athletes",
+  "seasons": [
+    2006,
+    2026
+  ],
+  "rows": 22175,
+  "cols": 29,
+  "pulled_at": "2026-07-26T04:51:08.557147+00:00",
+  "sha256": "b9ddcf0b844df40328859f45cf2ea98583c447f6c1384e3c24e8133a75faa137",
+  "note": "QB-PP / QB-DT / ATH prospects only; camp measurables range-validated (see data/recruiting.py)"
+}

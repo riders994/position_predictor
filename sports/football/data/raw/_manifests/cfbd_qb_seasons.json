@@ -1,0 +1,11 @@
+{
+  "source": "collegefootballdata.com /stats/player/season + /ppa/players/season",
+  "seasons": [
+    2013,
+    2025
+  ],
+  "rows": 3511,
+  "cols": 27,
+  "pulled_at": "2026-07-26T13:49:56.795305+00:00",
+  "note": "QB seasons with >=50 attempts. Requires a free API key (env CFBD_API_KEY or ~/.config/cfbd/api_key); the key is never stored in the repo. PPA begins 2013."
+}
