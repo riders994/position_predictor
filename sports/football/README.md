@@ -19,9 +19,10 @@ ADP from FantasyFootballCalculator) is a **benchmark only — never blended** in
 ```
 src/position_predictor/   code: fetch · build · features · eligibility · eda · models · eval
 src/medstaff/             sibling project: team availability / injury grades (shares the caches)
+src/qb_breakout/          sibling project: late-breakout QBs from pre-NFL evidence (see below)
 scripts/                  stage entrypoints + serving tools (keeper/redraft/postseason)
 config/                   per-position experiment configs (football_{rb,wr,qb}.yaml)
-docs/                     PROJECT_PLAN · MEDSTAFF_PLAN · data_dictionary · PROMPT_LOG
+docs/                     PROJECT_PLAN · MEDSTAFF_PLAN · QB_BREAKOUT_PLAN · data_dictionary · PROMPT_LOG
 notebooks/rb/             EDA, eligibility-cutoff, feature analysis
 reports/                  committed REPORT_*.md + versions/<stem>/<v>/ (figures/results git-ignored)
 data/                     git-ignored cache (committed: raw/_manifests/ + external/ reference)
@@ -69,16 +70,27 @@ uv run python sports/football/scripts/medstaff_ingest.py     # stage 1: data + d
 ### Late-breakout QB (`qb_breakout`) — ⏸️ shelved
 
 A sibling research project: which QBs break out *after* the league writes them off, and was it
-visible before they took an NFL snap? All seven stages are complete. **The code lives on the
-`qb-late-breakout` branch and is not on `primary`** — the plan
+visible before they took an NFL snap? All seven stages are complete and the findings are final.
+Shelved means **parked, not unfinished** — resuming is a deliberate choice, not a default. The plan
 ([`docs/QB_BREAKOUT_PLAN.md`](docs/QB_BREAKOUT_PLAN.md)), the decision trail (PROMPT_LOG entries
-055–061) and the stage reports (`reports/REPORT_qb_breakout_*.md`) are here so the findings are
-not stranded.
+055–061), the stage reports (`reports/REPORT_qb_breakout_*.md`) and the code are all on `primary`.
 
 **Headline, and it is a negative one:** college production does predict breakout (CV AUC 0.696
 vs a permutation null of 0.493), but adds nothing *within a draft band* — among first-round
 picks the model is at chance (0.496, n=46). If late breakouts are visible pre-NFL, they are not
 visible in college production.
+
+Stage entrypoints (each writes its report under `reports/`):
+
+```bash
+uv run python sports/football/scripts/qb_breakout_cohort.py       # cohort + labels
+uv run python sports/football/scripts/qb_breakout_college.py      # college layer + join
+uv run python sports/football/scripts/qb_breakout_cfbd.py         # CFBD extension (needs a key)
+uv run python sports/football/scripts/qb_breakout_archetypes.py   # style archetypes
+uv run python sports/football/scripts/qb_breakout_model.py        # pre-NFL-only model
+uv run python sports/football/scripts/qb_breakout_situation.py    # drafting team / regime
+uv run python sports/football/scripts/qb_breakout_recruiting.py   # HS layer (optional)
+```
 
 ## Headline
 
