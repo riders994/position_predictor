@@ -11,10 +11,18 @@ baselines); whichever best discriminates durable from fragile (clears-cutoff AUC
 
 Scope: **RB only** — the canonical handcuff, where a workhorse back's injury concentrates touches
 onto one clear backup. Model-only: ECR/ADP stay benchmarks, never inputs (PROJECT_PLAN no-blend).
+
+**Scoring matters here, and not only in magnitude.** The board is built from projections, so the
+configured format (``target.scoring``) decides both the contingent-upside numbers *and* which
+player is the handcuff — the handcuff is whichever backup projects highest, and halving reception
+value reorders pass-catching backs against early-down ones. Roster shape is irrelevant by
+construction: this compares a starter to his own backup, so replacement level never enters.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass
+
+from ..scoring import scoring_of
 
 GAMES_TARGET = "games_next"
 
@@ -175,6 +183,7 @@ class HandcuffResult:
     winner: str
     season: int
     cutoff: int
+    scoring: str = "ppr"
 
 
 def _board_with_risk(config, *, draft_season, signal, seed):
@@ -191,10 +200,9 @@ def _board_with_risk(config, *, draft_season, signal, seed):
     from .experiment import _all_feature_columns
     from .projection import project_position
     from ..utils.io import DATA_PROCESSED, read_parquet
+    from ..utils.naming import artifact_stem
 
-    sport = config.get("experiment.sport", "football")
-    position = config.require("experiment.position")
-    stem = f"{sport}_{position}".lower()
+    stem = artifact_stem(config)
     seed = int(seed if seed is not None else config.get("reproducibility.random_seed", 1729))
     horizon = int(config.get("target.predict_horizon", 1))
     cutoff = int(config.get("eligibility.chosen_games_played", 4))
@@ -225,7 +233,8 @@ def run_handcuff(config, *, draft_season=None, signal=None, seed=None, max_start
         config, draft_season=draft_season, signal=signal, seed=seed)
     board = build_handcuff_board(proj, features_board, risk, max_starter_rank=max_starter_rank)
     return HandcuffResult(board=board, backtest=backtest, signal=chosen, winner=winner,
-                          season=board_season + horizon, cutoff=cutoff)
+                          season=board_season + horizon, cutoff=cutoff,
+                          scoring=scoring_of(config))
 
 
 @dataclass
@@ -237,6 +246,7 @@ class InjuryRiskResult:
     season: int
     cutoff: int
     n_starters: int
+    scoring: str = "ppr"
 
 
 def build_injury_risk_list(proj, risk, *, top_starters=32):
@@ -278,15 +288,16 @@ def run_injury_risk(config, *, draft_season=None, signal=None, seed=None, top_st
         config, draft_season=draft_season, signal=signal, seed=seed)
     risk_list = build_injury_risk_list(proj, risk, top_starters=top_starters)
     return InjuryRiskResult(risk_list=risk_list, backtest=backtest, signal=chosen, winner=winner,
-                            season=board_season + horizon, cutoff=cutoff, n_starters=len(risk_list))
+                            season=board_season + horizon, cutoff=cutoff,
+                            n_starters=len(risk_list), scoring=scoring_of(config))
 
 
 def render_markdown(result: HandcuffResult, *, top: int | None = None) -> str:
     """Render a handcuff board to markdown (the same content the CSV carries, ranked)."""
     lines = [f"# Handcuff Board — {result.season} (RB)", ""]
-    lines.append("_Model-only (ECR/ADP are benchmarks, never inputs). A handcuff's "
-                 "**contingent upside** = (starter − backup projected PPG) × the starter's "
-                 "projected miss share._")
+    lines.append(f"_Scoring: **{result.scoring.replace('_', ' ')}**. Model-only (ECR/ADP are "
+                 f"benchmarks, never inputs). A handcuff's **contingent upside** = "
+                 f"(starter − backup projected PPG) × the starter's projected miss share._")
     lines.append("")
 
     lines.append("## Risk signal (leak-safe backtest)")
@@ -327,8 +338,9 @@ def render_markdown(result: HandcuffResult, *, top: int | None = None) -> str:
 def render_injury_markdown(result: InjuryRiskResult, *, position: str = "QB") -> str:
     """Render a position injury-risk list to markdown (the same content the CSV carries)."""
     lines = [f"# {position} Injury-Risk List — {result.season}", ""]
-    lines.append(f"_Projected {position} starters ranked by injury/availability risk — "
-                 f"**draft a backup** for the High tier. Model-only (ECR/ADP are benchmarks)._")
+    lines.append(f"_Scoring: **{result.scoring.replace('_', ' ')}**. Projected {position} starters "
+                 f"ranked by injury/availability risk — **draft a backup** for the High tier. "
+                 f"Model-only (ECR/ADP are benchmarks)._")
     lines.append("")
     lines.append("> **Read the tiers, not the raw number.** The QB games model regresses toward a "
                  "backup-heavy pool mean, so it ranks risk well (clears-cutoff AUC ~0.90) but "

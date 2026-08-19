@@ -10,8 +10,21 @@ Two modes, by position:
 Injury risk uses whichever signal wins a leak-safe backtest (the §7.4 availability model vs
 durability baselines). Model-only (no ECR/ADP).
 
+Scoring is adjustable: `--scoring half_ppr` (or `--league` to take it from a league config)
+rebuilds the board against that format's target. It changes more than the magnitudes — the
+"handcuff" is whoever projects as that team's RB2, so halving receptions can hand the role to a
+different player. On the 2026 board it does exactly that for 2 of 27 starters (James Cook's
+handcuff moves from pass-catching Ty Johnson to Ray Davis; Derrick Henry's from Justice Hill to
+Keaton Mitchell), on top of rank shifts for 19 of 25 handcuffs and a lower mean contingent upside
+(1.29 -> 1.14 PPG) since receptions are worth less.
+
+Roster shape is deliberately ignored here: this is a within-team starter-vs-backup comparison, so
+replacement level never enters. That is why the tool takes a scoring format rather than a league.
+
 Usage:
     uv run python scripts/handcuff.py                                   # RB handcuff board
+    uv run python scripts/handcuff.py --scoring half_ppr                # half-PPR board
+    uv run python scripts/handcuff.py --league config/leagues/my_2qb.yaml
     uv run python scripts/handcuff.py --config config/football_qb.yaml  # QB injury-risk list
     uv run python scripts/handcuff.py --season 2025                     # past draft year (leak-safe)
 """
@@ -30,6 +43,9 @@ from position_predictor.eval.handcuff import (  # noqa: E402
     run_handcuff,
     run_injury_risk,
 )
+from position_predictor.eval.league import load_league  # noqa: E402
+from position_predictor.eval.projection import ensure_features  # noqa: E402
+from position_predictor.scoring import DEFAULT_SCORING, RECEPTION_POINTS  # noqa: E402
 from position_predictor.utils.config import Config  # noqa: E402
 from position_predictor.utils.io import REPORTS_DIR, ensure_dir  # noqa: E402
 
@@ -46,12 +62,30 @@ def main() -> int:
     p.add_argument("--top", type=int, default=25, help="How many RB handcuffs to print (RB mode).")
     p.add_argument("--top-starters", type=int, default=32,
                    help="Projected starters to rank (QB/list mode).")
+    p.add_argument("--scoring", choices=sorted(RECEPTION_POINTS), default=None,
+                   help="Scoring format to board in (default: the config's, i.e. PPR).")
+    p.add_argument("--league", default=None,
+                   help="League YAML to take the scoring from (roster shape is not used here).")
     p.add_argument("--out", default=None,
-                   help="CSV path (default reports/handcuff_<pos>_<season>.csv; .md alongside).")
+                   help="CSV path (default reports/handcuff_<pos>_<season>[_<scoring>].csv; "
+                        ".md alongside).")
     args = p.parse_args()
 
+    if args.scoring and args.league:
+        p.error("--scoring and --league both set the scoring format; pass only one")
+    scoring = args.scoring
+    if args.league:
+        try:
+            scoring = load_league(args.league).scoring
+        except (ValueError, FileNotFoundError) as exc:
+            p.error(str(exc))
+
     config = Config.load(args.config)
+    if scoring:
+        config = config.with_overrides({"target.scoring": scoring})
     position = config.require("experiment.position").upper()
+    # A non-PPR format has its own dataset/features (artifact_stem namespaces them).
+    ensure_features(config)
 
     if position == "RB":
         print("[handcuff] projecting RBs + backtesting risk signals …")
@@ -83,8 +117,10 @@ def main() -> int:
         out_table, render = res.risk_list, render_injury_markdown(res, position=position)
 
     ensure_dir(REPORTS_DIR)
+    # PPR keeps the historical filename; other formats get their own so boards don't clobber.
+    suffix = "" if res.scoring == DEFAULT_SCORING else f"_{res.scoring}"
     csv_path = (Path(args.out) if args.out
-                else REPORTS_DIR / f"handcuff_{position.lower()}_{res.season}.csv")
+                else REPORTS_DIR / f"handcuff_{position.lower()}_{res.season}{suffix}.csv")
     md_path = csv_path.with_suffix(".md")
     out_table.to_csv(csv_path, index=False)
     md_path.write_text(render)

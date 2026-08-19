@@ -33,10 +33,10 @@ def project_position(config, *, model=None, combine=None, feature_season=None,
     from ..eras import load_eras
     from ..models.era_ensemble import EraEnsemble
     from ..utils.io import DATA_PROCESSED, REPORTS_DIR, ensure_dir, read_parquet
+    from ..utils.naming import artifact_stem
 
-    sport = config.get("experiment.sport", "sport")
     position = config.require("experiment.position")
-    stem = f"{sport}_{position}".lower()
+    stem = artifact_stem(config)
     seed = int(config.get("reproducibility.random_seed", 1729))
     horizon = int(config.get("target.predict_horizon", 1))
     model = model or config.get("projection.model", "ridge")
@@ -83,11 +83,40 @@ def project_position(config, *, model=None, combine=None, feature_season=None,
     return out
 
 
-def project_positions(configs):
-    """Project several positions and stack them into one board. ``configs`` is an iterable of
-    loaded ``Config`` objects (one per position)."""
+def ensure_features(config, *, verbose: bool = True) -> None:
+    """Build the dataset/feature artifacts for ``config`` if they aren't cached yet.
+
+    A non-PPR scoring format has its own artifacts (see :func:`utils.naming.artifact_stem`), and
+    the first tool to ask for one has to materialise it. Cheap no-op once they exist.
+    """
+    from ..data.build import build_dataset
+    from ..features.build import build_features
+    from ..utils.io import DATA_PROCESSED
+    from ..utils.naming import artifact_stem
+
+    stem = artifact_stem(config)
+    if (DATA_PROCESSED / f"{stem}_features.parquet").exists():
+        return
+    if verbose:
+        print(f"[projection] building missing artifacts for {stem} (first run for this scoring) …")
+    build_dataset(config, write=True)
+    build_features(config, write=True)
+
+
+def project_positions(configs, *, scoring=None, build_missing: bool = True):
+    """Project several positions and stack them into one board.
+
+    ``configs`` is an iterable of loaded ``Config`` objects (one per position). ``scoring``
+    re-points them at a league's format — a real retrain against that format's target, not a
+    rescale of the PPR numbers — building the format's artifacts on first use.
+    """
     import pandas as pd
 
+    configs = ([c.with_overrides({"target.scoring": scoring}) for c in configs] if scoring
+               else list(configs))
+    if build_missing:
+        for c in configs:
+            ensure_features(c)
     frames = [project_position(c) for c in configs]
     frames = [f for f in frames if not f.empty]
     return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()

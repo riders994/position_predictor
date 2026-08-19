@@ -1,0 +1,23 @@
+# League config — the 10-team 2QB half-PPR redraft league.
+# Two settings here move the board hard versus the PPR 1QB default:
+#   * 2 dedicated QB slots in a 10-team league makes ~20 QBs starters (vs ~12), so replacement-
+#     level QB is roughly QB20 and the elite QBs gain a large VORP edge.
+#   * half PPR pulls receptions back to 0.5, which costs pass-catching backs and volume slot WRs
+#     relative to touchdown-dependent players.
+
+name: my_2qb
+label: "10-team 2QB half-PPR"
+
+scoring: half_ppr                # 0.5 pt / reception
+teams: 10
+
+starters:                        # per team, per week
+  QB: 2                          # true 2QB, not superflex — a QB must fill both slots
+  RB: 2
+  WR: 2
+  TE: 1
+  FLEX: 1
+flex_positions: [RB, WR, TE]     # TE is flex-eligible (true of every league here)
+
+roster_size: 16                  # drafted players per team; sets the cross-position board depth
+bestball: false

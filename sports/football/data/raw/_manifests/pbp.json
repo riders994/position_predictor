@@ -32,7 +32,7 @@
     2025
   ],
   "min_season": 1999,
-  "pulled_at": "2026-06-24T19:09:06.456570+00:00",
+  "pulled_at": "2026-08-09T03:50:24.077436+00:00",
   "n_rows": 1279628,
   "n_cols": 372,
   "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/pbp.parquet",

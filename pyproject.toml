@@ -59,6 +59,7 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = [
     "sports/football/src/position_predictor",
+    "sports/football/src/medstaff",
     "sports/football/src/qb_breakout",
     "sports/basketball/src/nba_archetypes",
 ]

@@ -18,10 +18,10 @@ ADP from FantasyFootballCalculator) is a **benchmark only — never blended** in
 
 ```
 src/position_predictor/   code: fetch · build · features · eligibility · eda · models · eval
-src/qb_breakout/          second project: late-breakout QBs from pre-NFL evidence (see below)
+src/medstaff/             sibling project: team availability / injury grades (shares the caches)
 scripts/                  stage entrypoints + serving tools (keeper/redraft/postseason)
 config/                   per-position experiment configs (football_{rb,wr,qb}.yaml)
-docs/                     PROJECT_PLAN · QB_BREAKOUT_PLAN · data_dictionary · PROMPT_LOG
+docs/                     PROJECT_PLAN · MEDSTAFF_PLAN · data_dictionary · PROMPT_LOG
 notebooks/rb/             EDA, eligibility-cutoff, feature analysis
 reports/                  committed REPORT_*.md + versions/<stem>/<v>/ (figures/results git-ignored)
 data/                     git-ignored cache (committed: raw/_manifests/ + external/ reference)
@@ -52,8 +52,33 @@ uv run python sports/football/scripts/keeper.py \
 
 (Or `cd sports/football` and drop the `-C`/path prefixes.)
 
+### Medical-staff injury grades (`medstaff`)
+
+A sibling research project — grades each club's **availability system** over 3- and 5-year
+windows, with reinjury risk as the core component. Reuses these caches; no Makefile targets, run
+the stages directly. See [`docs/MEDSTAFF_PLAN.md`](docs/MEDSTAFF_PLAN.md).
+
+```bash
+make -C sports/football fetch DATASETS="injuries rosters_weekly schedules"
+uv run python sports/football/scripts/medstaff_ingest.py     # stage 1: data + diagnostics
+```
+
 **Full command reference** — every stage and tool, with flags and outputs:
 [`docs/USAGE.md`](docs/USAGE.md).
+
+### Late-breakout QB (`qb_breakout`) — ⏸️ shelved
+
+A sibling research project: which QBs break out *after* the league writes them off, and was it
+visible before they took an NFL snap? All seven stages are complete. **The code lives on the
+`qb-late-breakout` branch and is not on `primary`** — the plan
+([`docs/QB_BREAKOUT_PLAN.md`](docs/QB_BREAKOUT_PLAN.md)), the decision trail (PROMPT_LOG entries
+055–061) and the stage reports (`reports/REPORT_qb_breakout_*.md`) are here so the findings are
+not stranded.
+
+**Headline, and it is a negative one:** college production does predict breakout (CV AUC 0.696
+vs a permutation null of 0.493), but adds nothing *within a draft band* — among first-round
+picks the model is at chance (0.496, n=46). If late breakouts are visible pre-NFL, they are not
+visible in college production.
 
 ## Headline
 
@@ -64,95 +89,3 @@ Per-position write-ups: [`reports/REPORT_football_rb.md`](reports/REPORT_footbal
 [`reports/REPORT_football_wr.md`](reports/REPORT_football_wr.md),
 [`reports/REPORT_football_qb.md`](reports/REPORT_football_qb.md); cross-version progress under
 [`reports/versions/`](reports/versions/).
-
-## Second project — late-breakout QBs
-
-A separate question in the same tree: **which QBs break out after the league has written them
-off, and was it visible before they ever took an NFL snap?** Models here are restricted to
-**pre-NFL evidence** by design — NFL data builds the label only. In practice that means **college
-production**: the high-school recruiting layer was built and measured, but its 2006-class floor
-cuts off the entire 2001-2005 cluster of late breakouts, so it is retained only as an optional
-covariate.
-
-```bash
-make -C sports/football fetch                                     # once, shared caches
-uv run python sports/football/scripts/qb_breakout_cohort.py       # cohort + labels
-uv run python sports/football/scripts/qb_breakout_college.py      # college layer + join
-uv run python sports/football/scripts/qb_breakout_cfbd.py         # CFBD extension (needs a key)
-uv run python sports/football/scripts/qb_breakout_archetypes.py   # style archetypes
-uv run python sports/football/scripts/qb_breakout_model.py        # pre-NFL-only model
-uv run python sports/football/scripts/qb_breakout_situation.py    # drafting team / regime
-uv run python sports/football/scripts/qb_breakout_recruiting.py   # HS layer (optional)
-```
-
-A breakout needs **two bars**: a **top-15** PPR PPG season triggers it (genuine draft-day value),
-**held at top-20** in >=2 of the 3 seasons from it (still startable in superflex). One number
-fails both ways — at top-20 Baker Mayfield's rookie year (rank exactly 20) counts; at top-15 his
-real 17/4/19 run does not. *Late* means NFL year 4+. Of 331 QBs entering since 1999, 59 ever
-broke out and **16 did it late**. The result that motivates the constraint: through three NFL
-seasons, future late breakouts look far more like busts than like on-time breakouts — early NFL
-production does not separate them.
-
-College evidence comes from cfbfastR play-by-play (2004-2021) rather than a season-stats table,
-so EPA per dropback exists and **sacks separate from rushing** — NCAA box scores charge sack
-yardage to rushing, which understates mobile QBs badly. 3,419 QB-seasons, 88% matched to the
-cohort for 2005+ entrants, unbiased across outcomes. **9 late breakouts carry a college profile**
-(vs 6 for high school), and 38 matched QBs have a sustained breakout — the modelling sample.
-(Note `ever_breakout` is the loose single-bar diagnostic, not the label; the two-bar version is
-`sustained_season`.)
-
-cfbfastR stops publishing after 2021, which is fine for fitting but means the layer cannot score
-*this year's* prospects. [CFBD](https://collegefootballdata.com) closes that gap (2013-present,
-free API key in `CFBD_API_KEY` or `~/.config/cfbd/api_key` — never in the repo), and the two
-sources were compared on their overlap rather than assumed interchangeable. Volume splices
-cleanly (r ≈ 0.99); **efficiency does not** — CFBD's PPA against cfbfastR's EPA per dropback
-correlates only 0.735, and a calibrated version would carry two-thirds of the between-player
-spread as error. So the features split into a **portable tier** (completion %, YPA, TD rate, rush
-share, volume) that can score current prospects, and a **cfbfastR-only tier** (EPA, success rate)
-that is a historical instrument. Stage 6 fits both — and finds portability costs nothing.
-
-Archetypes are clustered on **style, not quality** — clustering on efficiency returns a
-leaderboard with four bins, so the feature set is four rate stats describing mobility and depth of
-target, and the quality columns are held out to check the result. The check is the share of
-within-season EPA variance falling between clusters: 0.56 clustering on quality stats, 0.14 for
-the set kept. At k=4 the centroids land one per quadrant of mobility × depth — a 2×2 nobody asked
-for — giving the Quick-Game Pocket Passer, Downfield Pocket Passer, Short-Game Runner and
-Downfield Dual-Threat. Names come from centroid position rather than the k-means label integer, so
-99% of seasons keep their name under a different random seed.
-
-The one result that survives a permutation test: quick-game pocket passers produce a sustained
-breakout at **0.05 (3/60)** against **0.28 (9/32)** for downfield dual-threats (p = 0.034). Among
-QBs who *did* break out, archetype does not predict whether it happened late (p = 0.064, 9
-positives) — a statement about power as much as about football.
-
-**The model, and what it concludes.** 177 QBs with a settled outcome, 35 breakouts. College
-production predicts a breakout at cross-validated **AUC 0.696** against a label-permutation null
-of 0.493 — real signal, not noise — and the **portable tier matches the full one (0.689)**, so
-efficiency features add nothing and the project ends with a tool that can score *this year's*
-prospects. What the model actually reads is workload and role, not efficiency.
-
-Draft position, kept out of the model and used only as an independent benchmark, scores **0.890**
-— but that comparison is a trap: the draft *allocates* the snaps a fantasy breakout requires
-(first-rounders average 85 career games against 18 for day-three picks), so it partly causes the
-outcome it predicts. The fair test is within a draft band, and there the college evidence is at
-**chance among first-round picks (0.496)**. The honest conclusion is negative: if late breakouts
-are visible before the NFL, they are not visible in college *production*. Context — competition,
-supporting cast, scheme — is what remains untested.
-
-**Drafting situation** was measured too, and the answer is bounded by arithmetic before football.
-140 drafted QBs across 32 franchises is a median of 4 QBs and 1 breakout each, so no raw team rate
-is computed — the analysis is observed-minus-expected given draft capital, against a simulated
-null. Nothing is detectable: franchises **p = 0.128**, head coaches **p = 0.089**, with two
-coaches clearing p < 0.05 individually against 0.8 expected by chance. The power calculation is
-the real output — a typical franchise would have needed **~2 extra breakouts above expectation
-across its whole draft history** to register, so the honest statement is "nothing this size or
-smaller was findable". General managers aren't analysed because no free GM-by-team-season data
-exists; `--gm-table` accepts one.
-
-Write-ups: [`reports/REPORT_qb_breakout_cohort.md`](reports/REPORT_qb_breakout_cohort.md),
-[`reports/REPORT_qb_breakout_college.md`](reports/REPORT_qb_breakout_college.md),
-[`reports/REPORT_qb_breakout_cfbd.md`](reports/REPORT_qb_breakout_cfbd.md),
-[`reports/REPORT_qb_breakout_archetypes.md`](reports/REPORT_qb_breakout_archetypes.md),
-[`reports/REPORT_qb_breakout_model.md`](reports/REPORT_qb_breakout_model.md),
-[`reports/REPORT_qb_breakout_situation.md`](reports/REPORT_qb_breakout_situation.md);
-design: [`docs/QB_BREAKOUT_PLAN.md`](docs/QB_BREAKOUT_PLAN.md).
