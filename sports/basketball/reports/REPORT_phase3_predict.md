@@ -12,39 +12,39 @@ the same 2538 pooled pairs (2017-2026).
 
 | predictor | top-1 acc | macro-F1 | log-loss | Brier |
 | --- | --- | --- | --- | --- |
-| persistence | 0.638 | 0.569 | 2.277 | 0.366 |
-| marginal | 0.210 | 0.029 | 21.817 | 1.343 |
-| Model A (YOE) | 0.605 | 0.525 | 1.322 | 0.386 |
-| Model B (true age) | 0.608 | 0.526 | 1.316 | 0.382 |
+| persistence | 0.576 | 0.569 | 1.957 | 0.339 |
+| marginal | 0.138 | 0.019 | 23.810 | 1.404 |
+| Model A (YOE) | 0.547 | 0.533 | 1.505 | 0.371 |
+| Model B (true age) | 0.548 | 0.537 | 1.496 | 0.368 |
 
-> The models **do not beat persistence on hard top-1 accuracy** (0.608 vs
-> 0.638) — archetype membership is highly persistent, so "same as last season" is a very
-> strong argmax baseline. But they **more than halve log-loss** (1.316 vs
-> 2.277): the models produce far better-calibrated soft membership vectors, which is
+> The models **do not beat persistence on hard top-1 accuracy** (0.548 vs
+> 0.576) — archetype membership is highly persistent, so "same as last season" is a very
+> strong argmax baseline. But they **more than halve log-loss** (1.496 vs
+> 1.957): the models produce far better-calibrated soft membership vectors, which is
 > exactly what Phase 2 consumes at draft time (projected category coverage needs a probability
 > distribution, not a single hard label). **Marginal** (always the most common archetype) is the floor.
 
-**Does true age beat the experience proxy?** Barely — Model B (age) lands at acc 0.608 / log-loss 1.316 vs Model A (YOE) 0.605 / 1.322. Neither age nor experience cracks the top features. The plan's expectation that **age carries most of the lift is not supported**: archetype transitions are governed by *where a player is now* (current membership + style), not by age or one-year trajectory.
+**Does true age beat the experience proxy?** Barely — Model B (age) lands at acc 0.548 / log-loss 1.496 vs Model A (YOE) 0.547 / 1.505. Neither age nor experience cracks the top features. The plan's expectation that **age carries most of the lift is not supported**: archetype transitions are governed by *where a player is now* (current membership + style), not by age or one-year trajectory.
 
 ## What drives the prediction (permutation importance, Model B (true age))
 
 | feature | importance |
 | --- | --- |
-| p1 | +0.0527 |
-| p0 | +0.0505 |
-| p6 | +0.0424 |
-| p8 | +0.0377 |
-| ast36_z | +0.0361 |
-| p3 | +0.0357 |
-| p10 | +0.0304 |
-| stl36_z | +0.0302 |
-| dreb36_z | +0.0292 |
-| p2 | +0.0277 |
-| fg3a_rate_z | +0.0266 |
-| fg3a36_z | +0.0254 |
-| p9 | +0.0245 |
-| oreb36_z | +0.0237 |
-| fga36_z | +0.0221 |
+| p7 | +0.0635 |
+| p9 | +0.0614 |
+| p1 | +0.0577 |
+| p12 | +0.0534 |
+| ast36_z | +0.0468 |
+| p6 | +0.0387 |
+| p2 | +0.0365 |
+| p8 | +0.0353 |
+| p0 | +0.0342 |
+| dreb36_z | +0.0342 |
+| p11 | +0.0332 |
+| p3 | +0.0324 |
+| p5 | +0.0282 |
+| stl36_z | +0.0276 |
+| oreb36_z | +0.0271 |
 
 The current **membership vector and style** dominate; the experience/age and trajectory-delta terms add
 little on their own — "archetypes are sticky, and where you are now says most about where you'll be."

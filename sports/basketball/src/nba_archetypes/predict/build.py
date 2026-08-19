@@ -106,6 +106,6 @@ def feature_columns(table, *, kind="yoe"):
 
 
 def target_prob_columns(table):
-    """The soft next-season membership target columns ``t0..t11``."""
+    """The soft next-season membership target columns ``t0..tN`` (N follows Phase-1 ``k``)."""
     return sorted((c for c in table.columns if c.startswith("t") and c[1:].isdigit()),
                   key=lambda c: int(c[1:]))

@@ -1,12 +1,12 @@
 """Phase 2 — model: **archetype composition -> 9-cat success** (which mixes win).
 
-PROJECT_PLAN §4 deliverable #2. The unit is a fantasy **team-season**; features are the 12 archetype
+PROJECT_PLAN §4 deliverable #2. The unit is a fantasy **team-season**; features are the archetype
 soft shares (``comp_*``, weeks-weighted, sum≈1); the target is **category-win rate** over the regular
 season (the user's chosen success label). The corpus is the ~88 Yahoo redraft team-seasons.
 
 Three things drive the design, all from the data:
 
-1. **Small, collinear, compositional.** n≈88 with 12 shares that sum to 1 (one is redundant), so we
+1. **Small, collinear, compositional.** n≈88 with k shares that sum to 1 (one is redundant), so we
    **regularize** (Ridge) and read coefficients as *relative tilts* away from the average roster mix —
    not independent partial effects. Standardized coefficients give the "shift weight toward archetype
    X" direction; a CLR transform is a noted future refinement (some shares are exact 0, breaking logs).
