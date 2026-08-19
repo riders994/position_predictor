@@ -159,6 +159,15 @@ simulated fields seeded by real settings).
   augmentation.
 - **Eligibility floor** (minutes/games) — set in EDA (15 mpg / 20 gp).
 - **Rookie model** — deferred (separate college/HS + draft-coverage project).
+- **Injury / availability analysis** — **investigated and not viable today**; see
+  [`INJURY_DATA_FEASIBILITY.md`](INJURY_DATA_FEASIBILITY.md). Porting the football `medstaff`
+  availability board needs body-part injury *history*, and no accessible source has it: ESPN
+  carries excellent body-part detail but is a **live snapshot with no history** (per-athlete
+  endpoint 404s), `nba_api` has **zero** injury endpoints, the NBA official report and Pro Sports
+  Transactions both **403**, and the community PST datasets **stop around 2020** — just before the
+  window such an analysis would use. **The one action with a deadline:** if this is ever wanted,
+  archiving ESPN's snapshot daily starts the clock, and ~3 seasons are needed before a 3-year
+  window exists.
 
 ---
 
