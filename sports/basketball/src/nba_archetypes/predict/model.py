@@ -11,16 +11,21 @@ from __future__ import annotations
 
 import numpy as np
 
-from .build import feature_columns, target_prob_columns
+from .build import _prob_cols, feature_columns, target_prob_columns
 
-N_ARCH = 12
-LABELS = list(range(N_ARCH))
+def _n_arch(table):
+    """Number of archetypes, read off the membership columns rather than assumed.
+
+    Phase 1's ``k`` is a config knob (it moved 12 -> 13 in the fg3-gating refit), so anything that
+    hardcodes it silently breaks the next time it changes.
+    """
+    return len(table.attrs.get("pcols") or _prob_cols(table))
 
 
-def _aligned_proba(est, X):
-    """predict_proba re-indexed to the full 0..11 label space (0 for classes absent from training)."""
+def _aligned_proba(est, X, n_arch):
+    """predict_proba re-indexed to the full 0..n_arch-1 label space (0 for classes absent from training)."""
     proba = est.predict_proba(X)
-    full = np.zeros((len(X), N_ARCH))
+    full = np.zeros((len(X), n_arch))
     full[:, est.classes_] = proba
     return full
 
@@ -29,14 +34,15 @@ def _metrics(y_true, proba, soft_target=None):
     """Top-1 accuracy, macro-F1, log-loss, and (soft) multiclass Brier vs the N+1 membership vector."""
     from sklearn.metrics import accuracy_score, f1_score, log_loss
 
+    labels = list(range(proba.shape[1]))
     pred = proba.argmax(axis=1)
     eps = 1e-12
     p = np.clip(proba, eps, 1.0)
     p = p / p.sum(axis=1, keepdims=True)
     out = {"accuracy": round(float(accuracy_score(y_true, pred)), 4),
-           "macro_f1": round(float(f1_score(y_true, pred, average="macro", labels=LABELS,
+           "macro_f1": round(float(f1_score(y_true, pred, average="macro", labels=labels,
                                              zero_division=0)), 4),
-           "log_loss": round(float(log_loss(y_true, p, labels=LABELS)), 4)}
+           "log_loss": round(float(log_loss(y_true, p, labels=labels)), 4)}
     if soft_target is not None:
         out["brier"] = round(float(((p - soft_target) ** 2).sum(axis=1).mean()), 4)
     return out
@@ -58,6 +64,8 @@ def walk_forward(table, *, kind="yoe", min_train_seasons=2, seed=1729):
     """
     cols = feature_columns(table, kind=kind)
     tp = target_prob_columns(table)
+    n_arch = _n_arch(table)
+    pcols = table.attrs.get("pcols") or _prob_cols(table)
     df = table.copy()
     df["target_season"] = df["season"] + 1
     target_seasons = sorted(df["target_season"].unique())
@@ -71,9 +79,8 @@ def walk_forward(table, *, kind="yoe", min_train_seasons=2, seed=1729):
             continue
         est = _make_estimator(seed)
         est.fit(tr[cols].to_numpy(dtype=float), tr["target_arch"].to_numpy())
-        model_proba.append(_aligned_proba(est, te[cols].to_numpy(dtype=float)))
-        # persistence as a SOFT predictor = the player's current membership vector (p0..p11)
-        pcols = table.attrs.get("pcols") or [f"p{j}" for j in range(N_ARCH)]
+        model_proba.append(_aligned_proba(est, te[cols].to_numpy(dtype=float), n_arch))
+        # persistence as a SOFT predictor = the player's current membership vector (p0..pN)
         pers_proba.append(te[pcols].to_numpy(dtype=float))
         marg_pred.append(np.full(len(te), tr["target_arch"].mode().iloc[0]))
         y_all.append(te["target_arch"].to_numpy())
@@ -87,7 +94,7 @@ def walk_forward(table, *, kind="yoe", min_train_seasons=2, seed=1729):
 
     model_m = _metrics(y, model_proba, soft)
     pers_m = _metrics(y, pers_proba, soft)
-    marg_proba = np.zeros((len(y), N_ARCH))
+    marg_proba = np.zeros((len(y), n_arch))
     marg_proba[np.arange(len(y)), marg] = 1.0
     marg_m = _metrics(y, marg_proba, soft)
     return {"model": model_m, "persistence": pers_m, "marginal": marg_m,

@@ -601,6 +601,45 @@ so the number ordering is merge order, not authoring order)*
 
 ---
 
+## Entry 086 — regenerate the stale Phase-2/3 artifacts against the k=13 taxonomy
+
+**Date:** 2026-08-19
+
+**Prompt (full text):**
+
+> Regenerate stale reports, commit, and push
+
+**Response notes:**
+- The Phase-1 refit (`66203df`, k=12 -> 13 + fg3_pct attempt-gating) regenerated only
+  `REPORT_archetypes.md`. Six downstream reports still carried the **old taxonomy** — they named
+  `High-Usage Primary` and `Non-Shooting Center`, which are exactly the cluster the refit split and
+  the artifact it killed. Confirmed by ancestry, not mtimes: for each report, is its last-touching
+  commit a descendant of the refit?
+- Phase 1 re-ran **byte-identical** to the committed report first, so the taxonomy is deterministic
+  (seed 1729) and the downstream deltas are attributable to the refit alone.
+- **⚠️ The cascade was not just stale text — Phase 3 was broken.** `predict/model.py` hardcoded
+  `N_ARCH = 12`, so `predict` died with `IndexError: index 12 is out of bounds for axis 1 with
+  size 12`. Every other module already derived the count from the `pcols`/`t*` membership columns;
+  this one file did not. Fixed by reading it off the table (`_n_arch`) and threading it through
+  `_aligned_proba` / `_metrics` / the marginal baseline. `p12` now shows up in the Phase-3
+  permutation importances, i.e. the 13th cluster is actually being used.
+- **No test caught it** — the synthetic fixture already took `n_arch` as a parameter but every test
+  called it at the default 12. Added `test_walk_forward_is_k_agnostic`, parametrized over
+  [12, 13, 15]. Verified it fails (IndexError at 13 and 15) against the pre-fix `model.py` and
+  passes after, so it is a real regression guard rather than a passing decoration.
+- **Conclusions survived the refit; only the numbers moved.** Phase 3 accuracy drops across the
+  board (persistence 0.638 -> 0.576, Model B 0.608 -> 0.548) because 13 classes is a harder task
+  than 12, but the findings are unchanged: the models still do **not** beat persistence on top-1,
+  and true age still adds nothing over the experience proxy. In the three Phase-2 model reports the
+  **only** changed lines are table rows — no prose or conclusion moved.
+- `REPORT_phase2_optimizer.md` and `REPORT_archetype_value.md` regenerated **byte-identical**:
+  both are driven by category coverage/value rather than archetype labels, so the taxonomy change
+  does not reach them. Kept the re-run anyway as the check that establishes it.
+- Also removed the k=12 assumptions left in docstrings (`t0..t11`, "the 12 archetype features").
+- 58 basketball tests pass (+1 parametrized to 3 cases), ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

@@ -16,13 +16,13 @@ Leave-one-season-out Ridge, target `sim_cat_win_rate` (league mean 0.5 by constr
 
 | representation | out-of-fold R² | out-of-fold MAE | # features |
 | --- | --- | --- | --- |
-| archetype shares | +0.0092 | 0.0620 | 12 |
+| archetype shares | +0.0523 | 0.0608 | 13 |
 | prior coverage | +0.0436 | 0.0610 | 9 |
 | actual coverage | +0.3695 | 0.0495 | 9 |
 
 **Three conclusions:**
 
-1. **Archetype shares are the wrong success representation** (R²=+0.009 — null even in this
+1. **Archetype shares are the wrong success representation** (R²=+0.052 — null even in this
    clean sim). They describe play-style but *discard the category information* that decides 9-cat
    matchups; a contribution-matrix can't rescue a linear model since Ridge already spans any linear
    transform of shares.

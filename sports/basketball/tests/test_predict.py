@@ -4,6 +4,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -63,7 +64,7 @@ def test_feature_columns_kind_switch():
     t["age"] = 25.0
     age_cols = feature_columns(t, kind="age")
     assert "age" in age_cols and "yoe" not in age_cols
-    assert len(target_prob_columns(t)) == 12
+    assert len(target_prob_columns(t)) == 12          # matches _synthetic default
 
 
 def test_walk_forward_reports_baselines_on_same_rows():
@@ -78,3 +79,19 @@ def test_walk_forward_reports_baselines_on_same_rows():
     assert res["persistence"]["accuracy"] > res["marginal"]["accuracy"]
     # model's soft distribution should beat marginal on log-loss
     assert res["model"]["log_loss"] < res["marginal"]["log_loss"]
+
+
+@pytest.mark.parametrize("n_arch", [12, 13, 15])
+def test_walk_forward_is_k_agnostic(n_arch):
+    """Phase-1 ``k`` is a config knob and it has already moved once (12 -> 13 in the fg3-gating
+    refit), which broke Phase 3 with an IndexError because the label space was hardcoded to 12.
+    Anything sized to the archetype count must read it off the membership columns."""
+    mem, feat = _synthetic(n_arch=n_arch, seed=3)
+    t = build_predict_table(mem, feat, write=False)
+    assert len(target_prob_columns(t)) == n_arch
+
+    res = walk_forward(t, kind="yoe")
+    assert res["n_eval"] > 0
+    for name in ("model", "persistence", "marginal"):
+        assert 0 <= res[name]["accuracy"] <= 1
+        assert res[name]["log_loss"] >= 0
