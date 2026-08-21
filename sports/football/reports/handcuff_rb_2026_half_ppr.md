@@ -16,29 +16,29 @@ Chosen: **`availability_model`** (best clears-cutoff AUC at g\*=4; `winner`=`ava
 
 | # | handcuff (RB rank) | starter (RB rank) | starter exp. games missed | contingent upside | handcuff value |
 |---|---|---|---|---|---|
-| 1 | Tyler Allgeier (51) | Bijan Robinson (1) | 3.5 | 2.54 | 9.26 |
-| 2 | Brian Robinson (50) | Christian McCaffrey (6) | 5.2 | 2.54 | 9.36 |
-| 3 | Jaylen Wright (60) | De'Von Achane (3) | 3.5 | 2.32 | 8.64 |
-| 4 | Ray Davis (75) | James Cook (5) | 3.5 | 2.13 | 7.76 |
-| 5 | DJ Giddens (77) | Jonathan Taylor (4) | 3.4 | 2.09 | 7.63 |
-| 6 | Zamir White (118) | Ashton Jeanty (11) | 3.7 | 1.98 | 5.62 |
-| 7 | Keaton Mitchell (65) | Derrick Henry (8) | 3.6 | 1.59 | 7.59 |
-| 8 | David Montgomery (30) | Jahmyr Gibbs (2) | 3.0 | 1.54 | 11.03 |
-| 9 | Braelon Allen (58) | Breece Hall (7) | 3.3 | 1.45 | 7.79 |
-| 10 | Samaje Perine (86) | Chase Brown (10) | 3.0 | 1.36 | 6.34 |
-| 11 | Miles Sanders (59) | Javonte Williams (14) | 3.5 | 1.27 | 7.60 |
-| 12 | Tank Bigsby (54) | Saquon Barkley (13) | 3.6 | 1.27 | 7.75 |
-| 13 | Emanuel Wilson (70) | Josh Jacobs (16) | 3.5 | 1.26 | 7.10 |
-| 14 | Bhayshul Tuten (62) | Travis Etienne (15) | 3.5 | 1.23 | 7.46 |
-| 15 | Blake Corum (45) | Kyren Williams (9) | 3.4 | 1.22 | 8.69 |
-| 16 | Audric Estimé (47) | Alvin Kamara (34) | 9.6 | 0.94 | 8.21 |
-| 17 | Dylan Sampson (49) | Quinshon Judkins (24) | 4.2 | 0.88 | 7.83 |
-| 18 | Kyle Monangai (36) | D'Andre Swift (12) | 3.4 | 0.81 | 9.38 |
-| 19 | Najee Harris (40) | Omarion Hampton (20) | 3.6 | 0.70 | 8.73 |
-| 20 | Rachaad White (31) | Bucky Irving (19) | 5.9 | 0.69 | 10.12 |
-| 21 | Tyjae Spears (37) | Tony Pollard (23) | 4.3 | 0.56 | 8.95 |
-| 22 | Zach Charbonnet (27) | Kenneth Walker III (17) | 3.8 | 0.40 | 10.48 |
-| 23 | RJ Harvey (29) | J.K. Dobbins (22) | 6.0 | 0.36 | 9.98 |
-| 24 | Kenneth Gainwell (32) | Jaylen Warren (21) | 3.7 | 0.30 | 9.68 |
-| 25 | Rhamondre Stevenson (28) | TreVeyon Henderson (18) | 2.9 | 0.27 | 10.32 |
+| 1 | Isaac Guerendo (112) | Christian McCaffrey (2) | 5.2 | 4.29 | 7.19 |
+| 2 | Brian Robinson (52) | Bijan Robinson (1) | 3.5 | 2.48 | 8.24 |
+| 3 | DJ Giddens (76) | Jonathan Taylor (4) | 3.4 | 2.20 | 6.86 |
+| 4 | Raheem Mostert (82) | Ashton Jeanty (7) | 3.7 | 2.11 | 6.33 |
+| 5 | Chris Brooks (126) | Josh Jacobs (12) | 3.5 | 2.10 | 4.37 |
+| 6 | Isiah Pacheco (64) | Jahmyr Gibbs (3) | 3.0 | 1.92 | 7.18 |
+| 7 | Justice Hill (81) | Derrick Henry (11) | 3.6 | 1.81 | 6.19 |
+| 8 | Jaylen Wright (50) | De'Von Achane (5) | 3.5 | 1.80 | 7.75 |
+| 9 | Ray Davis (61) | James Cook (6) | 3.5 | 1.76 | 7.10 |
+| 10 | Tank Bigsby (58) | Saquon Barkley (10) | 3.6 | 1.60 | 7.09 |
+| 11 | Samaje Perine (69) | Chase Brown (8) | 3.0 | 1.51 | 6.53 |
+| 12 | Braelon Allen (74) | Breece Hall (15) | 3.3 | 1.36 | 6.07 |
+| 13 | Miles Sanders (55) | Javonte Williams (13) | 3.5 | 1.33 | 6.94 |
+| 14 | Blake Corum (41) | Kyren Williams (9) | 3.4 | 1.23 | 8.37 |
+| 15 | Tyjae Spears (63) | Tony Pollard (22) | 4.3 | 1.18 | 6.50 |
+| 16 | Dylan Sampson (56) | Quinshon Judkins (24) | 4.2 | 1.04 | 6.62 |
+| 17 | Emanuel Wilson (67) | Zach Charbonnet (27) | 4.2 | 1.03 | 6.07 |
+| 18 | Najee Harris (45) | Omarion Hampton (19) | 3.6 | 0.77 | 7.35 |
+| 19 | Alvin Kamara (38) | Travis Etienne (16) | 3.5 | 0.77 | 8.25 |
+| 20 | Kyle Monangai (33) | D'Andre Swift (14) | 3.4 | 0.70 | 8.92 |
+| 21 | Woody Marks (43) | David Montgomery (31) | 4.9 | 0.55 | 7.26 |
+| 22 | Kareem Hunt (37) | Kenneth Walker III (21) | 3.8 | 0.55 | 8.07 |
+| 23 | Kenneth Gainwell (28) | Bucky Irving (18) | 5.9 | 0.48 | 9.63 |
+| 24 | Rhamondre Stevenson (25) | TreVeyon Henderson (17) | 2.9 | 0.26 | 9.59 |
+| 25 | RJ Harvey (29) | J.K. Dobbins (26) | 6.0 | 0.11 | 9.01 |
 

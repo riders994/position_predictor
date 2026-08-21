@@ -29,12 +29,13 @@
     2022,
     2023,
     2024,
-    2025
+    2025,
+    2026
   ],
   "min_season": 1999,
-  "pulled_at": "2026-06-23T17:18:06.244153+00:00",
-  "n_rows": 66480,
+  "pulled_at": "2026-08-21T21:10:51.995835+00:00",
+  "n_rows": 69410,
   "n_cols": 36,
   "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/rosters.parquet",
-  "sha256": "af91191cafd04b8e657d3771a6aee07be3ec17f00bdc3ed34d72cbf5e59ffc08"
+  "sha256": "2c455ac057fe4fe09b2c5703e58c553eaa2e72c6218a58759fc9e52909587b49"
 }

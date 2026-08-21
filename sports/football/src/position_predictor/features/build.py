@@ -479,7 +479,11 @@ def add_offseason(df, rosters, draft_picks, *, position="RB", workload_col="touc
                     on=["team_next", "season"], how="left")
     out["vacated_workload_next"] = out["vacated_workload_next"].fillna(0.0)
 
-    out = out.drop(columns=["_label", "team_next"])
+    # `team_next` stays on the frame as *context*, not as a feature — it is a team code, and the
+    # returned `cols` (the offseason block) is what the model ever sees, so it cannot leak into
+    # the design matrix. Serving tools need it: a board for season N+1 that groups players by
+    # their season-N team puts anyone who changed clubs on the wrong roster.
+    out = out.drop(columns=["_label"])
     cols = ["changed_team_next", "rookie_drafted_next", "rookie_draft_capital_next",
             "rookie_count_next", "room_prior_workload_next", "room_size_next",
             "vacated_workload_next"]

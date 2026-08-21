@@ -135,7 +135,16 @@ def build_handcuff_board(rb_proj, features_board, risk, *, max_starter_rank=36, 
     """
     import pandas as pd
 
-    team = features_board[["player_id", "recent_team"]].rename(columns={"recent_team": "team"})
+    # Group by the team the player is on *in the season being drafted* (N+1 preseason roster),
+    # falling back to his season-N team where the roster join found nothing (undrafted rookies,
+    # unsigned free agents, or a cache without next season's rosters). Using `recent_team` alone
+    # boards a starter against last year's backup, so anyone who changed clubs in the offseason
+    # gets handcuffed to the wrong team.
+    cols = ["player_id", "recent_team"] + (["team_next"] if "team_next" in features_board else [])
+    team = features_board[cols].copy()
+    team["team"] = (team["team_next"].fillna(team["recent_team"])
+                    if "team_next" in team else team["recent_team"])
+    team = team[["player_id", "team"]]
     proj = (rb_proj.merge(team, on="player_id", how="left")
                    .merge(risk, on="player_id", how="left")
                    .dropna(subset=["team"]))

@@ -69,11 +69,24 @@ def _write_manifest(d: Path, name: str, seasons):
 
 def test_datasets_needing_refresh(tmp_path):
     _write_manifest(tmp_path, "seasonal", list(range(1999, 2025)))   # stale (max 2024)
-    _write_manifest(tmp_path, "rosters", list(range(1999, 2026)))    # up to date (max 2025)
     # snap_counts: no manifest -> uncached -> stale; ids: always-refresh snapshot.
     stale = av.datasets_needing_refresh(
-        2025, datasets=["seasonal", "rosters", "snap_counts", "ids"], manifest_dir=tmp_path)
+        2025, datasets=["seasonal", "snap_counts", "ids"], manifest_dir=tmp_path)
     assert stale == ["seasonal", "snap_counts", "ids"]
+
+
+def test_rosters_refresh_even_when_current_through_the_feature_season(tmp_path):
+    """Rosters must refresh at N even with N already cached, because the offseason block reads N+1.
+
+    The staleness rule only asks whether a dataset covers ``feature_season``. Rosters cached
+    through N satisfy that and were skipped -- so nothing ever fetched the N+1 preseason roster,
+    ``add_offseason``'s ``team_next`` join produced all-NaN, and every offseason feature collapsed
+    to a constant. A degenerate block, not a stale one: no N-based rule can catch it, which is why
+    rosters is in ``always_refresh`` rather than getting a cleverer staleness test.
+    """
+    _write_manifest(tmp_path, "rosters", list(range(1999, 2026)))    # current through N=2025
+    stale = av.datasets_needing_refresh(2025, datasets=["rosters"], manifest_dir=tmp_path)
+    assert stale == ["rosters"]
 
 
 def test_refresh_skips_uncovered_dataset(tmp_path):

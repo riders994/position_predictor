@@ -8,14 +8,14 @@ _A keeper costs you the pick you drafted him at, so_ **`surplus = pick paid − 
 
 | | player | pos | proj PPG | board slot | pick (round) | surplus |
 |---|---|---|---|---|---|---|
-| **KEEP** | Bo Nix | QB6 | 16.77 | 54 | 110 (rd 10) | +56 |
-| **KEEP** | Puka Nacua | WR1 | 21.49 | 1 | 40 (rd 4) | +39 |
-| **KEEP** | Brian Thomas Jr. | WR27 | 12.36 | 62 | 72 (rd 6) | +10 |
-| **KEEP** | Josh Jacobs | RB17 | 13.03 | 46 | 55 (rd 5) | +9 |
-| pass | Jayden Daniels | QB15 | 15.09 | 97 | 95 (rd 8) | -2 |
-| pass | Sam LaPorta | TE9 | 10.15 | 74 | 60 (rd 5) | -14 |
-| pass | Derrick Henry | RB11 | 14.03 | 29 | 15 (rd 2) | -14 |
-| pass | Saquon Barkley | RB14 | 13.56 | 37 | 8 (rd 1) | -29 |
+| **KEEP** | Bo Nix | QB7 | 17.83 | 48 | 110 (rd 10) | +62 |
+| **KEEP** | Puka Nacua | WR1 | 20.39 | 2 | 40 (rd 4) | +38 |
+| **KEEP** | Josh Jacobs | RB12 | 13.64 | 24 | 55 (rd 5) | +31 |
+| **KEEP** | Brian Thomas Jr. | WR30 | 11.64 | 66 | 72 (rd 6) | +6 |
+| pass | Derrick Henry | RB11 | 14.02 | 22 | 15 (rd 2) | -7 |
+| pass | Saquon Barkley | RB10 | 14.16 | 20 | 8 (rd 1) | -12 |
+| pass | Sam LaPorta | TE9 | 10.00 | 73 | 60 (rd 5) | -13 |
+| pass | Jayden Daniels | QB18 | 15.40 | 113 | 95 (rd 8) | -18 |
 
 ## Replacement level
 
@@ -23,8 +23,8 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 
 | position | started league-wide | replacement PPG |
 |---|---|---|
-| QB | 12 | 15.46 |
-| RB | 24 | 11.47 |
-| WR | 36 | 11.39 |
-| TE | 12 | 9.83 |
+| QB | 12 | 16.24 |
+| RB | 25 | 10.36 |
+| WR | 35 | 10.79 |
+| TE | 12 | 9.38 |
 
