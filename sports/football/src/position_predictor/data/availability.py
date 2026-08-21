@@ -113,7 +113,7 @@ def _manifest_max_season(name: str, manifest_dir) -> int | None:
 
 
 def datasets_needing_refresh(feature_season: int, *, datasets=None,
-                             always_refresh=("ids", "sleeper_players", "draft_picks"),
+                             always_refresh=("ids", "sleeper_players", "draft_picks", "rosters"),
                              manifest_dir=None) -> list[str]:
     """Which cached datasets must be re-fetched to model ``feature_season``.
 
@@ -122,6 +122,14 @@ def datasets_needing_refresh(feature_season: int, *, datasets=None,
     the season's publication and must be overwritten. ``always_refresh`` datasets are snapshots /
     crosswalks (no per-season manifest) plus the draft class used for rookie counting; we always
     refresh them. Order follows the registry for stable, readable output.
+
+    ``rosters`` is in ``always_refresh`` for a reason the staleness rule cannot express: the
+    offseason block reads the season **N+1** preseason roster (see
+    :func:`position_predictor.features.build.add_offseason`), but the rule only ever asks whether
+    a dataset covers ``feature_season`` — which is N. So once season N's rosters were cached
+    nothing ever pulled N+1's, the ``team_next`` join silently produced all-NaN, and every
+    offseason feature collapsed to a constant. That is a degenerate feature block, not a stale
+    one, so no amount of tightening the N-based rule would have caught it.
     """
     from ..utils.io import MANIFEST_DIR
 

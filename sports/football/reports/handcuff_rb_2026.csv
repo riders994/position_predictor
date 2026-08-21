@@ -1,28 +1,30 @@
 rank,team,starter,starter_pos_rank,starter_proj_ppg,starter_exp_games_missed,starter_miss_share,handcuff,handcuff_pos_rank,handcuff_proj_ppg,contingent_upside,handcuff_value
-1,SF,Christian McCaffrey,4,17.51,5.4,0.317,Brian Robinson,53,7.29,3.24,10.53
-2,ATL,Bijan Robinson,1,21.52,3.4,0.202,Tyler Allgeier,54,7.2,2.89,10.09
-3,MIA,De'Von Achane,3,19.94,3.3,0.196,Jaylen Wright,64,6.8,2.58,9.38
-4,LV,Ashton Jeanty,10,14.26,4.0,0.237,Zamir White,119,4.0,2.43,6.43
-5,IND,Jonathan Taylor,5,17.34,3.6,0.209,DJ Giddens,80,6.02,2.37,8.39
-6,BUF,James Cook,6,17.15,3.5,0.205,Ty Johnson,74,6.38,2.21,8.59
-7,DET,Jahmyr Gibbs,2,20.49,3.0,0.176,David Montgomery,33,10.28,1.8,12.08
-8,NYJ,Breece Hall,7,15.15,3.4,0.201,Braelon Allen,62,6.92,1.65,8.57
-9,CIN,Chase Brown,9,14.32,3.2,0.185,Samaje Perine,86,5.52,1.63,7.15
-10,BAL,Derrick Henry,11,14.03,3.8,0.226,Justice Hill,60,6.95,1.6,8.55
-11,PHI,Saquon Barkley,14,13.56,4.1,0.241,Tank Bigsby,61,6.95,1.59,8.54
-12,GB,Josh Jacobs,17,13.03,3.6,0.21,Emanuel Wilson,75,6.33,1.41,7.74
-13,JAX,Travis Etienne,15,13.54,3.6,0.209,Bhayshul Tuten,63,6.82,1.4,8.22
-14,DAL,Javonte Williams,13,13.7,3.2,0.19,Miles Sanders,56,7.11,1.25,8.36
-15,NO,Alvin Kamara,34,10.12,9.8,0.577,Audric Estimé,46,8.05,1.19,9.24
-16,LA,Kyren Williams,8,14.72,2.9,0.171,Blake Corum,47,8.04,1.14,9.18
-17,LAC,Omarion Hampton,19,12.79,3.9,0.232,Najee Harris,41,8.68,0.95,9.63
-18,CHI,D'Andre Swift,12,13.87,3.6,0.212,Kyle Monangai,37,9.38,0.95,10.33
-19,CLE,Quinshon Judkins,24,11.49,4.2,0.245,Dylan Sampson,45,8.09,0.83,8.92
-20,TB,Bucky Irving,20,12.74,5.7,0.333,Rachaad White,31,10.63,0.7,11.33
-21,TEN,Tony Pollard,22,11.61,4.7,0.277,Tyjae Spears,36,9.69,0.53,10.22
-22,SEA,Kenneth Walker III,16,13.03,4.2,0.25,Zach Charbonnet,28,10.96,0.52,11.48
-23,CAR,Rico Dowdle,26,11.36,3.4,0.202,Chuba Hubbard,35,9.98,0.28,10.26
-24,NE,TreVeyon Henderson,18,12.84,2.8,0.163,Rhamondre Stevenson,27,11.19,0.27,11.46
-25,NYG,Cam Skattebo,23,11.57,4.3,0.255,Tyrone Tracy Jr.,32,10.58,0.25,10.83
-26,PIT,Jaylen Warren,21,11.96,3.8,0.226,Kenneth Gainwell,29,10.95,0.23,11.18
-27,DEN,J.K. Dobbins,25,11.47,6.8,0.398,RJ Harvey,30,10.92,0.22,11.14
+1,SF,Christian McCaffrey,2,19.2,5.4,0.317,Isaac Guerendo,110,3.42,5.0,8.42
+2,ATL,Bijan Robinson,1,20.12,3.4,0.202,Brian Robinson,53,6.49,2.75,9.24
+3,IND,Jonathan Taylor,4,16.96,3.6,0.209,DJ Giddens,84,4.74,2.55,7.29
+4,LV,Ashton Jeanty,8,15.22,4.0,0.237,Raheem Mostert,82,4.86,2.46,7.32
+5,GB,Josh Jacobs,12,13.64,3.6,0.21,Chris Brooks,124,2.7,2.3,5.0
+6,DET,Jahmyr Gibbs,3,18.09,3.0,0.176,Isiah Pacheco,63,6.04,2.12,8.16
+7,BAL,Derrick Henry,11,14.02,3.8,0.226,Justice Hill,75,5.26,1.98,7.24
+8,PHI,Saquon Barkley,10,14.16,4.1,0.241,Tank Bigsby,58,6.24,1.91,8.15
+9,MIA,De'Von Achane,5,16.33,3.3,0.196,Jaylen Wright,50,6.72,1.88,8.6
+10,BUF,James Cook,7,15.27,3.5,0.205,Ray Davis,61,6.19,1.86,8.05
+11,CIN,Chase Brown,6,15.32,3.2,0.185,Samaje Perine,73,5.32,1.85,7.17
+12,NYJ,Breece Hall,14,12.83,3.4,0.201,Isaiah Davis,71,5.43,1.49,6.92
+13,DAL,Javonte Williams,13,12.89,3.2,0.19,Miles Sanders,59,6.23,1.27,7.5
+14,TEN,Tony Pollard,22,10.98,4.7,0.277,Tyjae Spears,51,6.66,1.2,7.86
+15,LA,Kyren Williams,9,14.19,2.9,0.171,Blake Corum,42,7.79,1.09,8.88
+16,CLE,Quinshon Judkins,24,10.86,4.2,0.245,Dylan Sampson,54,6.46,1.08,7.54
+17,LAC,Omarion Hampton,18,11.78,3.9,0.232,Najee Harris,44,7.53,0.99,8.52
+18,SEA,Zach Charbonnet,30,9.79,4.1,0.239,Emanuel Wilson,67,5.7,0.98,6.68
+19,CHI,D'Andre Swift,15,12.57,3.6,0.212,Kyle Monangai,33,8.88,0.78,9.66
+20,NO,Travis Etienne,17,11.92,3.6,0.209,Alvin Kamara,39,8.42,0.73,9.15
+21,KC,Kenneth Walker III,23,10.88,4.2,0.25,Kareem Hunt,36,8.64,0.56,9.2
+22,HOU,David Montgomery,34,8.88,4.1,0.244,Woody Marks,43,7.61,0.31,7.92
+23,NE,TreVeyon Henderson,16,11.99,2.8,0.163,Rhamondre Stevenson,26,10.36,0.27,10.63
+24,TB,Bucky Irving,19,11.55,5.7,0.333,Kenneth Gainwell,25,10.79,0.25,11.04
+25,MIN,Aaron Jones,32,9.01,8.9,0.525,Jordan Mason,37,8.58,0.23,8.81
+26,NYG,Cam Skattebo,27,10.26,4.3,0.255,Tyrone Tracy Jr.,31,9.49,0.2,9.69
+27,WAS,Rachaad White,35,8.66,4.0,0.237,Jacory Croskey-Merritt,41,8.11,0.13,8.24
+28,PIT,Rico Dowdle,20,11.08,3.4,0.202,Jaylen Warren,21,10.98,0.02,11.0
+29,DEN,RJ Harvey,28,10.11,4.4,0.258,J.K. Dobbins,29,10.1,0.0,10.1

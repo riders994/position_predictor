@@ -104,6 +104,15 @@ era_modeling:
   combine: val_weighted
   combine_alternatives: [mean, recency_weighted]   # also reported in the recency study
 
+# Which model the *serving* tools project with (project.py, keeper.py, redraft.py, handcuff.py).
+# Without this key `eval.projection.project_position` fell back to "ridge" for every position, so
+# every shipped board was a ridge board regardless of what the experiment found. Set it to the
+# RB v4 winner from reports/REPORT_football_rb.md (§6.2, 20-yr window): random_forest, Spearman
+# 0.819 against ridge 0.808. Fixed here rather than at the callers so the CLI, the boards and any
+# future consumer all get the same model.
+projection:
+  model: random_forest
+
 benchmark:
   use_market_data: true
   as_feature: false                # benchmark only, NOT a feature

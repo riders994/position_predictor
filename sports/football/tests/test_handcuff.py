@@ -92,6 +92,33 @@ def test_build_board_starter_backup_and_contingent_upside():
     assert board.iloc[1]["contingent_upside"] == 0.5
 
 
+def test_build_board_groups_by_next_season_team_not_last_season_team():
+    """A back who changed clubs is handcuffed on his NEW team, not the one he left.
+
+    The board is for season N+1, so grouping on ``recent_team`` (season N) pairs a starter with
+    last year's backup. Here Cuff B leaves AAA for BBB: AAA loses its handcuff entirely and BBB's
+    starter must be paired with B (6.0), not with the D (5.0) he outranks.
+    """
+    rb_proj, features_board, risk = _board_inputs()
+    features_board = features_board.assign(
+        team_next=["AAA", "BBB", "BBB", "BBB", "CCC", "DDD", "DDD"])
+    board = build_handcuff_board(rb_proj, features_board, risk, max_starter_rank=36)
+    assert list(board["team"]) == ["BBB"]          # AAA is down to one RB -> dropped
+    row = board.iloc[0]
+    assert row["starter"] == "Star C" and row["handcuff"] == "Cuff B"
+    assert row["contingent_upside"] == 0.4         # (10 - 6) * 0.1
+
+
+def test_build_board_falls_back_to_recent_team_when_next_is_missing():
+    """An unsigned player has no N+1 roster row; fall back rather than drop him off the board."""
+    rb_proj, features_board, risk = _board_inputs()
+    features_board = features_board.assign(
+        team_next=[None, None, "BBB", "BBB", "CCC", "DDD", "DDD"])
+    board = build_handcuff_board(rb_proj, features_board, risk, max_starter_rank=36)
+    assert list(board["team"]) == ["AAA", "BBB"]   # AAA reconstructed from recent_team
+    assert board.iloc[0]["starter"] == "Star A" and board.iloc[0]["handcuff"] == "Cuff B"
+
+
 def test_build_board_empty_when_no_eligible_starters():
     rb_proj, features_board, risk = _board_inputs()
     board = build_handcuff_board(rb_proj, features_board, risk, max_starter_rank=1)

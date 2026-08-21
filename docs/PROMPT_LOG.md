@@ -1176,7 +1176,142 @@ the results of the other models?")_
   offseason exclusion. But clears-AUC improved for 3/4 positions (RB 0.736→0.778, WR 0.798→0.814,
   TE 0.775→0.798; QB 0.887→0.881, a slight dip but already the best). Updated only the `gbm_poisson`
   line in the 4 **live** reports (surgical, no timing churn; version snapshots left immutable).
-- **(prompt-log fix)** Restored the root log's missing `<!-- Template for new entries:` opener (the
+- **(prompt-log fix)** Restored the root log's missing `## Entry 087 — serving brief for the home-site dashboard (football models behind a web UI)
+
+**Date:** 2026-08-21
+
+**Prompt (full text):**
+
+> [cross-session message from the Claude session working in `/home/weezy/activity/home-site`,
+> the LAN home dashboard (FastAPI + Jinja2 + htmx, no Node/build step), in plan mode:]
+>
+> Rohan asked me to work with you: he wants the first set of tools on the dashboard to be webapps
+> wrapping the successful football models you two built in `/home/weezy/activity/position_predictor`.
+> ... (1) which models are actually "successful" enough to put behind a UI and which to skip;
+> (2) for each: a one-line plain-English description, the exact Python entry point (module +
+> function + repo-relative file), inputs with names/types/units/ranges/defaults and the full value
+> list for any categorical, the exact output shape with per-field meaning and what to format as a
+> percentage/probability/rank, and latency + whether it needs a warm model in memory;
+> (3) where trained model files live and whether inference needs a dataset on disk or the network;
+> (4) what position_predictor depends on and whether it's pip-installable;
+> (5) whether an existing CLI already wraps predictions.
+> Home-site apps are small FastAPI routers rendering a form and a result card — fast, synchronous,
+> single prediction per submit. Anything >2s per call it would handle differently.
+
+**Response notes:**
+- Read-only reconnaissance plus **measured** timings (nothing was answered from the docs alone).
+  Deliverable: `/tmp/claude-1000/shared/position_predictor_serving_brief.md` (309 lines) + a
+  condensed reply. No source changes; one temporary `football_te_standard` artifact build was
+  timed and deleted, tree left clean.
+- **The structural fact that drives their design: there are no serialized models.** No
+  `.pkl`/`.joblib` anywhere in the repo — every serving tool refits the era ensemble at call time
+  off `data/processed/*_features.parquet`. That reads as fatal for a request handler and isn't:
+  cold process 1.9 s, **warm single position 0.17 s**, all four 0.62 s. So the caching unit is the
+  *process*, not a model file — import at FastAPI startup and stay warm.
+- Ranked the four positions honestly against their own reports (walk-forward Spearman vs the
+  must-beat baseline): RB 0.819/0.803, WR 0.803/0.782, TE 0.744/0.726, QB 0.572/0.529. All four
+  clear baseline; none beats ECR on overall rank. Told them to ship all four and *label* QB rather
+  than hide it, and restated the no-blend rule (ECR/ADP shown separately, never an input).
+- **Found a live defect while enumerating the inputs.** `project_position` falls back to
+  `config.get("projection.model", "ridge")` and **no config file sets `projection.model`** — so
+  every board projects with ridge. Harmless at RB/WR/QB (−0.004 to −0.015 Spearman), but at TE
+  ridge is 0.654 against lasso's 0.744: a 0.09 gap, the largest ridge-vs-best spread of any
+  position. Handed them the explicit per-position map
+  (`QB=lasso, RB=random_forest, WR=elasticnet, TE=lasso`) so the web layer passes `model=`.
+  *Worth fixing at the source too — adding `projection.model` to the four YAMLs would stop the
+  next caller inheriting the same silent TE downgrade.*
+- Triaged what **not** to build, which was as useful as the recommendations: `qb_breakout`
+  (shelved, and its headline is negative — a UI would imply a signal the study says isn't there),
+  `bestball_calibrate` (null result, λ=0 everywhere), `medstaff` (complete, but a research
+  pipeline with no per-request predict function), `redraft`/`postseason` (network + season-gated →
+  cron the CSV, don't call it from a handler).
+- Latency triage against their 2 s budget: projection + keeper are 0.17–0.65 s (**synchronous, no
+  network**); handcuff RB is 4.9 s and QB injury-risk 2.8 s, because each walk-forward-backtests
+  three risk signals before boarding. Both depend only on (config, season, signal, scoring) — all
+  static until the cache refreshes — so they precompute at startup rather than needing a job queue.
+- Inference surface is small and local: ~9 MB of feature parquet + `_feature_blocks.json` + the
+  config YAMLs. The 341 MB `data/raw/` is **not** needed at predict time. Flagged that `data/` is
+  git-ignored, so those files exist on this machine only — fine for a LAN box, not for a clone.
+- Passed on the freshness caveat as a UI banner rather than a footnote: the 2025 `offseason` block
+  is all-zero (next season's roster join un-refreshed), so `project_position` raises a
+  `UserWarning` and the live 2026 board lacks offseason signal. Better surfaced than swallowed.
+- Environment: the root `pyproject.toml` *is* pip-installable and does expose `position_predictor`,
+  but it drags in the basketball stack (`nba_api`, `sportsdataverse`, `fantraxapi`,
+  `yahoo_fantasy_api`) and `nflreadpy`, none of which the serving path imports. Recommended the
+  `sys.path` insert over installing or subprocessing — the scripts write CSVs into `reports/` as a
+  side effect, which a web request must not do.
+- **Noted for us:** the football README headline still claims "Spearman ≈ 0.74–0.75 (RB/WR)",
+  which the current reports (0.819 / 0.803) have overtaken. Told them the reports are the source of
+  truth; the README line should be corrected on the next football touch.
+
+---
+
+## Entry 088 — fix `_norm`, then serve the best model per position on next season's rosters
+
+**Date:** 2026-08-21
+
+**Prompt (full text):**
+
+> fix _norm first, then regenerate the artifacts from the best models. it looks like the handcuff
+> report is still using old rosters.
+
+**Response notes:**
+- Two commits: `3cae5ef` (name matching) then `b84db02` (models + rosters + regeneration), in the
+  order asked. The roster observation was correct and turned out to have **two independent
+  causes**, one data and one code — fixing either alone would have left the board wrong.
+- **`_norm` needed two fixes, not the one that was queued.** The single-letter collapse handles
+  `AJ Brown` ≡ `A.J. Brown`, but it does nothing for `V Jones` — there is no *run* of initials to
+  fold. That case needed the suffix strip **anchored to the end**: unanchored, the `v` alternative
+  in `\b(jr|sr|ii|iii|iv|v)\b` ate a standalone "v" anywhere in the name, so `V Jones` normalised
+  to the bare surname `jones` and then fuzzy-matched any Jones on the board. Both landed;
+  `Sammy Watkins IV` still strips correctly and `Robert V Smith` is now left intact.
+- Why fix rather than tighten the cutoff: `get_close_matches(n=1)` returns the *best* candidate
+  above 0.88, not a safe one, so an initialled name at ~0.94 was competing on ratio against the
+  whole 616-row board. Raising the cutoff would have traded a mis-resolve for a miss. Collapsing
+  removes those names from fuzzy contention entirely.
+- **Jr./Sr. left deliberately colliding**, with a test that says so. Dropping the suffix is exactly
+  what lets a typed "Brian Thomas" reach "Brian Thomas Jr."; an asymmetric rule would guard against
+  nothing in a pool with no father/son pair and cost every future reader a rule to carry.
+- Verified the whole change is a **no-op on real data**: zero `_norm` collisions across the board
+  before or after, and the eight-row `keepers_example` still reproduces the shipped keeper board to
+  the number. That is the point — these fail by resolving to a *confident wrong row*, not by
+  erroring, so "nothing changed" is the expected result and the tests are the guard.
+- **`projection.model` was never set in any config**, so `project_position` fell back to `"ridge"`
+  and every shipped board — `project.py`, `keeper.py`, `redraft.py`, `handcuff.py` — was a ridge
+  board regardless of what the experiment picked. Cheap at RB/WR/QB (−0.004 to −0.015 Spearman);
+  **TE ridge is 0.654 against lasso's 0.744**. Fixed in the four configs rather than at the
+  callers, which is what makes it reach every consumer including the home-site dashboard that
+  reads the CSVs and cannot pass `model=` at all.
+- **Nothing in the pipeline had ever fetched next season's rosters.** `add_offseason` reads the
+  season *N+1* preseason roster, but `datasets_needing_refresh` only asks whether a dataset covers
+  `feature_season` (N) — rosters cached through N satisfied that and were skipped, `always_refresh`
+  covered `draft_picks` but not `rosters`. So the `team_next` join produced all-NaN and every
+  offseason feature collapsed to a constant. **A degenerate block, not a stale one**: no amount of
+  tightening an N-based staleness rule would ever have caught it. nflverse *had* published 2026
+  rosters (2930 rows) — we simply never asked. Post-fetch the block is live: 85–91% of the board
+  carries a next-season team, 31 of 157 RBs changed clubs.
+- **The handcuff board grouped by `recent_team`**, so even with N+1 rosters cached it paired a
+  starter with *last* season's backup. `team_next` now survives `add_offseason` as context — never
+  a feature, since the returned block list is the only thing the model sees — and the board prefers
+  it with a `recent_team` fallback for players with no N+1 roster row (unsigned FAs).
+- **Impact, measured by rebuilding the board both ways: 9 of 26 starters had the wrong handcuff.**
+  CMC → Brian Robinson becomes Isaac Guerendo; Bijan → Tyler Allgeier becomes Brian Robinson;
+  Travis Etienne → Bhayshul Tuten becomes Alvin Kamara; Kenneth Walker III → Zach Charbonnet
+  becomes Kareem Hunt. Three teams appear that were absent (HOU/NO/WAS), two drop off (CAR/JAX).
+- **No experiment re-run, and the committed reports still stand.** The offseason block was
+  degenerate only for the *latest* feature season — the live board — because every test fold's N+1
+  rosters were already cached by the time that fold's features were built. So the Spearman numbers
+  in `REPORT_football_*.md` are unaffected; only the serving artifacts were regenerated.
+- Updated `test_datasets_needing_refresh`, which had encoded the old assumption (rosters current
+  through N ⇒ not stale). Replaced with a test named for the trap and explaining why an N-based
+  rule cannot express an N+1 dependency.
+- Credit where due: the initials gap was found by the home-site dashboard session porting this
+  matcher and measuring it, and the Jr./Sr. edge was entirely its find.
+- 552 tests pass (+7 across the two commits), ruff clean.
+
+---
+
+<!-- Template for new entries:` opener (the
   `-->` was orphaned, so the template was rendering as a literal entry).
 - Added `test_offseason_degenerate`. **130 tests pass, ruff clean.** Branch `handcuff-tool` (same PR).
 
