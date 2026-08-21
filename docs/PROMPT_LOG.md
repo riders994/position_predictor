@@ -1246,6 +1246,71 @@ the results of the other models?")_
 
 ---
 
+## Entry 088 — fix `_norm`, then serve the best model per position on next season's rosters
+
+**Date:** 2026-08-21
+
+**Prompt (full text):**
+
+> fix _norm first, then regenerate the artifacts from the best models. it looks like the handcuff
+> report is still using old rosters.
+
+**Response notes:**
+- Two commits: `3cae5ef` (name matching) then `b84db02` (models + rosters + regeneration), in the
+  order asked. The roster observation was correct and turned out to have **two independent
+  causes**, one data and one code — fixing either alone would have left the board wrong.
+- **`_norm` needed two fixes, not the one that was queued.** The single-letter collapse handles
+  `AJ Brown` ≡ `A.J. Brown`, but it does nothing for `V Jones` — there is no *run* of initials to
+  fold. That case needed the suffix strip **anchored to the end**: unanchored, the `v` alternative
+  in `\b(jr|sr|ii|iii|iv|v)\b` ate a standalone "v" anywhere in the name, so `V Jones` normalised
+  to the bare surname `jones` and then fuzzy-matched any Jones on the board. Both landed;
+  `Sammy Watkins IV` still strips correctly and `Robert V Smith` is now left intact.
+- Why fix rather than tighten the cutoff: `get_close_matches(n=1)` returns the *best* candidate
+  above 0.88, not a safe one, so an initialled name at ~0.94 was competing on ratio against the
+  whole 616-row board. Raising the cutoff would have traded a mis-resolve for a miss. Collapsing
+  removes those names from fuzzy contention entirely.
+- **Jr./Sr. left deliberately colliding**, with a test that says so. Dropping the suffix is exactly
+  what lets a typed "Brian Thomas" reach "Brian Thomas Jr."; an asymmetric rule would guard against
+  nothing in a pool with no father/son pair and cost every future reader a rule to carry.
+- Verified the whole change is a **no-op on real data**: zero `_norm` collisions across the board
+  before or after, and the eight-row `keepers_example` still reproduces the shipped keeper board to
+  the number. That is the point — these fail by resolving to a *confident wrong row*, not by
+  erroring, so "nothing changed" is the expected result and the tests are the guard.
+- **`projection.model` was never set in any config**, so `project_position` fell back to `"ridge"`
+  and every shipped board — `project.py`, `keeper.py`, `redraft.py`, `handcuff.py` — was a ridge
+  board regardless of what the experiment picked. Cheap at RB/WR/QB (−0.004 to −0.015 Spearman);
+  **TE ridge is 0.654 against lasso's 0.744**. Fixed in the four configs rather than at the
+  callers, which is what makes it reach every consumer including the home-site dashboard that
+  reads the CSVs and cannot pass `model=` at all.
+- **Nothing in the pipeline had ever fetched next season's rosters.** `add_offseason` reads the
+  season *N+1* preseason roster, but `datasets_needing_refresh` only asks whether a dataset covers
+  `feature_season` (N) — rosters cached through N satisfied that and were skipped, `always_refresh`
+  covered `draft_picks` but not `rosters`. So the `team_next` join produced all-NaN and every
+  offseason feature collapsed to a constant. **A degenerate block, not a stale one**: no amount of
+  tightening an N-based staleness rule would ever have caught it. nflverse *had* published 2026
+  rosters (2930 rows) — we simply never asked. Post-fetch the block is live: 85–91% of the board
+  carries a next-season team, 31 of 157 RBs changed clubs.
+- **The handcuff board grouped by `recent_team`**, so even with N+1 rosters cached it paired a
+  starter with *last* season's backup. `team_next` now survives `add_offseason` as context — never
+  a feature, since the returned block list is the only thing the model sees — and the board prefers
+  it with a `recent_team` fallback for players with no N+1 roster row (unsigned FAs).
+- **Impact, measured by rebuilding the board both ways: 9 of 26 starters had the wrong handcuff.**
+  CMC → Brian Robinson becomes Isaac Guerendo; Bijan → Tyler Allgeier becomes Brian Robinson;
+  Travis Etienne → Bhayshul Tuten becomes Alvin Kamara; Kenneth Walker III → Zach Charbonnet
+  becomes Kareem Hunt. Three teams appear that were absent (HOU/NO/WAS), two drop off (CAR/JAX).
+- **No experiment re-run, and the committed reports still stand.** The offseason block was
+  degenerate only for the *latest* feature season — the live board — because every test fold's N+1
+  rosters were already cached by the time that fold's features were built. So the Spearman numbers
+  in `REPORT_football_*.md` are unaffected; only the serving artifacts were regenerated.
+- Updated `test_datasets_needing_refresh`, which had encoded the old assumption (rosters current
+  through N ⇒ not stale). Replaced with a test named for the trap and explaining why an N-based
+  rule cannot express an N+1 dependency.
+- Credit where due: the initials gap was found by the home-site dashboard session porting this
+  matcher and measuring it, and the Jr./Sr. edge was entirely its find.
+- 552 tests pass (+7 across the two commits), ruff clean.
+
+---
+
 <!-- Template for new entries:` opener (the
   `-->` was orphaned, so the template was rendering as a literal entry).
 - Added `test_offseason_degenerate`. **130 tests pass, ruff clean.** Branch `handcuff-tool` (same PR).
