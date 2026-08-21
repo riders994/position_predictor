@@ -110,12 +110,34 @@ def build_board(proj, *, teams, roster=None, fmt=None, flex_positions=FLEX_POS,
     return board, replacement, starters
 
 
-_SUFFIX = re.compile(r"\b(jr|sr|ii|iii|iv|v)\b")
+# A generational suffix only counts as one in *trailing* position. Unanchored, the `v`
+# alternative eats a standalone "v" anywhere in the name: "V Jones" normalised to "jones", a bare
+# surname that then fuzzy-matches any Jones on the board. Anchoring keeps "Sammy Watkins IV" ->
+# "sammy watkins" while leaving "Robert V Smith" intact.
+_SUFFIX = re.compile(r"\s*\b(jr|sr|ii|iii|iv|v)\b\s*$")
+# Runs of single-letter tokens are one initialled name: "a j brown" -> "aj brown", so a typed
+# "AJ Brown" reaches "A.J. Brown" by *exact* match. It matched before only via the fuzzy pass at
+# ~0.94, and `get_close_matches(n=1)` returns the best candidate over the cutoff rather than a
+# safe one — so an initialled name was competing on ratio against the whole board and could
+# resolve to the wrong row. Collapsing removes it from fuzzy contention entirely.
+_INITIAL_RUN = re.compile(r"\b([a-z])\s+(?=[a-z]\b)")
 
 
 def _norm(name) -> str:
-    """Normalise a player name for matching: lowercase, drop punctuation & generational suffixes."""
+    """Normalise a player name for matching: lowercase, drop punctuation, fold runs of initials,
+    and drop a trailing generational suffix.
+
+    NB ``jr`` and ``sr`` both drop, so a father/son pair collapses to one key and would match
+    *exactly* — no cutoff guards it. Deliberate: dropping the suffix is what lets a typed "Brian
+    Thomas" find "Brian Thomas Jr.". Harmless while the pool holds no such pair (verified: zero
+    collisions across the 616-row board), and cheaper as a known edge than as a rule every reader
+    of this function has to carry.
+    """
     s = str(name).lower().replace(".", " ").replace("'", "").replace("-", " ")
+    s = re.sub(r"\s+", " ", s).strip()
+    prev = None
+    while prev != s:                      # "a b c smith" needs more than one pass
+        prev, s = s, _INITIAL_RUN.sub(r"\1", s)
     s = _SUFFIX.sub("", s)
     return re.sub(r"\s+", " ", s).strip()
 

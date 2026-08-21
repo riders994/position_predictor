@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from position_predictor.eval.keeper import (  # noqa: E402
+    _norm,
     build_board,
     evaluate_keepers,
     replacement_levels,
@@ -129,6 +130,65 @@ def test_resolve_players_normalises_and_flags_unmatched():
     assert len(matched) == 1 and matched.iloc[0]["player_id"] == "x"
     assert matched.iloc[0]["pick"] == 30
     assert list(unmatched["player"]) == ["Sam LaPorta"]
+
+
+@pytest.mark.parametrize("typed,canonical", [
+    ("AJ Brown", "A.J. Brown"),
+    ("DK Metcalf", "D.K. Metcalf"),
+    ("JJ Watt", "J.J. Watt"),
+    ("A B C Smith", "A.B.C. Smith"),        # more than one collapse pass
+])
+def test_initialled_names_match_exactly_not_by_fuzzy(typed, canonical):
+    """Runs of initials fold, so an initialled name never enters fuzzy contention.
+
+    It used to resolve only via ``get_close_matches`` at ~0.94. That returns the *best* candidate
+    over the 0.88 cutoff rather than a safe one, so an initialled name competed on ratio against
+    every other name on the board and could land on the wrong row.
+    """
+    assert _norm(typed) == _norm(canonical)
+
+
+@pytest.mark.parametrize("name,expected", [
+    ("Sammy Watkins IV", "sammy watkins"),   # trailing numeral is a suffix
+    ("Joe Milton III", "joe milton"),
+    ("Brian Thomas Jr.", "brian thomas"),
+    ("V Jones", "v jones"),                  # leading "V" is a name, not a suffix
+    ("Robert V Smith", "robert v smith"),    # ... and so is a middle one
+    ("Victor Cruz", "victor cruz"),
+])
+def test_suffix_strip_is_anchored_to_the_end(name, expected):
+    """Only a *trailing* token is a generational suffix.
+
+    Unanchored, the ``v`` alternative ate a standalone "v" anywhere in the name: "V Jones" became
+    the bare surname "jones", which then fuzzy-matched any Jones on the board.
+    """
+    assert _norm(name) == expected
+
+
+def test_jr_and_sr_still_collapse_together_known_edge():
+    """A father/son pair shares one key and matches *exactly* — no cutoff guards it.
+
+    Left deliberately: dropping the suffix is what lets a typed "Brian Thomas" reach "Brian Thomas
+    Jr.", which is the behaviour the tool wants. Latent while the pool holds no such pair. This
+    test pins the trade so a future reader sees the choice rather than rediscovering the bug.
+    """
+    assert _norm("Ken Griffey Jr") == _norm("Ken Griffey Sr")
+    assert _norm("Brian Thomas") == _norm("Brian Thomas Jr.")
+
+
+def test_fuzzy_pass_still_rescues_one_letter_typos():
+    """The collapse must not cost the permissive matching the fuzzy pass exists for."""
+    board = pd.DataFrame([
+        dict(player_id="n", player_name="Puka Nacua", position="WR",
+             proj_ppg=20.0, proj_pos_rank=1, vorp=9.0, proj_overall_rank=1),
+        dict(player_id="l", player_name="Sam LaPorta", position="TE",
+             proj_ppg=12.0, proj_pos_rank=1, vorp=2.0, proj_overall_rank=2),
+    ])
+    picks = pd.DataFrame([dict(player="Puka Nacuo", pick=10),
+                          dict(player="Sam LaPorte", pick=60)])
+    matched, unmatched = resolve_players(board, picks)
+    assert list(matched["player_id"]) == ["n", "l"]
+    assert unmatched.empty
 
 
 def test_evaluate_keepers_surplus_and_sort():
