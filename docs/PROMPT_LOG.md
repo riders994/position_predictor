@@ -1176,7 +1176,77 @@ the results of the other models?")_
   offseason exclusion. But clears-AUC improved for 3/4 positions (RB 0.736→0.778, WR 0.798→0.814,
   TE 0.775→0.798; QB 0.887→0.881, a slight dip but already the best). Updated only the `gbm_poisson`
   line in the 4 **live** reports (surgical, no timing churn; version snapshots left immutable).
-- **(prompt-log fix)** Restored the root log's missing `<!-- Template for new entries:` opener (the
+- **(prompt-log fix)** Restored the root log's missing `## Entry 087 — serving brief for the home-site dashboard (football models behind a web UI)
+
+**Date:** 2026-08-21
+
+**Prompt (full text):**
+
+> [cross-session message from the Claude session working in `/home/weezy/activity/home-site`,
+> the LAN home dashboard (FastAPI + Jinja2 + htmx, no Node/build step), in plan mode:]
+>
+> Rohan asked me to work with you: he wants the first set of tools on the dashboard to be webapps
+> wrapping the successful football models you two built in `/home/weezy/activity/position_predictor`.
+> ... (1) which models are actually "successful" enough to put behind a UI and which to skip;
+> (2) for each: a one-line plain-English description, the exact Python entry point (module +
+> function + repo-relative file), inputs with names/types/units/ranges/defaults and the full value
+> list for any categorical, the exact output shape with per-field meaning and what to format as a
+> percentage/probability/rank, and latency + whether it needs a warm model in memory;
+> (3) where trained model files live and whether inference needs a dataset on disk or the network;
+> (4) what position_predictor depends on and whether it's pip-installable;
+> (5) whether an existing CLI already wraps predictions.
+> Home-site apps are small FastAPI routers rendering a form and a result card — fast, synchronous,
+> single prediction per submit. Anything >2s per call it would handle differently.
+
+**Response notes:**
+- Read-only reconnaissance plus **measured** timings (nothing was answered from the docs alone).
+  Deliverable: `/tmp/claude-1000/shared/position_predictor_serving_brief.md` (309 lines) + a
+  condensed reply. No source changes; one temporary `football_te_standard` artifact build was
+  timed and deleted, tree left clean.
+- **The structural fact that drives their design: there are no serialized models.** No
+  `.pkl`/`.joblib` anywhere in the repo — every serving tool refits the era ensemble at call time
+  off `data/processed/*_features.parquet`. That reads as fatal for a request handler and isn't:
+  cold process 1.9 s, **warm single position 0.17 s**, all four 0.62 s. So the caching unit is the
+  *process*, not a model file — import at FastAPI startup and stay warm.
+- Ranked the four positions honestly against their own reports (walk-forward Spearman vs the
+  must-beat baseline): RB 0.819/0.803, WR 0.803/0.782, TE 0.744/0.726, QB 0.572/0.529. All four
+  clear baseline; none beats ECR on overall rank. Told them to ship all four and *label* QB rather
+  than hide it, and restated the no-blend rule (ECR/ADP shown separately, never an input).
+- **Found a live defect while enumerating the inputs.** `project_position` falls back to
+  `config.get("projection.model", "ridge")` and **no config file sets `projection.model`** — so
+  every board projects with ridge. Harmless at RB/WR/QB (−0.004 to −0.015 Spearman), but at TE
+  ridge is 0.654 against lasso's 0.744: a 0.09 gap, the largest ridge-vs-best spread of any
+  position. Handed them the explicit per-position map
+  (`QB=lasso, RB=random_forest, WR=elasticnet, TE=lasso`) so the web layer passes `model=`.
+  *Worth fixing at the source too — adding `projection.model` to the four YAMLs would stop the
+  next caller inheriting the same silent TE downgrade.*
+- Triaged what **not** to build, which was as useful as the recommendations: `qb_breakout`
+  (shelved, and its headline is negative — a UI would imply a signal the study says isn't there),
+  `bestball_calibrate` (null result, λ=0 everywhere), `medstaff` (complete, but a research
+  pipeline with no per-request predict function), `redraft`/`postseason` (network + season-gated →
+  cron the CSV, don't call it from a handler).
+- Latency triage against their 2 s budget: projection + keeper are 0.17–0.65 s (**synchronous, no
+  network**); handcuff RB is 4.9 s and QB injury-risk 2.8 s, because each walk-forward-backtests
+  three risk signals before boarding. Both depend only on (config, season, signal, scoring) — all
+  static until the cache refreshes — so they precompute at startup rather than needing a job queue.
+- Inference surface is small and local: ~9 MB of feature parquet + `_feature_blocks.json` + the
+  config YAMLs. The 341 MB `data/raw/` is **not** needed at predict time. Flagged that `data/` is
+  git-ignored, so those files exist on this machine only — fine for a LAN box, not for a clone.
+- Passed on the freshness caveat as a UI banner rather than a footnote: the 2025 `offseason` block
+  is all-zero (next season's roster join un-refreshed), so `project_position` raises a
+  `UserWarning` and the live 2026 board lacks offseason signal. Better surfaced than swallowed.
+- Environment: the root `pyproject.toml` *is* pip-installable and does expose `position_predictor`,
+  but it drags in the basketball stack (`nba_api`, `sportsdataverse`, `fantraxapi`,
+  `yahoo_fantasy_api`) and `nflreadpy`, none of which the serving path imports. Recommended the
+  `sys.path` insert over installing or subprocessing — the scripts write CSVs into `reports/` as a
+  side effect, which a web request must not do.
+- **Noted for us:** the football README headline still claims "Spearman ≈ 0.74–0.75 (RB/WR)",
+  which the current reports (0.819 / 0.803) have overtaken. Told them the reports are the source of
+  truth; the README line should be corrected on the next football touch.
+
+---
+
+<!-- Template for new entries:` opener (the
   `-->` was orphaned, so the template was rendering as a literal entry).
 - Added `test_offseason_degenerate`. **130 tests pass, ruff clean.** Branch `handcuff-tool` (same PR).
 
