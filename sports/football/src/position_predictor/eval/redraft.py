@@ -14,16 +14,20 @@ steps a redraft user wants for the coming season:
 
 **Leagues, not one board.** A projection is a number; a draft board is that number seen through
 a league's scoring and roster shape. Scoring changes the model's training target, so each format
-is a separate dataset → features → fit — the loop below is therefore keyed on *scoring*, and two
-leagues that share a format share one pipeline pass. Roster shape only affects replacement
-levels, which is pure post-processing.
+is a separate dataset → features → fit — the loop below is keyed on *(scoring, market board)*,
+and two leagues sharing both share one pipeline pass. Roster shape only affects replacement
+levels, which is pure post-processing; it reaches the pass itself only through the market board
+a league's QB shape selects (see :func:`data.benchmark.ecr_type_for_league`), because that board
+sets the rookie subtraction.
 
 **Top-N is "returning players within the top N", not N players.** The model only ranks returning
 players (rookies are excluded by ``scope: returning_only``), so a real top-20 board includes a
 few incoming rookies the model can't score. We keep model projections pure — ECR/market never
 changes a model number (the "two independent opinions" rule) — and only *subtract an estimated
 rookie count* from the list length: if the market expects 3 rookie QBs inside the top 20, we
-return the top 17 returning QBs.
+return the top 17 returning QBs. The count is taken at **each league's own depth** — a rookie the
+market ranks below a shallow league's board is not one of that league's picks, so charging it
+there would silently shorten the board.
 
 **Board depth follows the league.** A fixed top-20 QB list is meaningless in a 10-team 2QB league
 where 20 QBs are *starters*; depth is derived from teams × started slots (see :func:`board_depth`)
@@ -36,7 +40,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from ..data.availability import AvailabilityReport, check_season_available, datasets_needing_refresh
-from ..data.benchmark import ECR_URL, REDRAFT_OVERALL
+from ..data.benchmark import ECR_URL, REDRAFT_OVERALL, ecr_type_for_league, resolve_ecr_type
 from ..data.build import build_dataset
 from ..eval.keeper import _norm, build_board
 from ..eval.league import MODELED_POS, LeagueConfig, league_from_dict
@@ -79,6 +83,7 @@ class LeagueBoard:
     starters: dict = field(default_factory=dict)
     summaries: list[PositionSummary] = field(default_factory=list)
     bestball_lambdas: dict = field(default_factory=dict)
+    ecr_type: str = REDRAFT_OVERALL       # market board the rookie counts came from
 
 
 @dataclass
@@ -141,19 +146,25 @@ def _override_scoring(config: Config, scoring: str) -> Config:
     return config.with_overrides({"target.scoring": scoring})
 
 
-def _rookie_market_context(draft_season: int):
+def _rookie_market_context(draft_season: int, *, ecr_type: str = REDRAFT_OVERALL):
     """Load the rookie class + the latest market board for ``draft_season``.
 
-    Returns ``(ecr_df_or_None, rookie_names_by_pos, note)``. ``ecr_df`` is the latest
-    redraft-overall ECR scrape dated in ``draft_season`` (any date — in early summer the
-    just-before-kickoff window may not exist yet); ``rookie_names_by_pos`` maps our positions to
-    the normalised names of that year's drafted players. Best-effort: any failure yields ``None``
-    and a human note so the board falls back to the full top-N (no rookie adjustment).
+    Returns ``(ecr_df_or_None, rookie_names_by_pos, note)``. ``ecr_df`` is the latest ``ecr_type``
+    ECR scrape dated in ``draft_season`` (any date — in early summer the just-before-kickoff
+    window may not exist yet); ``rookie_names_by_pos`` maps our positions to the normalised names
+    of that year's drafted players. Best-effort: any failure yields ``None`` and a human note so
+    the board falls back to the full top-N (no rookie adjustment).
+
+    ``ecr_type`` follows the league's QB shape (:func:`data.benchmark.ecr_type_for_league`). It
+    barely moves the rookie counts — the two boards agree to ~.99 Spearman *within* a position,
+    which is all this function reads — but pulling the league's own board keeps the one place we
+    touch the market consistent with the league being built.
     """
     import pandas as pd
 
     from ..utils.io import DATA_RAW
 
+    ecr_type = resolve_ecr_type(ecr_type)
     rookie_names: dict[str, set[str]] = {"QB": set(), "RB": set(), "WR": set(), "TE": set()}
     try:
         dp = pd.read_parquet(DATA_RAW / "draft_picks.parquet", columns=["season", "position",
@@ -171,12 +182,12 @@ def _rookie_market_context(draft_season: int):
 
     try:
         ecr = pd.read_parquet(ECR_URL, columns=["player", "pos", "ecr", "ecr_type", "scrape_date"])
-        ecr = ecr[ecr["ecr_type"] == REDRAFT_OVERALL].copy()
+        ecr = ecr[ecr["ecr_type"] == ecr_type].copy()
         ecr["scrape_date"] = pd.to_datetime(ecr["scrape_date"], errors="coerce")
         ecr = ecr.dropna(subset=["scrape_date", "ecr"])
         yr = ecr[ecr["scrape_date"].dt.year == draft_season]
         if yr.empty:
-            return None, rookie_names, f"no {draft_season} market board published yet"
+            return None, rookie_names, (f"no {draft_season} {ecr_type} market board published yet")
         latest = yr[yr["scrape_date"] == yr["scrape_date"].max()].copy()
         return latest, rookie_names, ""
     except Exception as exc:  # noqa: BLE001 — market source down → no rookie adjustment
@@ -198,16 +209,73 @@ def estimate_rookie_count(ecr_df, rookie_names_by_pos, position: str, top_n: int
     return int(sum(_norm(p) in rookies for p in pos_board["player"]))
 
 
-def _project_scoring(configs, *, scoring, feature_season, draft_season, top_n, ecr_df,
-                     rookie_names):
-    """Build → feature → project every position under one scoring format.
+def market_rookies(ecr_df, rookie_names_by_pos, *, limit: int):
+    """The rookies the market ranks inside a board of ``limit`` picks, with their market slot.
 
-    Returns ``(board_df, summaries)``. This is the whole expensive part of a redraft run, which is
-    why the caller runs it once per *format* rather than once per league.
+    Returns rows ``[{player_name, position, market_slot, market_ecr}]`` ordered by slot, where
+    ``market_slot`` is the rookie's overall rank on the league's board **restricted to the
+    modeled positions** (the `ro` scrape also carries IDP rows, which are not draftable here).
+
+    The model cannot score a rookie, so a board of returning players silently skips the picks the
+    market spends on them and stops being a pick order. Listing them keeps no model number
+    market-derived: the market's other job in this report is counting these very players, and
+    this only says *which* ones rather than *how many*.
+    """
+    if ecr_df is None or len(ecr_df) == 0:
+        return []
+    board = ecr_df[ecr_df["pos"].isin(MODELED_POS)].sort_values("ecr")
+    out = []
+    for slot, (_, row) in enumerate(board.iterrows(), start=1):
+        if slot > limit:
+            break
+        pos = str(row["pos"]).upper()
+        if _norm(row["player"]) in rookie_names_by_pos.get(pos, set()):
+            out.append({"player_name": row["player"], "position": pos,
+                        "market_slot": slot, "market_ecr": float(row["ecr"])})
+    return out
+
+
+def insert_market_rookies(board, rookies, *, limit: int):
+    """Splice ``rookies`` into a VORP-ordered ``board`` at their market slots, then cut to
+    ``limit`` and renumber ``proj_overall_rank`` 1..N so the board reads as a pick order.
+
+    Rookie rows carry no model columns (``proj_ppg``/``vorp``/``proj_pos_rank`` stay null) and are
+    flagged by ``source == "market_rookie"``; every model row keeps ``source == "model"``. A slot
+    beyond the current length appends rather than erroring, so a thin board degrades gracefully.
     """
     import pandas as pd
 
-    frames, summaries = [], []
+    board = board.copy()
+    board["source"] = "model"
+    if not rookies:
+        return board.head(limit).assign(
+            proj_overall_rank=range(1, min(limit, len(board)) + 1)).reset_index(drop=True)
+
+    rows = board.to_dict("records")
+    for r in sorted(rookies, key=lambda r: r["market_slot"]):
+        idx = min(max(int(r["market_slot"]) - 1, 0), len(rows))
+        rows.insert(idx, {"player_name": r["player_name"], "position": r["position"],
+                          "market_ecr": r["market_ecr"], "source": "market_rookie"})
+    out = pd.DataFrame(rows).head(limit).reset_index(drop=True)
+    out["proj_overall_rank"] = range(1, len(out) + 1)
+    return out
+
+
+def _project_scoring(configs, *, scoring, feature_season, draft_season, top_n):
+    """Build → feature → project every position under one scoring format.
+
+    Returns ``(board_df, [(position, proj_season), ...])`` — the top ``top_n`` returning players
+    per position, *before* any rookie subtraction. This is the whole expensive part of a redraft
+    run, which is why the caller runs it once per pass rather than once per league.
+
+    The rookie trim deliberately does **not** happen here. ``top_n`` is the deepest board any
+    league sharing this pass asked for, and a rookie count is only meaningful at one league's own
+    depth — counting at the pooled depth would charge a shallow league for rookies the market
+    ranks below its board. Each league applies its own trim in :func:`run_redraft` step (d).
+    """
+    import pandas as pd
+
+    frames, seasons = [], []
     for cfg in configs:
         position = cfg.require("experiment.position").upper()
         cfg2 = _override_scoring(_override_season(cfg, feature_season), scoring)
@@ -221,15 +289,9 @@ def _project_scoring(configs, *, scoring, feature_season, draft_season, top_n, e
             raise RuntimeError(
                 f"{position}: projected season {proj_season} != draft season {draft_season} "
                 f"(feature season {feature_season} not the latest available — data not refreshed?)")
-        n = top_n.get(position, len(proj))
-        rookies = estimate_rookie_count(ecr_df, rookie_names, position, n)
-        keep = max(n - rookies, 0)
-        top = proj.head(keep).copy()
-        top["requested_top_n"] = n
-        top["rookies_subtracted"] = rookies
-        frames.append(top)
-        summaries.append(PositionSummary(position, n, rookies, len(top), proj_season))
-    return (pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()), summaries
+        frames.append(proj.head(top_n.get(position, len(proj))).copy())
+        seasons.append((position, proj_season))
+    return (pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()), seasons
 
 
 def _attach_bestball(proj, league, *, feature_season, lambdas=None):
@@ -285,34 +347,60 @@ def run_redraft(configs, *, draft_season=None, refresh: bool = True, top_n=None,
             fetch_all(list(range(earliest, draft_season + 1)), datasets=stale, overwrite=True)
         result.refreshed = stale
 
-    # rookie context (shared across positions) ---------------------------------------------
-    if rookie_context is None:
-        rookie_context = _rookie_market_context(draft_season)
-    ecr_df, rookie_names, note = rookie_context
-    result.rookie_note = note
+    # rookie context — one per market board, shared by every league that reads it ------------
+    # A 2QB/superflex league counts its rookies off the superflex chart, a 1QB league off
+    # redraft-overall. An explicit `rookie_context` (tests, offline runs) overrides both.
+    ecr_types = {lg.name: ecr_type_for_league(lg) for lg in leagues}
+    contexts = {}
+    if rookie_context is not None:
+        contexts = dict.fromkeys(set(ecr_types.values()), rookie_context)
+    else:
+        for et in sorted(set(ecr_types.values())):
+            contexts[et] = _rookie_market_context(draft_season, ecr_type=et)
+    notes = {et: ctx[2] for et, ctx in contexts.items() if ctx[2]}
+    result.rookie_note = "; ".join(f"{et}: {n}" for et, n in sorted(notes.items())) if notes else ""
 
-    # (c) project — once per *scoring format*, shared by every league that uses it -----------
-    # Depth is per-league, so a format's pass uses the deepest board any of its leagues asks for;
-    # each league then trims to its own depth in (d). Projecting deeper costs nothing extra.
+    # (c) project — once per *(scoring format, market board)*, shared by every league using it -
+    # Depth is per-league, so a pass projects the deepest board any of its leagues asks for; each
+    # league then applies its own rookie trim and depth in (d). Projecting deeper costs nothing.
     depths = {lg.name: board_depth(lg, overrides=top_n) for lg in leagues}
     projections = {}
-    for scoring in sorted({lg.scoring for lg in leagues}):
-        pooled = {p: max(depths[lg.name].get(p, 0) for lg in leagues if lg.scoring == scoring)
-                  for p in MODELED_POS}
-        projections[scoring] = _project_scoring(
+    for key in sorted({(lg.scoring, ecr_types[lg.name]) for lg in leagues}):
+        scoring, ecr_type = key
+        members = [lg for lg in leagues if (lg.scoring, ecr_types[lg.name]) == key]
+        pooled = {p: max(depths[lg.name].get(p, 0) for lg in members) for p in MODELED_POS}
+        projections[key] = _project_scoring(
             configs, scoring=scoring, feature_season=feature_season, draft_season=draft_season,
-            top_n=pooled, ecr_df=ecr_df, rookie_names=rookie_names)
+            top_n=pooled)
 
     # (d) value each league ------------------------------------------------------------------
     for lg in leagues:
-        proj, summaries = projections[lg.scoring]
+        ecr_type = ecr_types[lg.name]
+        proj, seasons = projections[(lg.scoring, ecr_type)]
         if proj is None or proj.empty:
-            result.leagues.append(LeagueBoard(league=lg))
+            result.leagues.append(LeagueBoard(league=lg, ecr_type=ecr_type))
             continue
         depth = depths[lg.name]
-        # proj_pos_rank is 1-based within position, so the league's depth is a plain row filter.
-        limit = proj["position"].map(depth).fillna(len(proj))
-        trimmed = proj[proj["proj_pos_rank"] <= limit].reset_index(drop=True)
+        ecr_df, rookie_names, _ = contexts[ecr_type]
+        # "Top N" means N *board slots*, of which the market expects some to be rookies the model
+        # can't score — so each league keeps its own depth minus its own rookie count.
+        #
+        # Only rookies the market ranks inside the *draft* count: one the market puts beyond the
+        # last pick will never take a slot, so charging a position's depth for him would shorten
+        # the board. Restricting the names here makes the subtraction and the insertion below
+        # read the same set, which is what keeps the board exactly `total_picks` long.
+        rookie_rows = market_rookies(ecr_df, rookie_names, limit=lg.total_picks)
+        draftable = {pos: {_norm(r["player_name"]) for r in rookie_rows
+                           if r["position"] == pos} for pos in MODELED_POS}
+        rookies = {pos: estimate_rookie_count(ecr_df, draftable, pos, depth.get(pos, 0))
+                   for pos, _ in seasons}
+        keep = {pos: max(depth.get(pos, 0) - r, 0) for pos, r in rookies.items()}
+        # proj_pos_rank is 1-based within position, so the kept depth is a plain row filter.
+        limit = proj["position"].map(keep).fillna(0)
+        trimmed = proj[proj["proj_pos_rank"] <= limit].copy()
+        trimmed["requested_top_n"] = trimmed["position"].map(depth)
+        trimmed["rookies_subtracted"] = trimmed["position"].map(rookies)
+        trimmed = trimmed.reset_index(drop=True)
         lambdas = {}
         value_col = "proj_ppg"
         if lg.bestball:
@@ -323,17 +411,19 @@ def run_redraft(configs, *, draft_season=None, refresh: bool = True, top_n=None,
         board, replacement, starters = build_board(
             trimmed, teams=lg.teams, roster=lg.starters, flex_positions=lg.flex_positions,
             value_col=value_col)
-        board = board.head(lg.total_picks).reset_index(drop=True)
+        # The board is titled a draft board, so it must be a pick order: the market's rookies
+        # occupy their own slots rather than leaving holes the model can't fill.
+        board = insert_market_rookies(board, rookie_rows, limit=lg.total_picks)
         board["league"] = lg.name
         # Summaries describe what each league actually kept, not the pooled projection pass.
         lg_summaries = [
-            PositionSummary(s.position, depth.get(s.position, s.requested_top_n),
-                            s.rookies_subtracted,
-                            int((board["position"] == s.position).sum()), s.proj_season)
-            for s in summaries]
+            PositionSummary(pos, depth.get(pos, 0), rookies[pos],
+                            int(((board["position"] == pos)
+                                 & (board["source"] == "model")).sum()), proj_season)
+            for pos, proj_season in seasons]
         result.leagues.append(LeagueBoard(league=lg, board=board, replacement=replacement,
                                           starters=starters, summaries=lg_summaries,
-                                          bestball_lambdas=lambdas))
+                                          bestball_lambdas=lambdas, ecr_type=ecr_type))
 
     first = result.leagues[0] if result.leagues else None
     if first is not None:
@@ -350,9 +440,14 @@ def render_markdown(result: RedraftResult, lb: LeagueBoard, *, top: int = 60) ->
                  f"{lg.roster_size} rounds ({lg.total_picks} picks). Features from "
                  f"{result.feature_season}._")
     lines.append("")
-    lines.append("_Model-only: ECR/ADP are benchmarks and never inputs. The market is used for "
-                 "one thing — counting how many rookies belong in each top-N, since the model "
-                 "only ranks returning players._")
+    from ..data.benchmark import ECR_TYPE_LABELS
+    lines.append(f"_**The overall board is a pick order — draft down it.** Every projection is "
+                 f"model-only; ECR/ADP are benchmarks and never inputs to a model number. The "
+                 f"model can't score rookies, so the market ("
+                 f"**{ECR_TYPE_LABELS.get(lb.ecr_type, lb.ecr_type)}** ECR) is used for two "
+                 f"things and nothing else: how many rookies belong in each position's top-N, "
+                 f"and which slot each takes in the order below. Rookie rows are *italic* and "
+                 f"carry no projection. The per-position tables are returning players only._")
     lines.append("")
 
     if lb.board is None or lb.board.empty:
@@ -399,18 +494,25 @@ def render_markdown(result: RedraftResult, lb: LeagueBoard, *, top: int = 60) ->
         divider += "---|"
     lines.extend([header, divider])
     for _, r in board.head(top).iterrows():
-        row = (f"| {int(r['proj_overall_rank'])} | {r['player_name']} | {r['position']} | "
-               f"{r['position']}{int(r['proj_pos_rank'])} | {r['proj_ppg']:.2f} | "
-               f"{r['vorp']:.2f} |")
+        if r.get("source") == "market_rookie":
+            # The model can't score a rookie; the market's slot is shown so the order stays a
+            # pick order. No model number is implied — the projection columns stay empty.
+            row = (f"| {int(r['proj_overall_rank'])} | *{r['player_name']}* | {r['position']} | "
+                   f"*rookie* | — | *market ECR {int(r['market_ecr'])}* |")
+        else:
+            row = (f"| {int(r['proj_overall_rank'])} | {r['player_name']} | {r['position']} | "
+                   f"{r['position']}{int(r['proj_pos_rank'])} | {r['proj_ppg']:.2f} | "
+                   f"{r['vorp']:.2f} |")
         if has_sigma:
-            row += f" {r['sigma']:.2f} |"
+            row += (" — |" if r.get("source") == "market_rookie" else f" {r['sigma']:.2f} |")
         lines.append(row)
     lines.append("")
 
     lines.append("## By position")
     lines.append("")
+    model_rows = board[board.get("source", "model") == "model"] if len(board) else board
     for s in lb.summaries:
-        sub = board[board["position"] == s.position]
+        sub = model_rows[model_rows["position"] == s.position]
         if sub.empty:
             continue
         note = (f" (top {s.requested_top_n} − {s.rookies_subtracted} rookies)"

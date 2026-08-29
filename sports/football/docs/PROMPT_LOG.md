@@ -2627,6 +2627,270 @@ so the number ordering is merge order, not authoring order)*
   14 started league-wide, i.e. the dedicated slots only. The 28→42 extra flex slots went entirely
   to RB (31 started) and WR (53). The USAGE note that TE-flex never bites survives the test.
 
+## Entry 090 — why the 2QB board doesn't look like an ADP chart
+
+**Date:** 2026-08-29
+
+**Prompt (full text):**
+
+> Let's talk about the 2qb draft board. This looks very different from an ADP chart right now. Why?
+
+**Response notes:**
+
+Diagnostic only — no code or report changed. Measured `reports/redraft_2026_my_2qb.csv` (160
+rows) against the live DynastyProcess ECR (`db_fpecr.parquet`, latest 2026 scrape 2026-08-28).
+
+- **Most of the apparent gap is benchmark mismatch, not model behaviour.** Public ADP/ECR charts
+  are single-QB (`ecr_type == "ro"`). Against `ro` the board is Spearman **.696** overall and has
+  **19 QBs in its top 60 vs the market's 2**. Against redraft **superflex** (`rsf`, the right
+  comparison for a 2QB league) it is **.773**, with **19 QBs in the board top 60 vs 20** in ECR.
+  The QB density is right; we were reading it against the wrong chart.
+- `rsf` exists in the same ECR file we already download and is a **better benchmark for
+  `my_2qb`/`suz_1qb`-style superflex shapes than `ro`**. `data/benchmark.py` hard-codes
+  `REDRAFT_OVERALL = "ro"`; a league-aware benchmark type is a candidate follow-up (still
+  benchmark-only, never blended).
+- **Non-QB divergence is genuine and concentrated at WR** (Spearman .766 ex-QB; by position
+  RB .909, TE .799, WR .746). Three mechanisms, all confirmed in the feature frames:
+  1. **Season-total shares punish injured players.** `target_share = targets / team_targets` over
+     full seasons (`features/build.py:83`), so a hurt star reads as a low-usage receiver: Nabers
+     4 games → .070 share, Tyreek Hill 4 games → .063, Garrett Wilson 7 games → .125. They land
+     at WR29/WR43/WR31 against ECR 45/—/53. Same shape for Bowers (12 g, TE2), Jayden Daniels
+     (7 g, QB17), Burrow (8 g, QB23).
+  2. **The projection is mostly last season, shrunk.** Spearman(proj_ppg, 2025 ppg) = QB .776,
+     RB .921, WR .812, TE .796, with sd(proj)/sd(actual) of .85/.78/.75/.62. Ridge shrinkage
+     compresses the top, so WR5–WR16 span 12.96→10.60 PPG — ordering inside that band is noise,
+     while ECR keeps a talent prior. Hence Jefferson (9.38 ppg on a 30% target share in 17 games)
+     at WR11 vs ECR 17, and A.J. Brown / CeeDee Lamb / DeVonta Smith similarly faded.
+  3. **No role or depth-chart knowledge for 2026.** The target is PPG, so a backup's few starts
+     score as a rate. The largest model-over-market gaps are all bench bodies: Ertz (board 113 vs
+     ECR 674), Mariota (134/644), Fields (153/630), Mac Jones (147/593), Cousins (146/499).
+     `retired_next` sums to **0** across all four 2025 feature frames, so retirees stay on the
+     board too.
+- **The board is also structurally short by ~23 picks.** Rookies are subtracted as counts, never
+  inserted: QB 35−1, RB 50−5, WR 75−16, TE 24−1. 18 of ECR's top 60 are absent from the board's
+  top 60, and the rookie-shaped holes are the most visible part of that.
+- Offseason block is **live**, not degenerate (2025: 44 WR / 27 RB / 18 QB / 25 TE
+  `changed_team_next`), so the PR #33 N+1 roster join is working.
+- Stale local cache noted: `data/external/market_football_*.parquet` still tops out at 2025. The
+  redraft path fetches ECR live, so the boards are fine; only the committed benchmark cache lags.
+
+## Entry 091 — which chart the 2QB board should be graded against
+
+**Date:** 2026-08-29
+
+**Prompt (full text):**
+
+> What chart comparison should I be doing?
+
+**Response notes:**
+
+Follow-up to Entry 090. Diagnostic only — no code or report changed.
+
+- **League shape lives entirely in cross-position placement, not within-position order.** Comparing
+  the 2026 `ro` (1QB PPR) and `rsf` (PPR superflex) ECR boards head to head: positional-rank
+  Spearman is **QB .991, RB .9991, WR .9973, TE .9972**, while overall-rank Spearman is .9545 and
+  the median QB's overall rank moves **162 → 76**. So there are two separate comparisons, not one:
+  1. *Is the board shaped right for the league?* → overall/cross-position placement → **must** use
+     `rsf`; `ro` is what made the board look alien in Entry 090.
+  2. *Is the model any good at ranking players?* → within-position rank → chart type is nearly
+     irrelevant, so the committed `ro` cache is fine. Current pos-rank agreement vs `rsf`:
+     RB .911, TE .799, QB .790, **WR .747** — WR remains the weak position.
+- **Two mismatches that can't be closed from this source, and shouldn't be read as model error.**
+  (a) Superflex ≠ true 2QB — superflex allows punting QB2 into the flex, so genuine 2QB demand is
+  *higher* than `rsf`; the board should sit slightly ahead of `rsf` on QBs, not level with it.
+  (b) Every FantasyPros page in `db_fpecr.parquet` is full PPR (`ro` = `ppr-cheatsheets.php`,
+  `rsf` = `ppr-superflex-cheatsheets.php`); there is **no half-PPR ECR**, so a half-PPR board will
+  structurally favour TD/deep profiles over volume slot WRs versus any chart here.
+- **Rejected: grading against the expert band.** ECR ships `sd`/`best`/`worst`, and comparing to the
+  band rather than the point estimate looked like the principled move. It is empirically useless —
+  **all 157** matched board players fall outside 2 sd (median sd 15.6 ranks overall, **7.7** in the
+  top 60). `sd` measures how tightly the experts agree with each other, not forecast uncertainty,
+  and it is far narrower than real year-to-year outcome spread. Do not build a diagnostic on it.
+- **The comparison that actually settles anything is neither.** Rank correlation against a chart
+  measures *conformity*, not accuracy. `make postseason SEASON=Y` already grades model / ECR / ADP
+  against the realised finish (`eval/postseason.py`), which is the only framing consistent with the
+  two-independent-opinions rule — it treats market and model as competing forecasts rather than
+  making one the target.
+- **The ADP leg can't do 2QB.** `data/external/adp_football_*.parquet` is
+  `[player_id, season, adp, adp_pos_rank]` with no format/scoring column, so ECR `rsf` is the only
+  2QB-shaped benchmark available. Also still capped at 2025, per Entry 089.
+- Follow-up candidate (unchanged from Entry 090): `data/benchmark.py:19` hard-codes
+  `REDRAFT_OVERALL = "ro"`; a league-aware benchmark type would let superflex leagues pull `rsf`.
+
+## Entry 092 — league-aware market benchmark: 2QB pulls the superflex board
+
+**Date:** 2026-08-29
+
+**Prompt (full text):**
+
+> make the benchmark league-aware so 2qb pulls rsf
+
+**Response notes:**
+
+Acts on the follow-up candidate from Entries 090/091. 567 tests pass (was 539), ruff clean.
+
+**What changed**
+
+- `eval/league.py` — `LeagueConfig.qb_starters` (dedicated QB slots + a QB-eligible flex) and
+  `is_superflex` (`qb_starters >= 2`). Covers true 2QB *and* superflex, which the market treats
+  as one shape.
+- `data/benchmark.py` — added `REDRAFT_SUPERFLEX = "rsf"`, `ECR_TYPES`, `ECR_TYPE_LABELS`,
+  `resolve_ecr_type` (rejects typos: an unknown type would silently empty the filter and surface
+  much later as "no preseason scrapes"), `ecr_type_for_league`, and `benchmark_path`.
+  `build_market_benchmark` takes `ecr_type` (falling back to `benchmark.ecr_type` in the config,
+  then `ro`). **The default board keeps its un-suffixed filename** so every committed `market_*`
+  table and its readers stay valid; other boards write `market_<sport>_<pos>_<type>.parquet`.
+- `eval/redraft.py` — `_rookie_market_context(season, ecr_type=…)`; `run_redraft` builds one
+  context per distinct board (not per league) and keys the pipeline pass on
+  **(scoring, market board)** rather than scoring alone. `LeagueBoard.ecr_type` records the board
+  and the report header names it ("Board: **superflex** ECR"). `rookie_note` now prefixes each
+  note with its board.
+- `scripts/fetch_benchmark.py` — `--league` (derive the board from a league YAML) and
+  `--ecr-type` (name it directly); `Makefile` gains `LEAGUE=…` on the `benchmark` target.
+- `docs/USAGE.md` — a "Which market board" subsection under `redraft.py`, plus the two mismatches
+  that cannot be closed from this source.
+
+**The chart swap itself changed nothing — and that is the measured result, not an assumption.**
+At every board depth these leagues use, `ro` and `rsf` return **identical** rookie counts
+(QB 1, RB 3, WR 7, TE 0 at my_2qb's 35/50/75/24). Expected from Entry 091: the rookie counter
+reads *within-position* rank, where the two charts agree at ~.99. The value of the change is
+correctness and the plumbing for cross-position work, not a different board today.
+
+**What did move my_2qb's numbers was the pass split — and it fixed a real bug.** Rookie counts
+are estimated at the *pooled* depth of a pass, but the report prints the *league's own* depth
+beside them. my_2qb previously shared the half_ppr pass with underdog_bestball and so subtracted
+rookies counted at underdog's deeper board (RB 62, WR 93, TE 35) while printing its own
+(RB 50, WR 75, TE 24) — reported as "top 75 − 16 rookies" when 16 was the count at 93. Splitting
+the pass leaves my_2qb pooling alone, so its counts are now self-consistent:
+RB 5→3, WR 16→7, TE 1→0. Board rows are unchanged (the 160-pick VORP cut binds first); the
+redraft CSVs are git-ignored and only the four `.md` headers/counts differ.
+
+**⚠️ The same bug still bites the remaining pooled pair.** `ppr_1qb` (WR 83) and `suz_1qb`
+(WR 80) still share the `ppr/ro` pass, so suz_1qb subtracts rookies counted at 83 while its
+report prints 80. The honest fix is to move the rookie subtraction out of `_project_scoring` and
+into the per-league step (d), where each league's own depth is known — deliberately **not** done
+here: it is outside this prompt and it would change suz_1qb's board content.
+
+**Also noted**
+
+- `rsf` history starts in **2021**; `ro` goes back to 2020. A superflex backtest therefore has one
+  fewer season.
+- The `rsf` benchmark tables have **no reader yet** — the redraft path fetches ECR live, and
+  experiment/postseason grade per-position off the default `ro` files (correct: Entry 091 showed
+  per-position grading is insensitive to the chart). `make benchmark LEAGUE=…` was smoke-tested
+  and the orphan `market_football_qb_rsf.parquet` deleted rather than committed.
+- The committed `market_football_*.parquet` tables still stop at 2025 — the 2026 preseason scrape
+  (2026-08-28) is inside the window and would be picked up by a `make benchmark` refresh.
+
+## Entry 093 — rookie trim moves from the pooled pass to the league
+
+**Date:** 2026-08-29
+
+**Prompt (full text):**
+
+> fix the pooled rookie count for suz_1qb too
+
+**Response notes:**
+
+Fixes the bug flagged at the end of Entry 092. 569 tests pass (was 567), ruff clean, boards
+regenerate idempotently.
+
+**The bug.** `_project_scoring` estimated the rookie count once per pipeline pass, at the
+**pooled** depth (the deepest board any league sharing that pass asked for), and then wrote it
+onto every row. Each league later trimmed to its own depth, so the number a report *printed* was
+measured at another league's depth. Two failure modes, both live:
+
+- *Wrong number displayed.* `ppr_1qb` shares the `ppr/ro` pass with `suz_1qb`, whose TE board is
+  deeper (52 vs 31). The count came from depth 52 → 5 rookies, but the trim to depth 31 discarded
+  it, so the report read "**31** returning players (top 31 − **5** rookies)" — internally
+  impossible, and the board carried a full 31 TEs.
+- *Wrong number applied.* `suz_1qb`'s own RB/WR counts were taken at `ppr_1qb`'s deeper board
+  (RB 55, WR 83), charging it for rookies the market ranks below its board.
+
+**The fix.** `_project_scoring` now returns the projection at the pooled depth **before** any
+rookie subtraction, plus `[(position, proj_season)]`. `run_redraft` step (d) computes each
+league's rookie count at that league's own depth, trims to `depth − rookies`, and writes
+`requested_top_n` / `rookies_subtracted` (both ride on the CSV) per league. Summaries are built
+from the league's own numbers rather than the pass's.
+
+**Board effects** — all 16 league×position combinations now reconcile (verified: board count
+`<= depth − rookies`, with equality except where the total-picks cap binds):
+
+| league | change |
+|---|---|
+| `ppr_1qb` | TE 31 → 30 on the board; report now "top 31 − 1 rookie" (was a false "− 5") |
+| `suz_1qb` | RB 51 → 49, WR 73 → 72; total 196 → **193** |
+| `my_2qb` | unchanged (it already pooled alone after Entry 092) |
+| `underdog_bestball` | unchanged |
+
+`my_2qb`'s RB/WR are the only rows where the total-picks cut still binds (board 43/59 against a
+kept 47/68), which is the intended meaning of the summary — what the league actually kept.
+
+**Tests.** `test_rookie_count_uses_each_leagues_own_depth` is the direct regression: two leagues
+share a pass, the single rookie sits at ECR QB8, the shallow (top-5) league subtracts 0 and the
+deep (top-12) league subtracts 1. `test_board_columns_record_the_leagues_own_trim` pins the two
+CSV columns to per-league values.
+
+Docs: `USAGE.md` gains the "top N means N board slots, counted at each league's own depth" note;
+the `redraft.py` module docstring says the same where it explains the top-N rule.
+
+## Entry 094 — the draft board becomes a pick order
+
+**Date:** 2026-08-29
+
+**Prompt (full text):**
+
+> now regenerate all reports if necessary. if something says "draft board" i should be trying to
+> draft in that order.
+
+**Response notes:**
+
+577 tests pass (was 569), ruff clean, all four boards regenerate idempotently.
+
+**Regeneration — only the four redraft boards needed it.** Verified rather than assumed: the
+keeper boards regenerate **byte-identical** (`keeper.py` builds its own board from
+`project_positions` and never touches the rookie trim or the benchmark), and `handcuff.py` /
+`postseason.py` are decoupled from every module touched in Entries 092-093 — postseason's only
+import from `redraft` is `_override_season`.
+
+**The defect.** The report is titled *Draft Board* but omitted rookies entirely, so row N was not
+pick N. Measured against the league's own market board: 1 rookie inside the top 60, 3 inside the
+top 120, **10 inside my_2qb's 160 picks** (Jeremiyah Love at 59, Carnell Tate 85, Jadarian Price
+89, …). Accurate at the top, drifting up to 10 slots by the end of the draft.
+
+Checked the keeper boards for the same flaw and **left them alone**: their slots shift by at most
+2, and no keep/pass verdict moves (worst case Sam LaPorta −17 → −18).
+
+**The fix** (user chose "insert rookies as placeholder rows" over retitling or a second section):
+`market_rookies()` returns the rookies the market ranks inside the draft, with the slot each takes
+— ranked over **modeled positions only**, since the `ro` scrape also carries IDP rows that are not
+draftable. `insert_market_rookies()` splices them into the VORP-ordered board at those slots, cuts
+to `total_picks`, and renumbers `proj_overall_rank` 1..N. Rookie rows carry no model columns
+(`proj_ppg`/`vorp`/`proj_pos_rank` stay null) and are tagged `source == "market_rookie"`; the
+report renders them italic with an em-dash projection and their market ECR.
+
+**Never-blend is intact.** No model number is market-derived. The market already decided *how
+many* rookies each position's top-N holds; this only adds *which ones* and *where*. The
+per-position tables stay returning-players-only, as they are labelled.
+
+**A second bug fell out of it.** The subtraction counted rookies inside a *position's depth* while
+the insertion counted them inside the *pick limit* — two different windows, so boards came up
+short of their own draft (`ppr_1qb` 190 of 192, `suz_1qb` 208 of 210). Restricting the subtraction
+to rookies the market ranks inside `total_picks` makes both read one set, which guarantees the
+board fills the draft: model rows = Σ(depth − rookies) and Σdepth ≥ total_picks, so
+model + inserted ≥ total_picks always. All four boards are now exactly their draft length with
+contiguous ranks: ppr_1qb 192, suz_1qb 210, my_2qb 160, underdog_bestball 216.
+
+**⚠️ CSV schema changed** (`reports/redraft_*.csv`, git-ignored but read by the home-site
+dashboard): two columns appended, `source` (`model` | `market_rookie`) and `market_ecr`. Every
+existing column survives, but rookie rows carry **nulls in `proj_ppg` / `vorp` / `proj_pos_rank` /
+`player_id`** — a consumer assuming those are numeric must filter `source == "model"` first.
+
+**Also.** Per-position counts now report model rows only, so they fall where the 10 inserted
+rookies pushed model players past the last pick (my_2qb QB 34→30, WR 59→54, RB 43→42). The
+"N returning players (top D − R rookies)" line keeps its documented meaning: what the league
+actually kept after the total-picks cut.
+
 ---
 
 <!-- Template for new entries:

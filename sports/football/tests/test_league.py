@@ -163,3 +163,27 @@ def test_duplicate_league_names_rejected():
 def test_top_n_override_must_name_modeled_positions():
     with pytest.raises(ValueError, match="not modeled positions"):
         league_from_dict(_base(top_n={"K": 5}))
+
+
+# -- QB shape / market board ----------------------------------------------------------------
+
+def test_qb_starters_counts_dedicated_slots():
+    lg = league_from_dict({"name": "x", "scoring": "ppr", "teams": 10,
+                           "starters": {"QB": 2, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1}})
+    assert lg.qb_starters == 2 and lg.is_superflex
+
+
+def test_qb_starters_counts_a_qb_eligible_flex():
+    """Superflex spells the second QB as a flex slot; it is still a two-QB league."""
+    lg = league_from_dict({"name": "x", "scoring": "ppr", "teams": 12,
+                           "starters": {"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1},
+                           "flex_positions": ["QB", "RB", "WR", "TE"]})
+    assert lg.qb_starters == 2 and lg.is_superflex
+
+
+def test_single_qb_league_is_not_superflex():
+    lg = league_from_dict({"name": "x", "scoring": "ppr", "teams": 12,
+                           "starters": {"QB": 1, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1},
+                           "flex_positions": ["RB", "WR", "TE"]})
+    assert lg.qb_starters == 1 and not lg.is_superflex
+

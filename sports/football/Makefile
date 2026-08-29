@@ -44,8 +44,10 @@ eligibility:
 eda:
 	uv run python scripts/run_eda.py --config $(CONFIG)
 
+# Defaults to the 1QB redraft-overall board, which is what the experiment/postseason grading
+# reads. For a superflex/2QB league's own board: `make benchmark LEAGUE=config/leagues/my_2qb.yaml`
 benchmark:
-	uv run python scripts/fetch_benchmark.py --config $(CONFIG)
+	uv run python scripts/fetch_benchmark.py --config $(CONFIG) $(if $(LEAGUE),--league $(LEAGUE),)
 
 experiment:
 	uv run python scripts/run_experiment.py --config $(CONFIG)

@@ -46,6 +46,27 @@ class LeagueConfig:
         """Players drafted league-wide — the natural cut for a cross-position board."""
         return self.teams * self.roster_size
 
+    @property
+    def qb_starters(self) -> int:
+        """The most QBs a team can start — dedicated QB slots plus a QB-eligible flex.
+
+        Superflex leagues express the second QB as a flex slot, true 2QB leagues as a second
+        dedicated slot; both let a manager start two, which is what moves the market board.
+        """
+        qb = self.starters.get("QB", 0)
+        if "QB" in self.flex_positions:
+            qb += self.starters.get("FLEX", 0)
+        return qb
+
+    @property
+    def is_superflex(self) -> bool:
+        """True when a team can start more than one QB (true 2QB *or* superflex).
+
+        The market publishes one board for both shapes, so they share a benchmark even though
+        their replacement levels differ (a 2QB league must fill both slots; superflex may punt).
+        """
+        return self.qb_starters >= 2
+
     def slot_summary(self) -> str:
         """``2QB / 2RB / 2WR / 1TE / 1FLEX`` — for report headers."""
         order = [*MODELED_POS, "FLEX"]
