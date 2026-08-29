@@ -29,7 +29,7 @@
     2025
   ],
   "min_season": 2002,
-  "pulled_at": "2026-08-03T10:43:15.097430+00:00",
+  "pulled_at": "2026-08-29T03:26:11.844346+00:00",
   "n_rows": 906378,
   "n_cols": 36,
   "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/rosters_weekly.parquet",

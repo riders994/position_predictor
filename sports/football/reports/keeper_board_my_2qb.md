@@ -13,9 +13,9 @@ _A keeper costs you the pick you drafted him at, so_ **`surplus = pick paid − 
 | **KEEP** | Puka Nacua | WR1 | 16.71 | 3 | 40 (rd 4) | +37 |
 | **KEEP** | Josh Jacobs | RB12 | 12.46 | 27 | 55 (rd 6) | +28 |
 | pass | Derrick Henry | RB11 | 13.01 | 23 | 15 (rd 2) | -8 |
-| pass | Brian Thomas Jr. | WR27 | 9.68 | 82 | 72 (rd 8) | -10 |
+| pass | Brian Thomas Jr. | WR28 | 9.68 | 85 | 72 (rd 8) | -13 |
 | pass | Saquon Barkley | RB10 | 13.06 | 22 | 8 (rd 1) | -14 |
-| pass | Sam LaPorta | TE9 | 8.10 | 76 | 60 (rd 6) | -16 |
+| pass | Sam LaPorta | TE9 | 8.10 | 77 | 60 (rd 6) | -17 |
 
 ## Replacement level
 
@@ -25,6 +25,6 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 |---|---|---|
 | QB | 20 | 14.10 |
 | RB | 24 | 9.33 |
-| WR | 26 | 9.68 |
+| WR | 26 | 9.70 |
 | TE | 10 | 7.90 |
 

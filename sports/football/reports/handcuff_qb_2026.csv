@@ -1,13 +1,13 @@
 risk_rank,player_name,proj_pos_rank,proj_ppg,pred_games_next,exp_games_missed,risk_tier,draft_backup
-1,Kirk Cousins,29,12.07,4.7,12.3,High,True
+1,Kirk Cousins,28,12.07,4.7,12.3,High,True
 2,Marcus Mariota,26,12.35,5.3,11.7,High,True
-3,Justin Fields,32,11.77,7.1,9.9,High,True
-4,Mac Jones,30,12.01,7.2,9.8,High,True
-5,Geno Smith,31,11.88,7.8,9.2,High,True
+3,Justin Fields,31,11.77,7.1,9.9,High,True
+4,Mac Jones,29,12.01,7.2,9.8,High,True
+5,Geno Smith,30,11.88,7.8,9.2,High,True
 6,Jayden Daniels,18,15.4,8.2,8.8,High,True
 7,Aaron Rodgers,25,12.47,8.6,8.4,High,True
 8,Tyler Shough,27,12.35,8.7,8.3,High,True
-9,Jacoby Brissett,28,12.15,9.1,7.9,Moderate,False
+9,Jacoby Brissett,32,11.71,9.1,7.9,Moderate,False
 10,Jaxson Dart,13,16.24,10.6,6.4,Moderate,False
 11,Joe Burrow,23,13.75,10.9,6.1,Moderate,False
 12,C.J. Stroud,20,14.79,11.2,5.8,Moderate,False

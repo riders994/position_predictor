@@ -21,11 +21,11 @@ Chosen: **`availability_model`** (best clears-cutoff AUC at g\*=4; `winner`=`ava
 | 3 | DJ Giddens (84) | Jonathan Taylor (4) | 3.6 | 2.55 | 7.29 |
 | 4 | Raheem Mostert (82) | Ashton Jeanty (8) | 4.0 | 2.46 | 7.32 |
 | 5 | Chris Brooks (124) | Josh Jacobs (12) | 3.6 | 2.30 | 5.00 |
-| 6 | Isiah Pacheco (63) | Jahmyr Gibbs (3) | 3.0 | 2.12 | 8.16 |
+| 6 | Isiah Pacheco (62) | Jahmyr Gibbs (3) | 3.0 | 2.12 | 8.16 |
 | 7 | Justice Hill (75) | Derrick Henry (11) | 3.8 | 1.98 | 7.24 |
 | 8 | Tank Bigsby (58) | Saquon Barkley (10) | 4.1 | 1.91 | 8.15 |
 | 9 | Jaylen Wright (50) | De'Von Achane (5) | 3.3 | 1.88 | 8.60 |
-| 10 | Ray Davis (61) | James Cook (7) | 3.5 | 1.86 | 8.05 |
+| 10 | Ray Davis (60) | James Cook (7) | 3.5 | 1.86 | 8.05 |
 | 11 | Samaje Perine (73) | Chase Brown (6) | 3.2 | 1.85 | 7.17 |
 | 12 | Isaiah Davis (71) | Breece Hall (14) | 3.4 | 1.49 | 6.92 |
 | 13 | Miles Sanders (59) | Javonte Williams (13) | 3.2 | 1.27 | 7.50 |

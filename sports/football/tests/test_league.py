@@ -19,8 +19,8 @@ from position_predictor.eval.league import (  # noqa: E402
     load_leagues,
 )
 
-SHIPPED = ["config/leagues/ppr_1qb.yaml", "config/leagues/my_2qb.yaml",
-           "config/leagues/underdog_bestball.yaml"]
+SHIPPED = ["config/leagues/ppr_1qb.yaml", "config/leagues/suz_1qb.yaml",
+           "config/leagues/my_2qb.yaml", "config/leagues/underdog_bestball.yaml"]
 
 
 def _base(**over):
@@ -32,7 +32,7 @@ def _base(**over):
 
 def test_all_shipped_leagues_load():
     leagues = load_leagues(SHIPPED)
-    assert [lg.name for lg in leagues] == ["ppr_1qb", "my_2qb", "underdog_bestball"]
+    assert [lg.name for lg in leagues] == ["ppr_1qb", "suz_1qb", "my_2qb", "underdog_bestball"]
 
 
 def test_ppr_1qb_is_the_historical_default_shape():
@@ -56,6 +56,17 @@ def test_flex_eligibility_defaults_to_te_eligible():
 
 def test_rb_wr_only_flex_can_still_be_requested():
     assert league_from_dict(_base(flex_positions=["RB", "WR"])).flex_positions == ("RB", "WR")
+
+
+def test_suz_1qb_league():
+    """14-team 1QB PPR with a single dedicated RB slot and two flexes. The file began as a copy
+    of my_2qb.yaml, so pin the fields that copy got wrong: a stale ``name`` would collide with
+    my_2qb and a stale ``scoring`` would board the league in the wrong format."""
+    lg = load_league("config/leagues/suz_1qb.yaml")
+    assert (lg.scoring, lg.teams, lg.starters["QB"]) == ("ppr", 14, 1)
+    assert (lg.starters["RB"], lg.starters["FLEX"]) == (1, 3)
+    assert not lg.bestball
+    assert lg.total_picks == 210
 
 
 def test_my_2qb_league():
