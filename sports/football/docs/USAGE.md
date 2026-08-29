@@ -44,7 +44,7 @@ directly if you need their extra flags.
 | 4 features | `make features` | `build_features.py` | `data/processed/football_<pos>_features.parquet` + `_feature_blocks.json` |
 | 5 eligibility | `make eligibility` | `run_eligibility.py` | `reports/results/eligibility_*` + `reports/figures/eligibility_*.png` |
 | 6 EDA | `make eda` | `run_eda.py` | `reports/results/eda_*` + figures |
-| market | `make benchmark` | `fetch_benchmark.py` | `data/external/market_football_<pos>.parquet` (committed) |
+| market | `make benchmark` | `fetch_benchmark.py` | `data/external/market_football_<pos>[_<board>].parquet` (committed) |
 | 8 experiment | `make experiment` | `run_experiment.py` | `reports/results/experiment_*` + `summary.json` |
 | 9 report | `make report` | `make_report.py` | `reports/REPORT_football_<pos>.md` + figures + `reports/versions/<stem>/<version>/` snapshot |
 | 9 progress | `make progress` | `make_progress.py` | `reports/versions/<stem>/PROGRESS_<stem>.md` |
@@ -126,9 +126,21 @@ Two of eight recommendations flip. The QBs gain because 20 QBs start instead of 
 15.5 → 13.7 PPG); the receivers lose because half-PPR takes a point off every reception.
 
 **`redraft.py`** — new-season draft boards, **one per league**. Checks nflverse has published the
-just-completed season, refreshes stale caches, projects once per scoring format, then values each
-league with the keeper tool's VORP engine. Returning players within each top-N (rookie count
-estimated from market ADP).
+just-completed season, refreshes stale caches, projects once per *(scoring format, market board)*,
+then values each league with the keeper tool's VORP engine. Returning players within each top-N
+(rookie count estimated from the market board that matches the league — see below).
+
+**The overall board is a pick order — one row per pick, so you can draft down it.** "Top N" means
+N *board slots*, some of which the market expects to be rookies the model can't score. Each league
+keeps its own depth minus its own rookie count, and those same rookies are then spliced back in at
+their market slot as `source == "market_rookie"` rows carrying no projection (italic in the `.md`,
+with `market_ecr` in the CSV). Both the count and the depth are per league even when several
+leagues share a pipeline pass, and only rookies the market ranks *inside the draft* count — one
+ranked past the final pick takes no slot, so subtracting him would leave the board short.
+
+No model number is market-derived: the market decides how many rookies a position's top-N holds
+and where each falls in the order, nothing else. The per-position tables below the board stay
+returning-players-only, as labelled.
 ```bash
 make redraft SEASON=2026                              # or:
 uv run python scripts/redraft.py [options]
@@ -142,6 +154,22 @@ uv run python scripts/redraft.py [options]
 # → reports/redraft_<season>_<league>.{md,csv} for each league
 ```
 Hard-stops (exit 1) if the feature season isn't published yet.
+
+**Which market board.** FantasyPros publishes a separate consensus per roster shape, and the one a
+league is read against follows its QB slots: a league that can start two QBs (true 2QB *or* a
+QB-eligible flex) uses redraft **superflex** (`rsf`), everything else redraft-**overall** (`ro`).
+`ecr_type_for_league` picks it and each report's header names the board it used.
+
+Within a position the two charts agree almost perfectly (2026 rank Spearman QB .991, RB .999,
+WR .997, TE .997), so the rookie counts barely move — as of the 2026-08-28 scrape they are
+identical. The charts diverge **across** positions: the median QB sits 162nd overall on `ro` and
+76th on `rsf`. Any comparison that places positions against each other needs the league's own
+board; comparing within a position can use either.
+
+Two caveats this cannot fix. Superflex is not true 2QB (superflex may punt the second QB into the
+flex, a 2QB league must fill both slots), so genuine 2QB demand runs slightly ahead of `rsf`. And
+every FantasyPros consensus page is full PPR — there is no half-PPR chart — so a half-PPR league
+is benchmarked against a PPR board. Both are documented mismatches, not errors.
 
 ### League configs
 
@@ -190,6 +218,9 @@ with weekly mean at RB/WR/TE, so upside is mostly a restatement of quality. Best
 therefore rank by projected PPG; `sigma` is reported as context only.
 
 **`postseason.py`** — after a season completes, grade model vs ECR vs ADP vs the actual finish.
+This is the only comparison that measures *accuracy*; correlating a board against a chart measures
+conformity to it. Grading is per-position, where the board choice barely matters, so it reads the
+default `ro` tables.
 ```bash
 make postseason SEASON=2025                           # or:
 uv run python scripts/postseason.py [options]

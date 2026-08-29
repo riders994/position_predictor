@@ -3,12 +3,14 @@
 Runs the steps a redraft user wants for the upcoming season:
   (a) check nflverse has published the just-completed season,
   (b) refresh stale caches,
-  (c) project the season once per scoring format used by the configured leagues,
+  (c) project the season once per (scoring format, market board) the configured leagues use,
   (d) turn those projections into one VORP-ranked draft board per league.
 
 Leagues live in config/leagues/*.yaml (scoring, teams, started slots, flex eligibility). Two
-leagues that share a scoring format share one pipeline pass, so adding a league of an existing
-format is nearly free; adding a new format costs one dataset/features/fit pass per position.
+leagues that share a scoring format *and* a market board share one pipeline pass, so adding a
+league like an existing one is nearly free; a new format costs one dataset/features/fit pass per
+position. A league that can start two QBs is benchmarked against the superflex board, so it gets
+its own pass even when it shares a format.
 
 Usage:
     uv run python scripts/redraft.py                  # every shipped league, draft season = now
@@ -25,6 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from position_predictor.data.benchmark import ecr_type_for_league  # noqa: E402
 from position_predictor.eval.league import load_leagues  # noqa: E402
 from position_predictor.eval.redraft import render_markdown, run_redraft  # noqa: E402
 from position_predictor.utils.config import Config  # noqa: E402
@@ -83,9 +86,12 @@ def main() -> int:
     top_n = {pos: n for pos, n in (("QB", args.top_qb), ("RB", args.top_rb),
                                    ("WR", args.top_wr), ("TE", args.top_te)) if n is not None}
 
-    fmts = sorted({lg.scoring for lg in leagues})
+    # A pass is one (scoring format, market board) pair — the board joins the key because a
+    # two-QB league counts its rookies off the superflex chart. See eval.redraft.run_redraft.
+    passes = sorted({(lg.scoring, ecr_type_for_league(lg)) for lg in leagues})
     print(f"[redraft] {len(leagues)} league(s): {', '.join(lg.name for lg in leagues)}")
-    print(f"[redraft] {len(fmts)} scoring pass(es): {', '.join(fmts)}")
+    print(f"[redraft] {len(passes)} pipeline pass(es): "
+          f"{', '.join(f'{s}/{e}' for s, e in passes)}")
 
     res = run_redraft(configs, draft_season=args.season, refresh=not args.no_refresh,
                       top_n=top_n or None, leagues=leagues, bestball_lambdas=lambdas or None)

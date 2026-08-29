@@ -2,7 +2,7 @@
 
 _14-team · **ppr** · 1QB / 1RB / 2WR / 1TE / 3FLEX · 15 rounds (210 picks). Features from 2025._
 
-_Model-only: ECR/ADP are benchmarks and never inputs. The market is used for one thing — counting how many rookies belong in each top-N, since the model only ranks returning players._
+_**The overall board is a pick order — draft down it.** Every projection is model-only; ECR/ADP are benchmarks and never inputs to a model number. The model can't score rookies, so the market (**1QB redraft-overall** ECR) is used for two things and nothing else: how many rookies belong in each position's top-N, and which slot each takes in the order below. Rookie rows are *italic* and carry no projection. The per-position tables are returning players only._
 
 ## Replacement level
 
@@ -15,7 +15,7 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | WR | 53 | 9.33 |
 | TE | 14 | 9.30 |
 
-## Overall board (top 60 of 196)
+## Overall board (top 60 of 210)
 
 | # | player | pos | pos rank | proj PPG | VORP |
 |---|---|---|---|---|---|
@@ -59,26 +59,26 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 38 | Wan'Dale Robinson | WR | WR20 | 12.32 | 2.99 |
 | 39 | Ladd McConkey | WR | WR21 | 12.31 | 2.98 |
 | 40 | TreVeyon Henderson | RB | RB16 | 11.99 | 2.98 |
-| 41 | Jalen Hurts | QB | QB3 | 19.06 | 2.97 |
-| 42 | DeVonta Smith | WR | WR22 | 12.30 | 2.97 |
-| 43 | Brock Bowers | TE | TE2 | 12.26 | 2.96 |
-| 44 | Michael Wilson | WR | WR23 | 12.27 | 2.94 |
-| 45 | Travis Etienne | RB | RB17 | 11.92 | 2.91 |
-| 46 | Trevor Lawrence | QB | QB4 | 18.92 | 2.83 |
-| 47 | Omarion Hampton | RB | RB18 | 11.78 | 2.77 |
-| 48 | DK Metcalf | WR | WR24 | 12.06 | 2.73 |
-| 49 | Drake Maye | QB | QB5 | 18.69 | 2.60 |
-| 50 | Courtland Sutton | WR | WR25 | 11.89 | 2.56 |
-| 51 | Bucky Irving | RB | RB19 | 11.55 | 2.54 |
-| 52 | Deebo Samuel Sr. | WR | WR26 | 11.73 | 2.40 |
-| 53 | Alec Pierce | WR | WR27 | 11.70 | 2.37 |
-| 54 | Quentin Johnston | WR | WR28 | 11.68 | 2.35 |
-| 55 | Malik Nabers | WR | WR29 | 11.66 | 2.33 |
-| 56 | Brian Thomas Jr. | WR | WR30 | 11.64 | 2.31 |
-| 57 | Tyler Warren | TE | TE3 | 11.60 | 2.30 |
-| 58 | Garrett Wilson | WR | WR31 | 11.55 | 2.22 |
-| 59 | Harold Fannin Jr. | TE | TE4 | 11.40 | 2.10 |
-| 60 | Rico Dowdle | RB | RB20 | 11.08 | 2.07 |
+| 41 | *Jeremiyah Love* | RB | *rookie* | — | *market ECR 41* |
+| 42 | Jalen Hurts | QB | QB3 | 19.06 | 2.97 |
+| 43 | DeVonta Smith | WR | WR22 | 12.30 | 2.97 |
+| 44 | Brock Bowers | TE | TE2 | 12.26 | 2.96 |
+| 45 | Michael Wilson | WR | WR23 | 12.27 | 2.94 |
+| 46 | Travis Etienne | RB | RB17 | 11.92 | 2.91 |
+| 47 | Trevor Lawrence | QB | QB4 | 18.92 | 2.83 |
+| 48 | Omarion Hampton | RB | RB18 | 11.78 | 2.77 |
+| 49 | DK Metcalf | WR | WR24 | 12.06 | 2.73 |
+| 50 | Drake Maye | QB | QB5 | 18.69 | 2.60 |
+| 51 | Courtland Sutton | WR | WR25 | 11.89 | 2.56 |
+| 52 | Bucky Irving | RB | RB19 | 11.55 | 2.54 |
+| 53 | Deebo Samuel Sr. | WR | WR26 | 11.73 | 2.40 |
+| 54 | Alec Pierce | WR | WR27 | 11.70 | 2.37 |
+| 55 | Quentin Johnston | WR | WR28 | 11.68 | 2.35 |
+| 56 | Malik Nabers | WR | WR29 | 11.66 | 2.33 |
+| 57 | Brian Thomas Jr. | WR | WR30 | 11.64 | 2.31 |
+| 58 | Tyler Warren | TE | TE3 | 11.60 | 2.30 |
+| 59 | Garrett Wilson | WR | WR31 | 11.55 | 2.22 |
+| 60 | Harold Fannin Jr. | TE | TE4 | 11.40 | 2.10 |
 
 ## By position
 
@@ -88,31 +88,31 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 |---|---|---|---|---|
 | 1 | Josh Allen | 20.41 | 4.32 | 25 |
 | 2 | Lamar Jackson | 19.93 | 3.84 | 28 |
-| 3 | Jalen Hurts | 19.06 | 2.97 | 41 |
-| 4 | Trevor Lawrence | 18.92 | 2.83 | 46 |
-| 5 | Drake Maye | 18.69 | 2.60 | 49 |
-| 6 | Matthew Stafford | 17.94 | 1.85 | 67 |
-| 7 | Bo Nix | 17.83 | 1.74 | 73 |
-| 8 | Caleb Williams | 17.36 | 1.27 | 79 |
-| 9 | Justin Herbert | 17.28 | 1.19 | 81 |
-| 10 | Baker Mayfield | 17.12 | 1.03 | 85 |
-| 11 | Jared Goff | 17.01 | 0.92 | 89 |
-| 12 | Patrick Mahomes | 16.67 | 0.58 | 99 |
-| 13 | Jaxson Dart | 16.24 | 0.15 | 108 |
-| 14 | Dak Prescott | 16.15 | 0.06 | 111 |
-| 15 | Jordan Love | 16.09 | 0.00 | 113 |
-| 16 | Daniel Jones | 15.88 | -0.21 | 119 |
-| 17 | Sam Darnold | 15.42 | -0.67 | 133 |
-| 18 | Jayden Daniels | 15.40 | -0.69 | 135 |
-| 19 | Bryce Young | 15.21 | -0.88 | 137 |
-| 20 | C.J. Stroud | 14.79 | -1.30 | 146 |
-| 21 | Brock Purdy | 14.08 | -2.01 | 163 |
-| 22 | Cam Ward | 13.94 | -2.15 | 168 |
-| 23 | Joe Burrow | 13.75 | -2.34 | 173 |
-| 24 | Tua Tagovailoa | 12.95 | -3.14 | 181 |
-| 25 | Aaron Rodgers | 12.47 | -3.62 | 185 |
+| 3 | Jalen Hurts | 19.06 | 2.97 | 42 |
+| 4 | Trevor Lawrence | 18.92 | 2.83 | 47 |
+| 5 | Drake Maye | 18.69 | 2.60 | 50 |
+| 6 | Matthew Stafford | 17.94 | 1.85 | 69 |
+| 7 | Bo Nix | 17.83 | 1.74 | 76 |
+| 8 | Caleb Williams | 17.36 | 1.27 | 82 |
+| 9 | Justin Herbert | 17.28 | 1.19 | 84 |
+| 10 | Baker Mayfield | 17.12 | 1.03 | 88 |
+| 11 | Jared Goff | 17.01 | 0.92 | 92 |
+| 12 | Patrick Mahomes | 16.67 | 0.58 | 102 |
+| 13 | Jaxson Dart | 16.24 | 0.15 | 112 |
+| 14 | Dak Prescott | 16.15 | 0.06 | 115 |
+| 15 | Jordan Love | 16.09 | 0.00 | 117 |
+| 16 | Daniel Jones | 15.88 | -0.21 | 124 |
+| 17 | Sam Darnold | 15.42 | -0.67 | 140 |
+| 18 | Jayden Daniels | 15.40 | -0.69 | 142 |
+| 19 | Bryce Young | 15.21 | -0.88 | 145 |
+| 20 | C.J. Stroud | 14.79 | -1.30 | 155 |
+| 21 | Brock Purdy | 14.08 | -2.01 | 175 |
+| 22 | Cam Ward | 13.94 | -2.15 | 180 |
+| 23 | Joe Burrow | 13.75 | -2.34 | 184 |
+| 24 | Tua Tagovailoa | 12.95 | -3.14 | 191 |
+| 25 | Aaron Rodgers | 12.47 | -3.62 | 196 |
 
-### RB — 51 returning players (top 53 − 4 rookies)
+### RB — 49 returning players (top 53 − 4 rookies)
 
 | pos rank | player | proj PPG | VORP | overall |
 |---|---|---|---|---|
@@ -132,43 +132,41 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 14 | Breece Hall | 12.83 | 3.82 | 29 |
 | 15 | D'Andre Swift | 12.57 | 3.56 | 33 |
 | 16 | TreVeyon Henderson | 11.99 | 2.98 | 40 |
-| 17 | Travis Etienne | 11.92 | 2.91 | 45 |
-| 18 | Omarion Hampton | 11.78 | 2.77 | 47 |
-| 19 | Bucky Irving | 11.55 | 2.54 | 51 |
-| 20 | Rico Dowdle | 11.08 | 2.07 | 60 |
-| 22 | Tony Pollard | 10.98 | 1.97 | 62 |
-| 21 | Jaylen Warren | 10.98 | 1.97 | 63 |
-| 23 | Kenneth Walker III | 10.88 | 1.87 | 66 |
-| 24 | Quinshon Judkins | 10.86 | 1.85 | 68 |
-| 25 | Kenneth Gainwell | 10.79 | 1.78 | 71 |
-| 26 | Rhamondre Stevenson | 10.36 | 1.35 | 76 |
-| 27 | Cam Skattebo | 10.26 | 1.25 | 80 |
-| 28 | RJ Harvey | 10.11 | 1.10 | 83 |
-| 29 | J.K. Dobbins | 10.10 | 1.09 | 84 |
-| 30 | Zach Charbonnet | 9.79 | 0.78 | 90 |
-| 31 | Tyrone Tracy Jr. | 9.49 | 0.48 | 102 |
-| 32 | Aaron Jones | 9.01 | 0.00 | 116 |
-| 34 | David Montgomery | 8.88 | -0.13 | 117 |
-| 33 | Kyle Monangai | 8.88 | -0.13 | 118 |
-| 35 | Rachaad White | 8.66 | -0.35 | 124 |
-| 36 | Kareem Hunt | 8.64 | -0.37 | 125 |
-| 37 | Jordan Mason | 8.58 | -0.43 | 126 |
-| 38 | Chuba Hubbard | 8.48 | -0.53 | 130 |
-| 39 | Alvin Kamara | 8.42 | -0.59 | 131 |
-| 40 | James Conner | 8.33 | -0.68 | 134 |
-| 41 | Jacory Croskey-Merritt | 8.11 | -0.90 | 138 |
-| 42 | Blake Corum | 7.79 | -1.22 | 145 |
-| 43 | Woody Marks | 7.61 | -1.40 | 148 |
-| 44 | Najee Harris | 7.53 | -1.48 | 149 |
-| 45 | Nick Chubb | 7.48 | -1.53 | 151 |
-| 46 | Kimani Vidal | 7.28 | -1.73 | 156 |
-| 47 | Audric Estimé | 7.06 | -1.95 | 161 |
-| 48 | Austin Ekeler | 6.94 | -2.07 | 164 |
-| 49 | Bhayshul Tuten | 6.94 | -2.07 | 165 |
-| 50 | Jaylen Wright | 6.72 | -2.29 | 172 |
-| 51 | Tyjae Spears | 6.66 | -2.35 | 175 |
+| 17 | Travis Etienne | 11.92 | 2.91 | 46 |
+| 18 | Omarion Hampton | 11.78 | 2.77 | 48 |
+| 19 | Bucky Irving | 11.55 | 2.54 | 52 |
+| 20 | Rico Dowdle | 11.08 | 2.07 | 61 |
+| 22 | Tony Pollard | 10.98 | 1.97 | 63 |
+| 21 | Jaylen Warren | 10.98 | 1.97 | 64 |
+| 23 | Kenneth Walker III | 10.88 | 1.87 | 68 |
+| 24 | Quinshon Judkins | 10.86 | 1.85 | 71 |
+| 25 | Kenneth Gainwell | 10.79 | 1.78 | 74 |
+| 26 | Rhamondre Stevenson | 10.36 | 1.35 | 79 |
+| 27 | Cam Skattebo | 10.26 | 1.25 | 83 |
+| 28 | RJ Harvey | 10.11 | 1.10 | 86 |
+| 29 | J.K. Dobbins | 10.10 | 1.09 | 87 |
+| 30 | Zach Charbonnet | 9.79 | 0.78 | 93 |
+| 31 | Tyrone Tracy Jr. | 9.49 | 0.48 | 105 |
+| 32 | Aaron Jones | 9.01 | 0.00 | 121 |
+| 34 | David Montgomery | 8.88 | -0.13 | 122 |
+| 33 | Kyle Monangai | 8.88 | -0.13 | 123 |
+| 35 | Rachaad White | 8.66 | -0.35 | 129 |
+| 36 | Kareem Hunt | 8.64 | -0.37 | 130 |
+| 37 | Jordan Mason | 8.58 | -0.43 | 132 |
+| 38 | Chuba Hubbard | 8.48 | -0.53 | 137 |
+| 39 | Alvin Kamara | 8.42 | -0.59 | 138 |
+| 40 | James Conner | 8.33 | -0.68 | 141 |
+| 41 | Jacory Croskey-Merritt | 8.11 | -0.90 | 146 |
+| 42 | Blake Corum | 7.79 | -1.22 | 154 |
+| 43 | Woody Marks | 7.61 | -1.40 | 158 |
+| 44 | Najee Harris | 7.53 | -1.48 | 159 |
+| 45 | Nick Chubb | 7.48 | -1.53 | 161 |
+| 46 | Kimani Vidal | 7.28 | -1.73 | 166 |
+| 47 | Audric Estimé | 7.06 | -1.95 | 173 |
+| 48 | Austin Ekeler | 6.94 | -2.07 | 176 |
+| 49 | Bhayshul Tuten | 6.94 | -2.07 | 177 |
 
-### WR — 73 returning players (top 80 − 10 rookies)
+### WR — 72 returning players (top 80 − 8 rookies)
 
 | pos rank | player | proj PPG | VORP | overall |
 |---|---|---|---|---|
@@ -193,108 +191,102 @@ _The first non-starter at each position once every league-wide slot (dedicated +
 | 19 | Stefon Diggs | 12.40 | 3.07 | 37 |
 | 20 | Wan'Dale Robinson | 12.32 | 2.99 | 38 |
 | 21 | Ladd McConkey | 12.31 | 2.98 | 39 |
-| 22 | DeVonta Smith | 12.30 | 2.97 | 42 |
-| 23 | Michael Wilson | 12.27 | 2.94 | 44 |
-| 24 | DK Metcalf | 12.06 | 2.73 | 48 |
-| 25 | Courtland Sutton | 11.89 | 2.56 | 50 |
-| 26 | Deebo Samuel Sr. | 11.73 | 2.40 | 52 |
-| 27 | Alec Pierce | 11.70 | 2.37 | 53 |
-| 28 | Quentin Johnston | 11.68 | 2.35 | 54 |
-| 29 | Malik Nabers | 11.66 | 2.33 | 55 |
-| 30 | Brian Thomas Jr. | 11.64 | 2.31 | 56 |
-| 31 | Garrett Wilson | 11.55 | 2.22 | 58 |
-| 32 | Michael Pittman | 11.22 | 1.89 | 65 |
-| 33 | Rome Odunze | 11.17 | 1.84 | 69 |
-| 34 | Jakobi Meyers | 11.16 | 1.83 | 70 |
-| 35 | Keenan Allen | 11.09 | 1.76 | 72 |
-| 36 | Josh Downs | 10.79 | 1.46 | 74 |
-| 37 | Jordan Addison | 10.68 | 1.35 | 75 |
-| 38 | Marvin Harrison Jr. | 10.67 | 1.34 | 77 |
-| 39 | Khalil Shakir | 10.63 | 1.30 | 78 |
-| 40 | Parker Washington | 10.50 | 1.17 | 82 |
-| 42 | Tyreek Hill | 10.30 | 0.97 | 86 |
-| 41 | Jaylen Waddle | 10.30 | 0.97 | 87 |
-| 43 | Christian Watson | 10.09 | 0.76 | 91 |
-| 44 | Xavier Worthy | 10.09 | 0.76 | 92 |
-| 45 | Tre Tucker | 10.01 | 0.68 | 95 |
-| 46 | DJ Moore | 10.00 | 0.67 | 96 |
-| 47 | Jerry Jeudy | 9.98 | 0.65 | 97 |
-| 48 | Luther Burden III | 9.86 | 0.53 | 100 |
-| 49 | Terry McLaurin | 9.81 | 0.48 | 101 |
-| 50 | Troy Franklin | 9.67 | 0.34 | 104 |
-| 51 | Jauan Jennings | 9.61 | 0.28 | 105 |
-| 52 | Chris Godwin Jr. | 9.53 | 0.20 | 107 |
-| 53 | Romeo Doubs | 9.45 | 0.12 | 109 |
-| 54 | Jayden Reed | 9.33 | 0.00 | 114 |
-| 55 | Rashid Shaheed | 9.02 | -0.31 | 120 |
-| 56 | Jayden Higgins | 9.00 | -0.33 | 123 |
-| 57 | Mike Evans | 8.89 | -0.44 | 127 |
-| 58 | Ricky Pearsall | 8.84 | -0.49 | 129 |
-| 59 | Keon Coleman | 8.72 | -0.61 | 132 |
-| 60 | Elic Ayomanor | 8.36 | -0.97 | 139 |
-| 61 | Kayshon Boutte | 8.21 | -1.12 | 143 |
-| 62 | Cooper Kupp | 8.15 | -1.18 | 144 |
-| 63 | Travis Hunter | 7.97 | -1.36 | 147 |
-| 64 | Chimere Dike | 7.77 | -1.56 | 153 |
-| 65 | Matthew Golden | 7.56 | -1.77 | 157 |
-| 66 | Jalen Coker | 7.53 | -1.80 | 159 |
-| 67 | DeMario Douglas | 7.43 | -1.90 | 160 |
-| 68 | Xavier Legette | 7.36 | -1.97 | 162 |
-| 69 | Jalen McMillan | 7.23 | -2.10 | 167 |
-| 70 | Marquise Brown | 7.17 | -2.16 | 169 |
-| 71 | Malik Washington | 7.15 | -2.18 | 170 |
-| 72 | Adonai Mitchell | 6.99 | -2.34 | 174 |
-| 73 | Tez Johnson | 6.74 | -2.59 | 177 |
+| 22 | DeVonta Smith | 12.30 | 2.97 | 43 |
+| 23 | Michael Wilson | 12.27 | 2.94 | 45 |
+| 24 | DK Metcalf | 12.06 | 2.73 | 49 |
+| 25 | Courtland Sutton | 11.89 | 2.56 | 51 |
+| 26 | Deebo Samuel Sr. | 11.73 | 2.40 | 53 |
+| 27 | Alec Pierce | 11.70 | 2.37 | 54 |
+| 28 | Quentin Johnston | 11.68 | 2.35 | 55 |
+| 29 | Malik Nabers | 11.66 | 2.33 | 56 |
+| 30 | Brian Thomas Jr. | 11.64 | 2.31 | 57 |
+| 31 | Garrett Wilson | 11.55 | 2.22 | 59 |
+| 32 | Michael Pittman | 11.22 | 1.89 | 67 |
+| 33 | Rome Odunze | 11.17 | 1.84 | 72 |
+| 34 | Jakobi Meyers | 11.16 | 1.83 | 73 |
+| 35 | Keenan Allen | 11.09 | 1.76 | 75 |
+| 36 | Josh Downs | 10.79 | 1.46 | 77 |
+| 37 | Jordan Addison | 10.68 | 1.35 | 78 |
+| 38 | Marvin Harrison Jr. | 10.67 | 1.34 | 80 |
+| 39 | Khalil Shakir | 10.63 | 1.30 | 81 |
+| 40 | Parker Washington | 10.50 | 1.17 | 85 |
+| 42 | Tyreek Hill | 10.30 | 0.97 | 89 |
+| 41 | Jaylen Waddle | 10.30 | 0.97 | 90 |
+| 43 | Christian Watson | 10.09 | 0.76 | 94 |
+| 44 | Xavier Worthy | 10.09 | 0.76 | 95 |
+| 45 | Tre Tucker | 10.01 | 0.68 | 98 |
+| 46 | DJ Moore | 10.00 | 0.67 | 99 |
+| 47 | Jerry Jeudy | 9.98 | 0.65 | 100 |
+| 48 | Luther Burden III | 9.86 | 0.53 | 103 |
+| 49 | Terry McLaurin | 9.81 | 0.48 | 104 |
+| 50 | Troy Franklin | 9.67 | 0.34 | 107 |
+| 51 | Jauan Jennings | 9.61 | 0.28 | 109 |
+| 52 | Chris Godwin Jr. | 9.53 | 0.20 | 111 |
+| 53 | Romeo Doubs | 9.45 | 0.12 | 113 |
+| 54 | Jayden Reed | 9.33 | 0.00 | 119 |
+| 55 | Rashid Shaheed | 9.02 | -0.31 | 125 |
+| 56 | Jayden Higgins | 9.00 | -0.33 | 128 |
+| 57 | Mike Evans | 8.89 | -0.44 | 134 |
+| 58 | Ricky Pearsall | 8.84 | -0.49 | 136 |
+| 59 | Keon Coleman | 8.72 | -0.61 | 139 |
+| 60 | Elic Ayomanor | 8.36 | -0.97 | 148 |
+| 61 | Kayshon Boutte | 8.21 | -1.12 | 152 |
+| 62 | Cooper Kupp | 8.15 | -1.18 | 153 |
+| 63 | Travis Hunter | 7.97 | -1.36 | 157 |
+| 64 | Chimere Dike | 7.77 | -1.56 | 163 |
+| 65 | Matthew Golden | 7.56 | -1.77 | 167 |
+| 66 | Jalen Coker | 7.53 | -1.80 | 170 |
+| 67 | DeMario Douglas | 7.43 | -1.90 | 171 |
+| 68 | Xavier Legette | 7.36 | -1.97 | 174 |
+| 69 | Jalen McMillan | 7.23 | -2.10 | 179 |
+| 70 | Marquise Brown | 7.17 | -2.16 | 181 |
+| 71 | Malik Washington | 7.15 | -2.18 | 182 |
+| 72 | Adonai Mitchell | 6.99 | -2.34 | 185 |
 
-### TE — 47 returning players (top 52 − 5 rookies)
+### TE — 42 returning players (top 52 − 1 rookies)
 
 | pos rank | player | proj PPG | VORP | overall |
 |---|---|---|---|---|
 | 1 | Trey McBride | 15.62 | 6.32 | 10 |
-| 2 | Brock Bowers | 12.26 | 2.96 | 43 |
-| 3 | Tyler Warren | 11.60 | 2.30 | 57 |
-| 4 | Harold Fannin Jr. | 11.40 | 2.10 | 59 |
-| 5 | Kyle Pitts | 11.32 | 2.02 | 61 |
-| 6 | Travis Kelce | 11.20 | 1.90 | 64 |
-| 7 | George Kittle | 10.26 | 0.96 | 88 |
-| 8 | Hunter Henry | 10.05 | 0.75 | 93 |
-| 9 | Sam LaPorta | 10.00 | 0.70 | 94 |
-| 10 | Juwan Johnson | 9.89 | 0.59 | 98 |
-| 11 | Colston Loveland | 9.65 | 0.35 | 103 |
-| 12 | Tucker Kraft | 9.55 | 0.25 | 106 |
-| 13 | Jake Ferguson | 9.38 | 0.08 | 110 |
-| 14 | Dalton Kincaid | 9.33 | 0.03 | 112 |
-| 15 | Oronde Gadsden II | 9.30 | 0.00 | 115 |
-| 16 | Dalton Schultz | 8.99 | -0.31 | 121 |
-| 17 | Cade Otton | 8.98 | -0.32 | 122 |
-| 18 | Dallas Goedert | 8.83 | -0.47 | 128 |
-| 19 | Zach Ertz | 8.50 | -0.80 | 136 |
-| 20 | Mark Andrews | 8.30 | -1.00 | 140 |
-| 21 | AJ Barner | 8.22 | -1.08 | 141 |
-| 22 | Pat Freiermuth | 8.20 | -1.10 | 142 |
-| 23 | Evan Engram | 7.81 | -1.49 | 150 |
-| 24 | Chig Okonkwo | 7.75 | -1.55 | 152 |
-| 25 | Theo Johnson | 7.69 | -1.61 | 154 |
-| 26 | Brenton Strange | 7.68 | -1.62 | 155 |
-| 27 | T.J. Hockenson | 7.52 | -1.78 | 158 |
-| 28 | Darren Waller | 7.21 | -2.09 | 166 |
-| 29 | David Njoku | 7.07 | -2.23 | 171 |
-| 30 | Jonnu Smith | 6.84 | -2.46 | 176 |
-| 31 | Colby Parkinson | 6.59 | -2.71 | 178 |
-| 32 | Mike Gesicki | 6.41 | -2.89 | 179 |
-| 33 | Mason Taylor | 6.35 | -2.95 | 180 |
-| 34 | Gunnar Helm | 6.13 | -3.17 | 182 |
-| 35 | Dawson Knox | 6.08 | -3.22 | 183 |
-| 36 | Taysom Hill | 5.99 | -3.31 | 184 |
-| 37 | Noah Fant | 5.68 | -3.62 | 186 |
-| 38 | Darnell Washington | 5.53 | -3.77 | 187 |
-| 39 | Tyler Higbee | 5.51 | -3.79 | 188 |
-| 40 | Isaiah Likely | 5.51 | -3.79 | 189 |
-| 41 | Cole Kmet | 5.49 | -3.81 | 190 |
-| 42 | Greg Dulcich | 5.46 | -3.84 | 191 |
-| 43 | Michael Mayer | 5.43 | -3.87 | 192 |
-| 44 | Luke Musgrave | 5.30 | -4.00 | 193 |
-| 45 | Jake Tonges | 5.24 | -4.06 | 194 |
-| 46 | Ja'Tavion Sanders | 5.18 | -4.12 | 195 |
-| 47 | Tommy Tremble | 5.11 | -4.19 | 196 |
+| 2 | Brock Bowers | 12.26 | 2.96 | 44 |
+| 3 | Tyler Warren | 11.60 | 2.30 | 58 |
+| 4 | Harold Fannin Jr. | 11.40 | 2.10 | 60 |
+| 5 | Kyle Pitts | 11.32 | 2.02 | 62 |
+| 6 | Travis Kelce | 11.20 | 1.90 | 65 |
+| 7 | George Kittle | 10.26 | 0.96 | 91 |
+| 8 | Hunter Henry | 10.05 | 0.75 | 96 |
+| 9 | Sam LaPorta | 10.00 | 0.70 | 97 |
+| 10 | Juwan Johnson | 9.89 | 0.59 | 101 |
+| 11 | Colston Loveland | 9.65 | 0.35 | 106 |
+| 12 | Tucker Kraft | 9.55 | 0.25 | 110 |
+| 13 | Jake Ferguson | 9.38 | 0.08 | 114 |
+| 14 | Dalton Kincaid | 9.33 | 0.03 | 116 |
+| 15 | Oronde Gadsden II | 9.30 | 0.00 | 120 |
+| 16 | Dalton Schultz | 8.99 | -0.31 | 126 |
+| 17 | Cade Otton | 8.98 | -0.32 | 127 |
+| 18 | Dallas Goedert | 8.83 | -0.47 | 135 |
+| 19 | Zach Ertz | 8.50 | -0.80 | 143 |
+| 20 | Mark Andrews | 8.30 | -1.00 | 149 |
+| 21 | AJ Barner | 8.22 | -1.08 | 150 |
+| 22 | Pat Freiermuth | 8.20 | -1.10 | 151 |
+| 23 | Evan Engram | 7.81 | -1.49 | 160 |
+| 24 | Chig Okonkwo | 7.75 | -1.55 | 162 |
+| 25 | Theo Johnson | 7.69 | -1.61 | 164 |
+| 26 | Brenton Strange | 7.68 | -1.62 | 165 |
+| 27 | T.J. Hockenson | 7.52 | -1.78 | 169 |
+| 28 | Darren Waller | 7.21 | -2.09 | 178 |
+| 29 | David Njoku | 7.07 | -2.23 | 183 |
+| 30 | Jonnu Smith | 6.84 | -2.46 | 186 |
+| 31 | Colby Parkinson | 6.59 | -2.71 | 188 |
+| 32 | Mike Gesicki | 6.41 | -2.89 | 189 |
+| 33 | Mason Taylor | 6.35 | -2.95 | 190 |
+| 34 | Gunnar Helm | 6.13 | -3.17 | 192 |
+| 35 | Dawson Knox | 6.08 | -3.22 | 193 |
+| 36 | Taysom Hill | 5.99 | -3.31 | 194 |
+| 37 | Noah Fant | 5.68 | -3.62 | 197 |
+| 38 | Darnell Washington | 5.53 | -3.77 | 198 |
+| 39 | Tyler Higbee | 5.51 | -3.79 | 202 |
+| 40 | Isaiah Likely | 5.51 | -3.79 | 203 |
+| 41 | Cole Kmet | 5.49 | -3.81 | 204 |
+| 42 | Greg Dulcich | 5.46 | -3.84 | 205 |
 
