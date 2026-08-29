@@ -22,7 +22,7 @@
     2025
   ],
   "min_season": 2009,
-  "pulled_at": "2026-08-03T10:43:10.377524+00:00",
+  "pulled_at": "2026-08-29T03:26:08.082865+00:00",
   "n_rows": 90752,
   "n_cols": 17,
   "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/injuries.parquet",

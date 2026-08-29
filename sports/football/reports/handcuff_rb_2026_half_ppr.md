@@ -24,12 +24,12 @@ Chosen: **`availability_model`** (best clears-cutoff AUC at g\*=4; `winner`=`ava
 | 6 | Isiah Pacheco (64) | Jahmyr Gibbs (3) | 3.0 | 1.92 | 7.18 |
 | 7 | Justice Hill (81) | Derrick Henry (11) | 3.6 | 1.81 | 6.19 |
 | 8 | Jaylen Wright (50) | De'Von Achane (5) | 3.5 | 1.80 | 7.75 |
-| 9 | Ray Davis (61) | James Cook (6) | 3.5 | 1.76 | 7.10 |
-| 10 | Tank Bigsby (58) | Saquon Barkley (10) | 3.6 | 1.60 | 7.09 |
+| 9 | Ray Davis (60) | James Cook (6) | 3.5 | 1.76 | 7.10 |
+| 10 | Tank Bigsby (57) | Saquon Barkley (10) | 3.6 | 1.60 | 7.09 |
 | 11 | Samaje Perine (69) | Chase Brown (8) | 3.0 | 1.51 | 6.53 |
 | 12 | Braelon Allen (74) | Breece Hall (15) | 3.3 | 1.36 | 6.07 |
 | 13 | Miles Sanders (55) | Javonte Williams (13) | 3.5 | 1.33 | 6.94 |
-| 14 | Blake Corum (41) | Kyren Williams (9) | 3.4 | 1.23 | 8.37 |
+| 14 | Blake Corum (42) | Kyren Williams (9) | 3.4 | 1.23 | 8.37 |
 | 15 | Tyjae Spears (63) | Tony Pollard (22) | 4.3 | 1.18 | 6.50 |
 | 16 | Dylan Sampson (56) | Quinshon Judkins (24) | 4.2 | 1.04 | 6.62 |
 | 17 | Emanuel Wilson (67) | Zach Charbonnet (27) | 4.2 | 1.03 | 6.07 |

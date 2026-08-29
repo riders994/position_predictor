@@ -4,9 +4,9 @@
   "note": "Cross-source player ID crosswalk (fantasy positions only \u2014 carries essentially no offensive linemen; see `players` for a complete one).",
   "seasons": [],
   "min_season": null,
-  "pulled_at": "2026-08-09T03:50:06.143639+00:00",
-  "n_rows": 12470,
+  "pulled_at": "2026-08-29T03:27:56.962148+00:00",
+  "n_rows": 12484,
   "n_cols": 35,
   "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/ids.parquet",
-  "sha256": "3a6dd7f2528e7d0614b01677bb5625d50c0f03ba6ddff495adab6f8ab9126fe7"
+  "sha256": "f379aa592797e6b53a99e96f7408386bbabd2d9e98eba541d26b512f18e66949"
 }

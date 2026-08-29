@@ -3334,6 +3334,55 @@ so the number ordering is merge order, not authoring order)*
 - Also removed the k=12 assumptions left in docstrings (`t0..t11`, "the 12 archetype features").
 - 58 basketball tests pass (+1 parametrized to 3 cases), ruff clean.
 
+## Entry 089 — preseason-end refresh, and a fourth league
+
+**Date:** 2026-08-28
+
+**Prompt (full text):**
+
+> For football, make sure all reports are current with the latest data as pre-season ends. I also
+> added a new league.
+
+(mid-run, after the league config was edited by hand:)
+
+> Resume previous work, had to update the configs.
+
+**Response notes:**
+- **The new league config was a half-finished copy of `my_2qb.yaml`.** The values had been edited
+  but the prose had not, so the file contradicted itself four ways: `name: my_2qb` (which
+  `load_leagues` rejects as a duplicate — report files would collide), `label: "10-team 2QB
+  half-PPR"` against `teams: 14`, `scoring: ppr` against a `# 0.5 pt / reception` comment, and
+  `QB: 1` against a `# true 2QB, not superflex` comment. Filename and every edited *value* pointed
+  the same way (14-team 1QB PPR), so only **scoring** was genuinely ambiguous — asked, and the
+  answer was full PPR. Rewrote `name`, `label` and all the prose to match the values.
+- **Registering a league is three edits, not one.** `scripts/redraft.py` carries a hardcoded
+  `DEFAULT_LEAGUES`, so dropping a YAML into `config/leagues/` gets it loaded by nobody. Added it
+  there, to `SHIPPED` in `tests/test_league.py`, and to the shipped list in `docs/USAGE.md`.
+- **`make fetch` silently regressed the Entry 088 roster fix.** `fetch_data.py` takes its seasons
+  from `cfg.seasons()` (1999–2025), so an `--overwrite` refresh **truncated `rosters` from 2026
+  back to 2025** — re-breaking the `team_next` join that Entry 088 had just fixed, and in exactly
+  the way that fails silently. `redraft.py` is unaffected because it calls `fetch_all` with its own
+  `range(earliest, draft_season + 1)`. Restored by calling `fetch_all` directly through 2026
+  (rosters 66,480 → 69,410 rows; the 2026 draft class, 257 picks, came back with it).
+- **The refresh moved next-season context, not the training set.** All four positions' current
+  feature parquets match the row counts recorded in their experiment summaries exactly (QB 1996,
+  RB 4464, WR 5400, TE 3027, seasons 1999–2025), so `REPORT_football_*.md` are still faithful to
+  the data and re-running the experiments would only churn the v4 snapshots.
+- **⚠️ Regenerating `postseason_2025.md` silently swapped the ADP benchmark from FantasyPros to
+  FFC.** `data/external/adp_*.parquet` is git-ignored (`.gitignore:14`), so it is a *local cache*,
+  not a committed reference — and `postseason.py` calls `build_adp_benchmark(..., write=True)`
+  regardless of `--no-refresh`. The June report was graded against a FantasyPros cache that no
+  longer exists. Coverage and correlation both fell: QB 40→29 names (Spearman .705→**.506**),
+  RB 85→63 (.755→.735), WR 106→83 (.720→.695); TE gained its first ADP row (26 names, .561).
+  **Left as-is and flagged rather than patched** — this is the deferred FantasyPros-vs-FFC source
+  decision, ADP is benchmark-only and never blended, and no draft board reads it. The model rows
+  in the same report genuinely improved (QB .708→**.746**) from the Entry 088 per-position model
+  fix, so reverting the file would have thrown that away too.
+- **TE-flex is still inert, now at three flex slots.** The new league starts 1RB/2WR/1TE/**3FLEX**
+  in a 14-team league — the deepest flex demand of any shipped league — and TE still finishes with
+  14 started league-wide, i.e. the dedicated slots only. The 28→42 extra flex slots went entirely
+  to RB (31 started) and WR (53). The USAGE note that TE-flex never bites survives the test.
+
 ---
 
 <!-- Template for new entries:

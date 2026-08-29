@@ -32,8 +32,8 @@ from position_predictor.utils.io import REPORTS_DIR, ensure_dir  # noqa: E402
 
 DEFAULT_CONFIGS = ["config/football_qb.yaml", "config/football_rb.yaml",
                    "config/football_wr.yaml", "config/football_te.yaml"]
-DEFAULT_LEAGUES = ["config/leagues/ppr_1qb.yaml", "config/leagues/my_2qb.yaml",
-                   "config/leagues/underdog_bestball.yaml"]
+DEFAULT_LEAGUES = ["config/leagues/ppr_1qb.yaml", "config/leagues/suz_1qb.yaml",
+                   "config/leagues/my_2qb.yaml", "config/leagues/underdog_bestball.yaml"]
 PRINT_COLS = ["proj_overall_rank", "player_name", "position", "proj_ppg", "vorp"]
 
 

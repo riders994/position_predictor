@@ -20,15 +20,15 @@ Chosen: **`availability_model`** (best clears-cutoff AUC at g\*=7; `winner`=`ava
 
 | # | QB (QB rank) | proj PPG | risk tier | draft a backup? |
 |---|---|---|---|---|
-| 1 | Kirk Cousins (29) | 12.1 | High | **yes** |
+| 1 | Kirk Cousins (28) | 12.1 | High | **yes** |
 | 2 | Marcus Mariota (26) | 12.3 | High | **yes** |
-| 3 | Justin Fields (32) | 11.8 | High | **yes** |
-| 4 | Mac Jones (30) | 12.0 | High | **yes** |
-| 5 | Geno Smith (31) | 11.9 | High | **yes** |
+| 3 | Justin Fields (31) | 11.8 | High | **yes** |
+| 4 | Mac Jones (29) | 12.0 | High | **yes** |
+| 5 | Geno Smith (30) | 11.9 | High | **yes** |
 | 6 | Jayden Daniels (18) | 15.4 | High | **yes** |
 | 7 | Aaron Rodgers (25) | 12.5 | High | **yes** |
 | 8 | Tyler Shough (27) | 12.3 | High | **yes** |
-| 9 | Jacoby Brissett (28) | 12.2 | Moderate | — |
+| 9 | Jacoby Brissett (32) | 11.7 | Moderate | — |
 | 10 | Jaxson Dart (13) | 16.2 | Moderate | — |
 | 11 | Joe Burrow (23) | 13.8 | Moderate | — |
 | 12 | C.J. Stroud (20) | 14.8 | Moderate | — |
