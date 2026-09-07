@@ -3410,6 +3410,93 @@ incumbent is not a benching on the merits; stage 3 must carry a flag for it.
 
 ---
 
+## Entry 101 — the benching model, and the control that makes it believable
+
+**Date:** 2026-09-07
+
+**Prompt (full text):**
+
+> build stages 2 and 3
+
+**Response notes:**
+
+Stages 2 (preseason features) and 3 (the model) of [[qb-benching]]. Stage 4 (live board) still
+not built. Branch `qb-benching-model`.
+
+### Stage 2 — 32 features in five blocks, all knowable by Sept 1
+
+`prior_play` (last season's volume, efficiency, starts), `tenure` (age, experience, draft
+capital), `room` (the **week-1 depth chart** — room size, the rank-2 backup's own prior
+production, a drafted rookie and his pick), `team` (prior record, point differential, new head
+coach), `history` (the lagged label).
+
+`features/build.py::add_offseason` was deliberately **not** reused even though it computes almost
+the same room columns: it merges on `team_next` from the N+1 *full-season* roster, which entry
+096 established is a deterministic leak for absence-shaped targets. Every room column here comes
+off the week-1 chart instead.
+
+Two fixes on the way, both now pinned by tests:
+- The prior-record join silently dropped every **relocated franchise** — the cohort's team codes
+  are canonical (`LA`) and raw `schedules` is not (`STL`). 5.3% of rows had no prior record until
+  the schedule side was canonicalised too.
+- `incumbent_present` (last season's primary starter on the week-1 chart but *not* the opener) is
+  the §3.5 fill-in flag. It fires correctly on Derek Anderson's 2014 Carolina season, and carries
+  a 23.1% benching rate against 16.0% otherwise.
+
+Leakage check on the lagged label: **0 mismatches over 374 rows** against the previous season's
+own outcome.
+
+### Stage 3 — the headline, and why it is the stratified one
+
+**Pooled CV AUC 0.788** (±0.012) vs permutation null 0.497 ± 0.047, p < 0.005. Top-5-per-season
+precision **45.9%** against a 16.5% base rate. Temporal split (train <=2017) **0.686** — lower,
+and the number to believe.
+
+**The stratified result goes the opposite way to `qb_breakout`'s**, which is the finding:
+
+| prior-attempt band | n | positives | model AUC |
+|---|---|---|---|
+| none | 42 | 4 | 0.513 |
+| <100 | 38 | 18 | 0.556 |
+| 100-299 | 68 | 22 | 0.659 |
+| **300+** | **396** | **46** | **0.802** |
+
+The model is *strongest* among established starters (base rate 11.6%), and at chance in the two
+small stopgap bands — the opposite of the trap the plan was written to guard against, where draft
+capital went 0.890 pooled to 0.496 within band because it allocates opportunity rather than
+predicting outcome. The pooled number is not coming from "this man was never really the starter".
+
+**The control is the part that makes it worth believing.** Identical features, identical rows,
+fitted against `injured_out` (142 positives): **AUC 0.528** vs null 0.505, p=0.30, at chance in
+every band. Entries 096-097 already established injury is unpredictable from this data; if these
+features had "predicted" it too, the benching number would be an artefact of the evaluation
+rather than a fact about benching. Folded into the main report as a section rather than a
+separate file.
+
+Beats every single-column baseline: prior attempts 0.701, prior EPA/dropback 0.661, lost-the-job
+-last-season 0.589, draft capital 0.588. Boosting (0.780) does not beat the C=0.1 logistic
+(0.788), so the linear model stands.
+
+⚠️ **Coefficients are collinear and are not effects** — `has_prior_season`/`is_rookie` are
+near-mirrors, the three volume columns measure one thing, and the rate columns carry suppression
+signs as a result (`prior_int_rate` reads negative, `prior_comp_pct` positive). Stated in the
+report so nobody reads "interceptions keep a job" off the table.
+
+⚠️ **Scope not delivered:** the plan's fourth baseline — the ranking model's own projected QB
+rank via `eval/projection.py` — was **not run**. It needs a leak-safe per-season fit across 17
+seasons, a much heavier dependency than the other three; `prior_attempts` stands in as the volume
+baseline. Should be added before stage 4 ships a board.
+
+### Files
+
+New `src/qb_benching/{features,model}/`, `scripts/qb_benching_{features,model}.py`,
+`tests/test_qb_benching_{features,model}.py` (19 tests: 10 leakage/join, 9 evaluation-integrity),
+`reports/REPORT_qb_benching_model.md`. Plan doc gains §4.1/§4.2.
+
+**Tests:** 670 pass (651 + 19), ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

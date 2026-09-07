@@ -169,20 +169,72 @@ the modelling stage must carry a flag for it.
 
 ## 4. Stages
 
-1. **Cohort and label** — done. `labels/`, `scripts/qb_benching_cohort.py`,
-   `reports/REPORT_qb_benching_cohort.md`.
-2. **Preseason features** — prior play, tenure and standing, QB room, team and coaching.
-   ⚠️ Do **not** reuse `features/build.py::add_offseason`: it merges on `team_next` from the N+1
-   full-season roster, which entry 096 established is a deterministic label leak for any
-   absence-shaped target. Build the room snapshot from the week-1 roster and depth chart instead,
-   which is a genuine Sept-1 view.
-3. **Model** — binary classification on the `qb_breakout/model/fit.py` template (logistic +
-   depth-2 boosting, repeated stratified CV kept per repeat, permutation null, temporal split).
-   The **within-stratum AUC is the headline**, not the pooled one: "journeyman opening as QB1" is
-   an easy positive, and `qb_breakout` already showed how a variable that allocates opportunity
-   (draft capital, AUC 0.890) collapses to chance within a band (0.496).
-4. **Report and live board** — bench-risk tiers for the coming season, taking the projected
-   Week-1 starter from the preseason depth chart.
+1. **Cohort and label** — done. `labels/`, `scripts/qb_benching_cohort.py`.
+2. **Preseason features** — done. `features/`, `scripts/qb_benching_features.py`.
+3. **Model** — done. `model/`, `scripts/qb_benching_model.py`.
+4. **Report and live board** — **not built.** Bench-risk tiers for the coming season, taking the
+   projected Week-1 starter from the preseason depth chart (the 2025+ snapshot feed carries it —
+   see §2.3).
+
+### 4.1 What stage 2 established
+
+32 features in five blocks over the 544 rows, all knowable by Sept 1: `prior_play` (last
+season's volume, efficiency and starts), `tenure` (age, experience, draft capital), `room` (the
+week-1 chart — room size, the rank-2 backup's own prior production, a drafted rookie and his
+pick), `team` (prior record and point differential, new head coach), `history` (the lagged
+label).
+
+`add_offseason` from the ranking pipeline was **not** reused, per §1.2 — every room column is
+built from the **week-1** depth chart and roster, which is a genuine Sept-1 view, rather than
+from the N+1 full-season roster that carries entry 096's `team_next` leak.
+
+Two things needed fixing on the way, both now pinned by tests: the prior-record join lost every
+relocated franchise until the schedule side was canonicalised, and `incumbent_present` — last
+season's primary starter present on the week-1 chart but not the opener — is the §3.5 fill-in
+flag, which fires correctly on Derek Anderson's 2014 (23.1% benched, against 16.0% otherwise).
+The lagged label reconciles against the previous season's own outcome with **0 mismatches over
+374 rows**.
+
+### 4.2 What stage 3 established — the signal survives stratification
+
+**Pooled CV AUC 0.788** (± 0.012) against a permutation null of 0.497 ± 0.047, p < 0.005. Of the
+five riskiest openers flagged per season, **45.9%** were benched against a 16.5% base rate.
+Temporal split (train ≤ 2017, test after) **0.686** — the number to believe, and materially
+lower than the pooled one.
+
+**The stratified result is the finding, and it goes the opposite way to `qb_breakout`'s:**
+
+| prior-attempt band | n | positives | model AUC |
+|---|---|---|---|
+| none | 42 | 4 | 0.513 |
+| <100 | 38 | 18 | 0.556 |
+| 100–299 | 68 | 22 | 0.659 |
+| **300+** | **396** | **46** | **0.802** |
+
+The model is *strongest* in the largest and hardest stratum — established starters, where the
+base rate is only 11.6%. Draft capital in `qb_breakout` collapsed from 0.890 pooled to 0.496
+within a band because it allocates the opportunity; this does not. It is at chance in the two
+small stopgap bands, which is where the pooled number was expected to come from and does not.
+
+**The control is what makes it believable.** The identical features on the identical rows,
+fitted against `injured_out` (142 positives), reach **0.528** against a null of 0.505, p = 0.30,
+and are at chance in every band. Entries 096–097 already established injury is unpredictable
+here; had these features "predicted" it too, the benching AUC would be an artefact of the
+evaluation.
+
+Beats every single-column baseline a reader already has: prior attempts 0.701, prior EPA/dropback
+0.661, lost-the-job-last-season 0.589, draft capital 0.588. Boosting (0.780) does not beat the
+regularised linear model (0.788).
+
+⚠️ **Coefficients are collinear and are not effects.** `has_prior_season`/`is_rookie` are
+near-mirrors, the three volume columns measure one thing, and the rate columns carry suppression
+signs as a result (`prior_int_rate` negative, `prior_comp_pct` positive). Sign stability there
+means the fit is reproducible, not that a mechanism is identified.
+
+⚠️ **The projected-QB-rank baseline named in the original plan was not run.** It needs a
+leak-safe `eval/projection.py` fit per season across 17 seasons, which is a heavier dependency
+than the other three baselines; `prior_attempts` stands in as the volume baseline. Worth adding
+before stage 4 ships a board.
 
 ---
 
