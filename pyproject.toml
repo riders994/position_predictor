@@ -61,6 +61,7 @@ packages = [
     "sports/football/src/position_predictor",
     "sports/football/src/medstaff",
     "sports/football/src/qb_breakout",
+    "sports/football/src/qb_benching",
     "sports/basketball/src/nba_archetypes",
 ]
 

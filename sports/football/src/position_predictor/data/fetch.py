@@ -150,6 +150,12 @@ def _registry() -> dict[str, Dataset]:
         Dataset("rosters_weekly", L("load_rosters_weekly"), min_season=2002,
                 note="Weekly roster status (ACT/INA/RES-IR/PUP/practice squad) — the "
                      "report-independent absence signal; joins injuries on (gsis_id, week)."),
+        Dataset("depth_charts", L("load_depth_charts"), min_season=2001,
+                note="Weekly depth charts — `depth_team` is the club's own declared ordering at "
+                     "each position. Registered for qb_benching, which needs a weekly role "
+                     "signal that survives the 2021 `rosters_weekly` regime change: a demotion "
+                     "shows as depth_team 1 -> 2 and a reserve-list move as dropping off the "
+                     "chart entirely."),
         Dataset("schedules", L("load_schedules"), needs_years=False,
                 note="Game context: stadium surface & roof (injury-risk confounders), "
                      "rest days, and home/away head coach."),

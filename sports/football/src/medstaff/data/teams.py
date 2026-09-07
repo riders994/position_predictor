@@ -17,6 +17,9 @@ TEAM_ALIASES = {
     "SD": "LAC",    # San Diego -> Los Angeles Chargers (2017)
     "SDG": "LAC",
     "STL": "LA",    # St. Louis -> Los Angeles Rams (2016)
+    "SL": "LA",     # rosters_weekly spells St. Louis "SL" for all 14 of its seasons (2002-2015)
+                    # and never "STL", which is what schedules uses — found by qb_benching, where
+                    # the mismatch read every Rams quarterback as playing for another club.
     "LAR": "LA",    # nflverse uses LA for the Rams; some feeds emit LAR
     "RAM": "LA",
     "OAK": "LV",    # Oakland -> Las Vegas Raiders (2020)
