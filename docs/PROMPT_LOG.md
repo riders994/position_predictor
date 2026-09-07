@@ -4071,6 +4071,98 @@ optional injuries, and the IR dropout; 3 on the report section and `health_note`
   finish a fraction of a point apart — now decluttered with leader lines.
 
 **Tests:** none — no repo code changed; analysis script is session-scratchpad only.
+## Entry 100 — a new effort: which starting QBs get benched, and the roster column that lied
+
+**Date:** 2026-09-07
+
+**Prompt (full text):**
+
+> New football effort: Predict which QBs that are starting going into the season will get benched
+
+**Response notes:**
+
+Fourth standalone effort, `sports/football/src/qb_benching/`, branch `qb-benching`. Plan doc
+`docs/QB_BENCHING_PLAN.md`. **Stage 1 (cohort + label) is complete**; stages 2-4 (preseason
+features, model, live board) are specified and not built.
+
+### Decisions taken with the user before building
+
+- **Label:** build the full displacement label and split it three ways — `benched` / `injured` /
+  `gone` — modelling benching, carrying the injury arm as the declared comparison. (The
+  alternatives offered were benching-only and any-loss-of-job.)
+- **Horizon:** preseason, one row per QB-season, features known by Sept 1. Not an in-season
+  weekly hazard; that is specified as a later stage whose baseline is this model.
+- **Scope:** standalone effort plus report, not wired into the draft boards.
+
+### The result
+
+**544 opening starters, 2009-2025; 90 benched (16.5%)**, 142 losing >=3 weeks to injury, 213 for
+any reason. The bar is >=3 team-games started by somebody else, with 2/3/4/6 reported as
+sensitivities every time.
+
+Face validity is good: the most-benched seasons are Shaun Hill (2016 MIN), Scott Tolzien (2017
+IND), Trubisky (2022 PIT), Flacco (2022 NYJ), Eli Manning (2019 NYG), Russell Wilson (2025 NYG).
+
+### Three data defects found, all load-bearing
+
+1. **⚠️ Before 2021 `rosters_weekly.status` is not a weekly value** — it is the season-final
+   status stamped on every one of the player's weeks. Only 1-4% of pre-2021 QB-seasons have a
+   status that varies by week, against 50-72% from 2021. This is a *different and worse* defect
+   than the one `medstaff` records as `FIRST_COMPARABLE_SEASON = 2021` (that the ACT/INA split is
+   unpopulated). **Found because a first version of the label reported zero benchings in 2015**,
+   a season in which Kaepernick visibly lost the San Francisco job: he started eight games and
+   ended on IR, so all ten of his rows read `RES` — including the weeks he was starting.
+2. **⚠️ Injured reserve is invisible to the injury report** (a player on it drops off entirely).
+   Against the trustworthy 2021+ status, displaced weeks with no listing and no appearance split
+   **195 reserve / 104 active / 20 inactive** — ~60% genuinely hurt. A report-only label calls
+   them all benchings.
+3. **⚠️ `schedules` and `rosters_weekly` disagree on St. Louis.** The roster feed uses `SL` for
+   all 14 St. Louis seasons (2002-2015) and never `STL`. Uncanonicalised the club comparison
+   fires and every Rams QB reads as playing elsewhere — which classified **Nick Foles's 2015
+   benching as a departure**. `SL` was missing from `medstaff.data.teams.TEAM_ALIASES`; added
+   there rather than starting a third copy of the map. Audited all three tables: `SL` was the
+   only uncovered code.
+
+### The fix, and a new dataset
+
+Registered **`depth_charts`** in `data/fetch.py` — the one obvious nflverse endpoint the repo had
+never fetched (2001-2025, 1.42M rows). It is the only weekly role signal that survives the 2021
+break, and it records both facts *directly* rather than by elimination: a demotion is
+`depth_team` 1 -> 2, and a reserve move is dropping off the chart. Kaepernick's 2015 reads
+straight off it — rank 1 through week 9, rank 2 behind Gabbert in week 10, absent from week 11.
+
+⚠️ **nflverse changed the feed for 2025**: through 2024 it is weekly on
+`(season, week, club_code)` with a string `depth_team`; from 2025 it is a dated snapshot feed
+(`dt`, `team`, `pos_abb`, integer `pos_rank`) with **no season or week column** and ~15x the
+rows. `labels/depth.py::qb_depth` normalises both, resolving each team-game to the latest chart
+strictly before kickoff. Side benefit: the snapshot feed starts in early August, so it carries
+the preseason chart a live board needs to know who is opening the season — which also answers the
+serving problem the plan had flagged (`schedules.home_qb_id` is 100% null for an unplayed year).
+
+**What the depth chart bought, measured.** The benched:injured ratio of displaced team-games was
+1.04 pre-2021 against 0.40 from 2021 — a two-and-a-half-fold discrepancy that is the injury
+leakage. With the chart leading the ladder it is 0.67 vs 0.51, and the label's base rate moved
+from 0.206/0.150 either side of 2021 to **0.159/0.181**, a 0.022 gap. The chart resolves **526 of
+672** benched team-games directly; 146 remain a residual.
+
+### Ladder, and why benching is a lower bound
+
+held -> injury report -> off the chart -> demoted on the chart -> off the roster -> another club
+-> (2021+ only) weekly status -> residual benched. The injury report deliberately outranks the
+chart, so a QB both listed hurt and demoted is counted hurt.
+
+### Files
+
+New `src/qb_benching/{__init__,labels/{__init__,starters,depth,displacement,cohort}}.py`,
+`scripts/qb_benching_cohort.py`, `tests/test_qb_benching_labels.py` (13 tests, each aimed at one
+of the defects above), `docs/QB_BENCHING_PLAN.md`. Modified: `data/fetch.py` (one `Dataset`),
+`medstaff/data/teams.py` (the `SL` alias), root `pyproject.toml` (wheel packages).
+
+**Known limitation recorded, not fixed:** the opening starter is not always the intended starter
+(Derek Anderson, 2014 CAR, covering an injured Cam Newton). Losing the job to a returning
+incumbent is not a benching on the merits; stage 3 must carry a flag for it.
+
+**Tests:** 651 pass (638 + 13), ruff clean. Reverting the `SL` alias fails exactly one test — the St. Louis one — so the regression guard is real rather than decorative.
 
 ---
 
