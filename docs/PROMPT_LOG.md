@@ -3649,6 +3649,431 @@ actually kept after the total-picks cut.
 
 ---
 
+## Entry 095 — the per-position headers were lying, and why the board isn't ADP
+
+**Date:** 2026-08-30
+
+**Prompt (full text):**
+
+> I inspected some of the reports and they don't add up, we need to investigate root cause and
+> regenerate. Look at the 2qb league, it says top 35 with 1 rookie, but only 30 are shown.
+> Similarly for RB and WR. Second, the draft board seems like it's very differenet from a current
+> ADP board. I'd like an explanation of why this happened.
+>
+> [follow-up] Also, while it's possible for no rookie TE to break the top 24 it does seem unlikely
+
+**Response notes:**
+
+### Part 1 — the counts (two real bugs, both introduced by Entry 094)
+
+`### QB — 30 returning players (top 35 − 1 rookies)` — 35 − 1 = 34, not 30. Two independent
+causes, both in `eval/redraft.py`:
+
+**(a) The subtraction and the insertion read different windows.** `estimate_rookie_count` counted
+rookies inside the *position's* top-`depth[pos]` on the market board; `market_rookies` inserted
+every rookie inside the *overall* top-`total_picks`. Entry 094's comment claimed restricting the
+*names* made the two "read the same set" — it doesn't, because the windows differ. On deep boards
+they diverge badly: suz_1qb has 14 rookie WRs inside its 210-pick board but only 8 inside its
+WR top-80, so 6 rookies were spliced in that no position ever paid for. The surplus was amputated
+off the tail — WR/RB over-served their allotment at TE's expense (suz TE showed 42 of 52).
+
+Fixed: `rookies = {pos: len(draftable[pos])}` — subtract exactly what gets inserted. A rookie
+costs a position a slot precisely when he takes one. Per-league-ness is preserved: the window is
+now the league's own `total_picks`, so a short draft still isn't charged for a rookie past its
+last pick (`test_rookie_count_uses_each_leagues_own_draft`).
+
+**(b) The header was arithmetic on intent; the table was arithmetic on content.** `board_depth`'s
+`DEFAULT_TOP_N` floors can total more than the draft has picks — my_2qb drafts 160 but the floors
+ask for 35+50+75+24 = 184 — and `board_depth` only rescales *up* (`total < total_picks`), never
+down. `insert_market_rookies(...).head(limit)` then silently dropped 24 model rows, while the
+header kept printing the requested depth. Entry 094 saw this ("counts now… fall where the
+inserted rookies pushed model players past the last pick") and left the header alone.
+
+Deliberately **not** fixed by rescaling depth down: the VORP cut is cross-position and
+value-driven, which is the right cut for a pick order; a proportional rescale would substitute a
+per-position-rank cut and be worse (it would trim TE24 to TE21 while keeping WR65). Instead the
+second trim is now *recorded* — `PositionSummary.dropped_past_last_pick` — and rendered:
+
+```
+### QB — 30 returning players (top 35 − 1 rookies − 4 past pick 160)
+```
+
+35 − 1 − 4 = 30. Two new regression tests assert the arithmetic closes for every position of
+every league (`test_position_summary_arithmetic_closes`) and that the markdown header agrees with
+the row count of its own table (`test_markdown_header_matches_its_own_table`).
+
+**Regenerated.** All four boards; `rookies_subtracted` == rookies actually on the board at every
+position now. suz_1qb moved most (RB 49→46, WR 72→66, TE 42→51 — TE was the position being
+starved). my_2qb board content is unchanged; only its headers were wrong.
+
+**CSV note:** no schema change. `rookies_subtracted` *values* change (suz WR 8→14); the new
+`dropped_past_last_pick` is markdown-only and derivable from the CSV as
+`requested_top_n − rookies_subtracted − rows`.
+
+### Part 2 — the follow-up: no rookie TE in the top 24 is real
+
+Checked, not a matching bug. The 2026 class has 22 drafted TEs and they normalise/join fine; the
+highest-ranked rookie TE on the superflex board is **Kenyon Sadiq at overall slot 212**, past
+my_2qb's 160-pick board. The market's top-24 TEs are 24 returning players. Also swept the market's
+top 160 for names that are neither on the model board nor flagged rookie — 20 names, all genuine
+veterans below the model's depth or under the eligibility gate (Kyler Murray 5 games, Malik Willis
+4, vs the QB gate of 7). One name-normalisation miss found and noted but not acted on: FantasyPros
+"Kenny Gainwell" vs our "Kenneth Gainwell".
+
+### Part 3 — why the board isn't an ADP board
+
+Agreement is real but loose: overall Spearman vs the league's own ECR board is .788 (my_2qb/rsf),
+.804 (ppr_1qb), .861 (suz_1qb), .842 (underdog); median absolute gap ~24 board slots. Within
+position: RB .911, TE .799, QB .767, WR .749. Cross-position composition is close — the model's
+160-pick 2QB board is WR60/RB45/QB31/TE24 against the market's WR58/RB50/QB34/TE18 — so this is
+**not** a VORP/replacement-level miscalibration. Three drivers, in order:
+
+1. **The availability penalty.** Regressing the projection on last-season inputs:
+   `proj ≈ 0.55–0.71 × ppg2025 + ~0.20 × games2025` (R² .74–.92). Every position loads
+   significantly on games played (t = 3.2–4.9), so **each missed 2025 game costs ~0.2 projected
+   PPG** on top of the mean reversion. Players with ≤11 games in 2025 sit a median **+16 slots
+   worse** than market; players with ≥15 games sit **−13 slots better**. That is the whole Burrow
+   (model 98 / market 4, 8 games), Purdy (82 / 20, 9 games at 19.7 PPG), Jayden Daniels (48 / 5,
+   7 games), Nabers, Garrett Wilson, McLaurin, Godwin cluster. The market prices them as healthy
+   again; the model prices the games they missed. Neither is obviously right — but it's a
+   modelling choice, not a defect.
+
+2. **Mean reversion.** The coefficient on last-season PPG is .55–.71, so the model compresses
+   toward the pool while the market extrapolates recent form. This is what puts the model *ahead*
+   of ECR in backtest at RB (.860 vs .751) and WR (.861 vs .746) — see `postseason_2025.md`.
+
+3. **Structure without role.** The offseason block *is* populated for 2026 (team change, drafted
+   competition, room size, vacated workload — all 7 columns carry variance), so the model is not
+   blind to the offseason. But it only adds **+.01 to +.12 R²** over last-season PPG + games, and
+   it knows roster *membership*, not projected *role*. Nothing tells it Zach Ertz is a TE3 in
+   2026, so his 2025 line carries him to board slot 116 against a market slot of 484 — same story
+   for Kareem Hunt (146/353), Tyreek Hill (127/286), Keenan Allen (111/190).
+
+**Backtest context (2025, trained on labels < 2025):** model Spearman beats ECR at RB (.860 vs
+.751) and WR (.861 vs .746), ties TE (.802 vs .803), trails at QB (.746 vs .789) — and QB is
+exactly where the availability penalty bites hardest. The divergence is the point of the "two
+independent opinions" rule, but the QB gap is a live lever: an availability model that projected
+*next*-season games rather than penalising last-season absence is the obvious next move.
+
+**Tests:** 579 pass. Ruff clean.
+
+---
+
+## Entry 096 — the availability lever doesn't exist (three ways), and one leak found
+
+**Date:** 2026-08-30
+
+**Prompt (full text):**
+
+> lets try to flip that lever before the season starts
+>
+> [follow-up] Doesn't handcuff use different data sources than the main position_prediction model?
+
+**Response notes:**
+
+Entry 095 closed by proposing a lever: *"an availability model that projected next-season games
+rather than penalising last-season absence."* This entry tested it. **It doesn't work.** Nothing
+was shipped; the repo is unchanged apart from Entry 095's fixes.
+
+### The follow-up question found a leak
+
+Handcuff reads the **same** `data/processed/{stem}_features.parquet` and the same
+`{stem}_feature_blocks.json` as `eval/projection.py` — same rows, same columns, same `games_next`
+label out of `data/build.py`. So no source mismatch. But it does one thing the first draft of this
+study didn't: `_board_with_risk` **drops the `offseason` block** from the risk feature set.
+
+Re-running with the block included vs excluded moved the headline from +.018 to +.002, so the
+exclusion was load-bearing. Checked why:
+
+```
+team_next MISSING : n= 841   mean games_next =  0.00   P(games_next == 0) = 1.000
+team_next present : n=4091   mean games_next = 10.20   P(games_next == 0) = 0.109
+```
+
+`team_next` comes from the N+1 `rosters` table, which is the **full-season** roster, not a Sept-1
+snapshot. Absence from it implies zero games with probability 1. For the PPG target that is
+tolerable (PPG is conditional on playing, and the block is documented as Sept-1-knowable). For the
+`games_next` target it is a **deterministic leak of the label**. Every offseason column merges on
+`team_next`, so the whole block carries it.
+
+Handcuff's docstring gives the exclusion a weaker reason than it deserves ("opportunity context,
+not durability, and degenerate on a live board's N+1 horizon"). The degeneracy half is also stale —
+all 7 offseason columns carry variance on the 2025 live rows. **The real reason is the leak.**
+Left the code alone but this is worth a comment upgrade if the block is ever reused.
+
+### Three attempts at the lever, all negative
+
+Walk-forward, leak-safe throughout: feature seasons 2018/2019/2021–2024, projections trained on
+labels `< F`, availability signals fit on labeled rows `< F`, graded against actual F+1. n=2375
+player-seasons across QB/RB/WR/TE.
+
+**1. Multiply projected PPG by projected games.** Spearman vs actual next-season total points,
+mean over positions:
+
+| rule | QB | RB | TE | WR | ALL |
+|---|---|---|---|---|---|
+| ppg × availability_model | .706 | .735 | .722 | .773 | **.734** |
+| ppg (current) | .713 | .723 | .717 | .774 | **.732** |
+| ppg × durability_3yr | .706 | .723 | .711 | .765 | .726 |
+| ppg × prior_games | .693 | .705 | .709 | .754 | .715 |
+
++.002 overall and **negative at QB**, which is the position the complaint was about. (Also tested
+`vorp × games` cross-position: much worse, .46–.53 — multiplying a signed VORP by a count is not a
+coherent currency. Rejected.)
+
+**2. Take the games features out of the rate model.** The Entry 095 diagnostic
+(`proj ≈ 0.55–0.71 × ppg + 0.20 × games`) implied a removable penalty term. It isn't one:
+
+| arm | vs actual PPG | vs actual points |
+|---|---|---|
+| full (current) | .746 | .732 |
+| − `games` | .746 | .732 |
+| − `games`, `games_missed` | .746 | .732 |
+| − whole `availability` block | .745 | .731 |
+
+Deleting the columns changes nothing, because `games` is collinear with the rest of the vector
+(volume, career touches, snaps). The descriptive coefficient was real; the causal lever behind it
+was not.
+
+**3. Calibrate the bias away.** There *is* a measurable bias — signed rank error regressed on games
+missed, cluster-robust by position-season:
+
+| cohort | MODEL | ECR |
+|---|---|---|
+| all players (n=1409) | **+0.66 pct/game** (p<.001) | +0.39 pct/game (p<.001) |
+| top-24 by prior PPG (n=384) | +0.22 pct/game (p=**0.51**) | +0.13 pct/game (p=0.68) |
+
+So the model does under-rate players coming off partial seasons — but ECR does too (the excess is
+only ~0.27 pct/game), and **at the top of the board the effect is absent**, p=0.51 on n=384. The
+Burrow/Purdy/Daniels tier shows a flat error profile (−9.1 / −8.5 / −9.0 / −6.1 percentiles across
+missed-game cohorts): both sources over-rate good players generally, neither has an availability
+gradient among them.
+
+Fitting that slope on earlier seasons and applying it forward makes things **significantly worse**:
+
+```
+current    0.7572
+calibrated 0.7460   (-0.0112)   1/12 folds improved, paired t p = 0.008
+```
+
+Which is the expected failure: games missed is correlated with being genuinely worse, so
+"correcting" for it promotes players who were bad *and* hurt.
+
+### Verdict
+
+The model's harsh ranking of Burrow (98 vs market 4), Purdy (82 vs 20) and Daniels (48 vs 5) is
+**not a correctable systematic error**. Historically, good-but-injured players have not beaten the
+model's ranking of them. Entry 095's proposed lever was wrong and is retracted.
+
+### The lever that might actually exist
+
+The model has no idea whether a player is healthy *now* — that is missing **data**, not a missing
+correction. `data/raw/injuries.parquet` (the medstaff source, 2009–2025, 90,752 rows) is not wired
+into the position features at all, and it carries a week-1 report snapshot every season
+(176–221 rows/yr), so a Sept-1 health state is historically reconstructable for training. Medstaff
+already found the cross-position-group injury signature to be the useful instrument.
+
+Not started: it needs a leak-controlled Sept-1 snapshot design, and the season starts in ~10 days.
+Flagged for the user rather than begun.
+
+**Repo unchanged this entry.** Study scripts in scratchpad only.
+
+---
+
+## Entry 097 — the injury data is clean, informative, and predicts nothing
+
+**Date:** 2026-08-30
+
+**Prompt (full text):**
+
+> Start it
+
+(Entry 096's closing suggestion: wire `data/raw/injuries.parquet` into the position features so
+the model knows whether a player is healthy *now*, rather than only how many games he missed.)
+
+**Response notes:**
+
+Built it, tested it, **rejected it as a model feature**, and kept it as report context. Net change:
+the four draft boards gain a "Coming off a partial season" section; **no model number moved.**
+
+### What was built
+
+`features/build.season_health(weekly, injuries)` — a raw aggregate alongside `team_season_context`
+and `ngs_season`, keyed on `(player_id, season)`:
+
+- **from `weekly`** — `team_games`, `games_played`, `weeks_to_season_end`, `finished_season`,
+  `longest_absence`, `returned_after_absence`
+- **from `injuries`** — `inj_report_weeks`, `inj_weeks_out`, `inj_dnp_weeks`, `inj_distinct`,
+  `inj_out_at_end`
+
+Two details that took the design where it went. **Absences are counted against the player's own
+team's game weeks**, so a bye never reads as a missed game. And **players on IR drop off the injury
+report entirely** — Nabers and Tyreek Hill have almost no `Out` rows despite ending the season
+hurt — so the report is uninterpretable alone; it only works next to the weekly appearances, which
+is why both sources are folded into one function.
+
+It discriminates exactly as intended on the 2025 rows:
+
+| player | games | weeks_to_season_end | returned | out_at_end |
+|---|---|---|---|---|
+| Joe Burrow | 8 | **0** | 1 | 0 |
+| Brock Purdy | 9 | **0** | 1 | 0 |
+| Jayden Daniels | 7 | 4 | 0 | **1** |
+| Malik Nabers | 4 | 13 | 0 | 0 |
+
+Nothing in the existing feature set separated Burrow from Daniels — `availability` counts games
+missed but not *when*.
+
+### It doesn't predict anything
+
+Walk-forward A/B, leak-safe, 4 positions × 8 feature seasons (2016–2024, 2020 excluded), block
+added to the 2012+ eras only (injuries start 2009, so the boxscore era never gets it):
+
+| arm | vs actual PPG | vs actual points |
+|---|---|---|
+| none (current) | **0.7288** | **0.7129** |
+| minimal: `weeks_to_season_end` + `returned_after_absence` | 0.7278 | 0.7115 |
+| + `inj_out_at_end` | 0.7272 | 0.7110 |
+| + report load | 0.7265 | 0.7104 |
+| full block (12 cols) | 0.7250 | 0.7091 |
+
+Monotonically worse the more you add — 4/28 folds improved on the full block. And it **does not
+move the cohort it was built for**: players who missed 4+ games and *came back* stay under-rated by
++3.0 rank percentiles with or without it; players who missed 4+ and stayed out stay at +1.2. The
+information is in the columns and the model finds nothing to do with it. (Both are regularised —
+lasso/elasticnet/random forest — and correctly shrink these to nothing.)
+
+Also null on the **availability** target, which is where these features should have belonged
+(handcuff's `games_next` model, its own backtest metrics):
+
+| position | games MAE without health | with health | clears-AUC without | with |
+|---|---|---|---|---|
+| QB | 3.332 | 3.342 | 0.895 | 0.896 |
+| RB | 4.311 | 4.310 | 0.813 | 0.814 |
+| WR | 4.025 | 4.012 | 0.849 | 0.850 |
+| TE | 3.874 | 3.860 | 0.825 | 0.822 |
+
+### Why it was reverted rather than left in
+
+`eval/experiment._all_feature_columns` takes the union of **all** blocks, not the era-filtered set,
+so a `health` block in the map would silently join handcuff's availability feature set even with
+no era referencing it. Carrying a tested-null block that quietly changes another tool's inputs is a
+cost with no benefit, so `add_health` and the orchestrator wiring are gone and the features parquet
++ block map are byte-equivalent to before. `season_health` stays, now documented as report context.
+
+### What shipped instead
+
+Every draft board gains a section listing board players who missed 4+ games in the feature season,
+with how the season ended — the thing the model can't see and the market prices hard:
+
+```
+## Coming off a partial season
+
+| board | player | pos | proj PPG | 2025 games | how the season ended |
+|    98 | Joe Burrow     | QB | 13.76 | 8 of 17  | returned, finished the season |
+|    48 | Jayden Daniels | QB | 15.41 | 7 of 17  | ruled out over the last 4 weeks |
+|    90 | Malik Nabers   | WR |  9.60 | 4 of 17  | last played with 13 weeks left |
+```
+
+This is the honest landing for Entries 095–097: the model's number stays pure (no-blend rule
+intact, and the tested-null result is stated in the section's own preamble), and the drafter gets
+the one piece of context the projection structurally cannot carry. Markdown only — **no CSV schema
+change**; `RedraftResult.health` holds the frame and never reaches the board.
+
+### Incidental finding, not acted on
+
+`eval/handcuff.py`'s module docstring says the availability model "does *not* beat a naive
+prior-games baseline in backtests." On the current feature set it clearly does — QB clears-AUC
+.895 vs .859, WR .849 vs .798, RB .813 vs .784, TE .825 vs .799 — and `backtest_risk_signals`
+picks it as the winner at all four positions. The code chooses correctly by backtest; only the
+prose is stale. Left alone as out of scope.
+
+**Tests:** 586 pass (7 new: 4 on `season_health` covering byes, the came-back/still-out split,
+optional injuries, and the IR dropout; 3 on the report section and `health_note`). Ruff clean.
+
+---
+
+## Entry 098 — twenty seasons of positional share, and the flex that never takes a tight end
+
+**Date:** 2026-08-31
+
+**Prompt (full text):**
+
+> looking at the last 20 years of fantasy football data can you make a graph that shows what
+> portion of points scored by startable players were scored in each season at each position
+
+**Response notes:**
+
+- Read-only analysis off `data/raw/weekly.parquet` (nflverse, REG only, 2006–2025). No pipeline
+  code touched; the compute script lives in the session scratchpad, not the repo.
+- **"Startable" is a lineup, not a top-N-per-position list.** Filled the league-wide starting
+  lineup of a 12-team league — 12 QB / 24 RB / 24 WR / 12 TE by dedicated slot — then gave the 12
+  FLEX slots to the best remaining RB/WR/TE, which is the same shape `DEFAULT_LEAGUE` in
+  `eval/redraft.py` uses. 84 players per season. Ranked on season-total points (modal position per
+  player-season, since a player-week's listed position wobbles).
+- Recomputed all three scoring formats the same way `scoring.py` does — standard points plus
+  `reception_value × receptions` — so the format toggle is exact, not an approximation.
+- **Findings (PPR share of startable points).** RB 34.7% (2006) → 24.7% (2015) → 31.7% (2025), the
+  highest since 2009. WR peaks at 43.7% in 2015 — the same season RB bottoms — and falls to 38.1%
+  by 2025. QB rises 14.6% → 18.6% between 2006 and 2011 and then does nothing: every season since
+  sits inside a 3.1-point band. TE is the flattest line in the study, 10.6–12.8%.
+- The 2015 RB trough and WR peak are one event, not two, and the 2024–25 RB recovery is the first
+  real move against it in a decade.
+- **The flex is a receiver slot.** Across 240 flex slots (20 seasons × 12), a tight end never took
+  one, in *any* of the three scoring formats. In PPR, receivers took 11 or 12 of 12 every season
+  since 2010; in standard the count drops to 1–10, which is most of what the scoring toggle is for.
+- Scoring format moves the answer more than twenty years of NFL history does: 2025 RB share is
+  31.7% (PPR) vs 39.5% (standard); WR 38.1% vs 27.2%. Shipped the toggle rather than picking one.
+- Delivered as an Artifact — line chart per position, scoring toggle, hover crosshair, four
+  readings, and a table view. Palette is the dataviz reference categorical order (slots 1–4); the
+  validator script could not be run (no `node` on this box), so the palette is used as documented
+  rather than re-validated, with every series direct-labelled so identity is never colour-alone.
+
+**Tests:** none — no repo code changed.
+
+---
+
+## Entry 099 — the same chart on PPG, and how much of the RB collapse was games missed
+
+**Date:** 2026-08-31
+
+**Prompt (full text):**
+
+> Use ppg instead. Same cut offs as previously established in other project efforts.
+
+**Response notes:**
+
+- Reworked Entry 098's chart onto **points per game**, with the ranking universe restricted to the
+  Stage-5 eligibility cutoffs already committed in `config/football_*.yaml`
+  (`eligibility.chosen_games_played`): **QB 7, RB 4, WR 7, TE 5**. Same lineup shape — 12/24/24/12
+  plus 12 FLEX — but the sort key and the share numerator are now PPG, so a position's line is its
+  slice of the 84-player lineup's combined PPG.
+- Games are counted as REG weekly rows per player-season, which is how `data/build.py` counts them
+  (it matches the nflverse seasonal `games` column), so the cutoff bites exactly as it does in the
+  pipeline. Eligible pools are comfortably deep enough to fill every slot at every position in
+  every season (thinnest is QB, 35–44 eligible for 12 slots) — asserted in the script.
+- Kept 2020. `exclude_seasons: [2020]` is a *supervised* exclusion; dropping it from a descriptive
+  time series would just punch a hole in the middle of the chart.
+- **The headline finding changed.** On season totals the RB share collapses to 24.7% (2015) from
+  34.7% (2006) — a 10-point fall. Per game it only falls to 27.7%, a 7.7-point fall, and the same
+  holds in half-PPR (9.6 vs 12.4) and standard (9.7 vs 13.3). **Roughly a quarter to a third of
+  the "RB collapse" is games missed, not per-game production.** That is a point in favour of PPG
+  being the model's target, and an argument that a season-total positional-value chart overstates
+  the case against running backs.
+- Other lines, PPR: WR peaks 42.9% (2014) and ends 37.2% (2025), its lowest since 2009; QB rises
+  14.5% → 17.7% by 2011 and then sits inside a **2.0-point band** for fourteen seasons (tighter on
+  PPG than the 3.1 the season-total cut showed); TE spans 10.5–12.7%, still the flattest.
+- The flex is still never a tight end — 0 of 240 slots, in all three scoring formats, on PPG as on
+  season totals. On PPG the flex takes more backs than the season-total cut did (RB up to 5 in a
+  season), because a back who misses games is no longer penalised for it.
+- Artifact republished in place (same URL). Fixed two rendering bugs found while editing: the
+  redraw dropped the SVG `<title>` (accessibility name), and end labels collided when two series
+  finish a fraction of a point apart — now decluttered with leader lines.
+
+**Tests:** none — no repo code changed; analysis script is session-scratchpad only.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

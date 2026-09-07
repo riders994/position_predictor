@@ -366,6 +366,125 @@ def team_season_context(weekly, *, regular_season_only: bool = True):
     return agg
 
 
+def season_health(weekly, injuries=None, *, regular_season_only: bool = True):
+    """Per ``(player_id, season)``: **how the player's season ended**, and how hurt he was getting
+    there. Everything here is season-*N* history, knowable long before an *N+1* draft.
+
+    **This is report context, not a feature.** The ``availability`` block counts games missed but
+    not *when*, and two 8-game seasons are opposite signals to a drafter: hurt in September and
+    finishing the year starting is a healthy player, hurt in November is not. The columns separate
+    them cleanly (2025: Burrow and Purdy both land at ``weeks_to_season_end`` 0 having returned,
+    Jayden Daniels at 4 and ruled out late, Nabers at 13 and never back). But wired in as a
+    feature block it made every model slightly *worse* — −0.004 Spearman on next-season PPG and on
+    points, 4/28 walk-forward folds improved — and it did not move the cohort it was built for
+    (returning-from-injury players stayed under-rated by the same +3.0 rank percentiles). It is
+    equally null on the availability target (games MAE ±0.01). See PROMPT_LOG entry 097. So the
+    board *shows* it next to the projection and leaves the model number alone.
+
+    Absences are counted against the player's **team's** game weeks, so a bye is never mistaken
+    for a missed game. Injury-report columns are best-effort: ``injuries`` may be ``None`` (they
+    are simply omitted), and a player with no report rows gets zeros, which is the truth — he was
+    never listed. **Players on IR drop off the report entirely**, so the report alone cannot say
+    who is out; it is only interpretable next to the weekly appearances, which is why both
+    sources are folded together here rather than kept apart.
+
+    Note ``finished_season`` is not a clean injury flag on its own — a playoff-bound starter
+    rested in week 18 also scores 0 — so read it next to ``longest_absence`` and the report counts.
+    """
+    if weekly is None:
+        return None
+    w = weekly
+    if regular_season_only and "season_type" in w.columns:
+        w = w[w["season_type"] == "REG"]
+    need = {"player_id", "season", "week", "recent_team"}
+    if not need.issubset(w.columns):
+        return None
+    w = w[list(need)].dropna(subset=["player_id", "season", "week"]).copy()
+    w["season"] = w["season"].astype(int)
+    w["week"] = w["week"].astype(int)
+
+    played = w.drop_duplicates(["player_id", "season", "week"])
+    # The player's team for the season: the last one he appeared for (matches `recent_team`).
+    team = played.sort_values("week").groupby(["player_id", "season"], as_index=False).last()[
+        ["player_id", "season", "recent_team"]]
+    team_weeks = w[["season", "recent_team", "week"]].drop_duplicates()
+    # every week the player's team played, whether or not he did
+    panel = team.merge(team_weeks, on=["season", "recent_team"], how="left")
+    panel["played"] = panel.merge(
+        played.assign(_p=1)[["player_id", "season", "week", "_p"]],
+        on=["player_id", "season", "week"], how="left")["_p"].fillna(0).to_numpy()
+    panel = panel.sort_values(["player_id", "season", "week"])
+
+    g = panel.groupby(["player_id", "season"], sort=False)
+    # `team_games` is the denominator a bye is already removed from, so `team_games -
+    # games_played` is games missed — which is what a reader of the board wants, not `17 - games`.
+    out = g.agg(team_games=("week", "size"), games_played=("played", "sum")).reset_index()
+    # last week he actually played, and the team weeks that came after it
+    last = panel[panel["played"] == 1].groupby(["player_id", "season"], sort=False)["week"].max()
+    out["_last_played"] = out.set_index(["player_id", "season"]).index.map(last)
+    after = panel[panel["played"] == 0].copy()
+    after = after.merge(out[["player_id", "season", "_last_played"]], on=["player_id", "season"])
+    trailing = after[after["week"] > after["_last_played"]].groupby(
+        ["player_id", "season"], sort=False).size()
+    out["weeks_to_season_end"] = out.set_index(
+        ["player_id", "season"]).index.map(trailing).fillna(0).to_numpy(dtype=float)
+    out["finished_season"] = (out["weeks_to_season_end"] == 0).astype(int)
+
+    # longest run of consecutive team weeks missed, and whether he played again afterwards
+    panel["_miss"] = 1 - panel["played"]
+    # a new block starts wherever the played/missed state flips, so consecutive misses share an id
+    panel["_blk"] = (
+        panel["_miss"] != panel.groupby(["player_id", "season"], sort=False)["_miss"].shift(1)
+    ).cumsum()
+    runs = panel[panel["_miss"] == 1].groupby(
+        ["player_id", "season", "_blk"], sort=False).agg(n=("week", "size"),
+                                                         end=("week", "max")).reset_index()
+    if len(runs):
+        top = runs.sort_values(["n", "end"]).groupby(["player_id", "season"], sort=False).last()
+        idx = out.set_index(["player_id", "season"]).index
+        out["longest_absence"] = idx.map(top["n"]).fillna(0).to_numpy(dtype=float)
+        gap_end = idx.map(top["end"])
+        out["returned_after_absence"] = (
+            (out["longest_absence"] > 0) & (out["_last_played"] > gap_end)).astype(int)
+    else:
+        out["longest_absence"] = 0.0
+        out["returned_after_absence"] = 0
+    out = out.drop(columns=["_last_played"])
+
+    if injuries is None or len(injuries) == 0:
+        return out
+    inj = injuries.copy()
+    if regular_season_only and "game_type" in inj.columns:
+        inj = inj[inj["game_type"] == "REG"]
+    if "gsis_id" not in inj.columns:
+        return out
+    inj = inj.rename(columns={"gsis_id": "player_id"}).dropna(subset=["player_id", "season",
+                                                                     "week"])
+    inj["season"] = inj["season"].astype(int)
+    inj["week"] = inj["week"].astype(int)
+    status = inj.get("report_status")
+    inj["_out"] = status.isin(["Out", "Doubtful"]).astype(int) if status is not None else 0
+    prac = inj.get("practice_status")
+    inj["_dnp"] = (prac.fillna("").str.startswith("Did Not Participate").astype(int)
+                   if prac is not None else 0)
+    agg = inj.groupby(["player_id", "season"], as_index=False).agg(
+        inj_report_weeks=("week", "nunique"),
+        inj_weeks_out=("_out", "sum"),
+        inj_dnp_weeks=("_dnp", "sum"),
+        inj_distinct=("report_primary_injury", "nunique"),
+        _last_report=("week", "max"))
+    # was he ruled out in the closing stretch? (his last listed week, within the last 3 of the year)
+    late = inj[inj["_out"] == 1].groupby(["player_id", "season"], as_index=False)["week"].max(
+        ).rename(columns={"week": "_last_out"})
+    agg = agg.merge(late, on=["player_id", "season"], how="left")
+    out = out.merge(agg, on=["player_id", "season"], how="left")
+    for c in ["inj_report_weeks", "inj_weeks_out", "inj_dnp_weeks", "inj_distinct"]:
+        out[c] = out[c].fillna(0.0).astype(float)
+    out["inj_out_at_end"] = (
+        out["_last_out"].notna() & (out["_last_out"] >= out["team_games"] - 2)).astype(int)
+    return out.drop(columns=[c for c in ["_last_report", "_last_out"] if c in out.columns])
+
+
 def ngs_season(ngs, kind: str, *, regular_season_only: bool = True):
     """Reduce raw NGS to one season row per player (the ``week == 0`` summary) and rename."""
     if ngs is None or len(ngs) == 0:

@@ -188,8 +188,10 @@ bestball: false
 ```
 
 Shipped: `ppr_1qb` (12-team 1QB PPR — the historical default, unchanged), `suz_1qb` (14-team 1QB
-PPR, 1RB + 2FLEX), `my_2qb` (10-team 2QB half-PPR), `underdog_bestball` (12-team half-PPR, 3WR,
-18 rounds). All four run a TE-eligible flex.
+PPR, 1RB + 3FLEX), `sar_1qb` (14-team 1QB PPR, 2RB + 1FLEX — the same depth as `suz_1qb` with a
+conventional lineup, so the pair isolates what the flex structure alone does), `my_2qb` (10-team
+2QB half-PPR), `underdog_bestball` (12-team half-PPR, 3WR, 18 rounds). All five run a TE-eligible
+flex.
 
 Note that TE-flex eligibility is currently **inert** at these projections: every team
 already starts a dedicated TE, so the flex contest is TE13+ against RB25+/WR25+, and the

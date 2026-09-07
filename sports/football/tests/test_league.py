@@ -20,7 +20,8 @@ from position_predictor.eval.league import (  # noqa: E402
 )
 
 SHIPPED = ["config/leagues/ppr_1qb.yaml", "config/leagues/suz_1qb.yaml",
-           "config/leagues/my_2qb.yaml", "config/leagues/underdog_bestball.yaml"]
+           "config/leagues/my_2qb.yaml", "config/leagues/sar_1qb.yaml",
+           "config/leagues/underdog_bestball.yaml"]
 
 
 def _base(**over):
@@ -32,7 +33,8 @@ def _base(**over):
 
 def test_all_shipped_leagues_load():
     leagues = load_leagues(SHIPPED)
-    assert [lg.name for lg in leagues] == ["ppr_1qb", "suz_1qb", "my_2qb", "underdog_bestball"]
+    assert [lg.name for lg in leagues] == ["ppr_1qb", "suz_1qb", "my_2qb", "sar_1qb",
+                                           "underdog_bestball"]
 
 
 def test_ppr_1qb_is_the_historical_default_shape():

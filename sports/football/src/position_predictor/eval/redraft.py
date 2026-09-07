@@ -23,15 +23,23 @@ sets the rookie subtraction.
 **Top-N is "returning players within the top N", not N players.** The model only ranks returning
 players (rookies are excluded by ``scope: returning_only``), so a real top-20 board includes a
 few incoming rookies the model can't score. We keep model projections pure — ECR/market never
-changes a model number (the "two independent opinions" rule) — and only *subtract an estimated
-rookie count* from the list length: if the market expects 3 rookie QBs inside the top 20, we
-return the top 17 returning QBs. The count is taken at **each league's own depth** — a rookie the
-market ranks below a shallow league's board is not one of that league's picks, so charging it
-there would silently shorten the board.
+changes a model number (the "two independent opinions" rule) — and only *subtract a rookie count*
+from the list length: if the market puts 3 rookie QBs inside the draft, we return the top 17
+returning QBs. The count is **exactly the rookies spliced into that league's board** by
+:func:`insert_market_rookies`, because a rookie costs a position a slot precisely when he takes
+one. Counting instead within the position's own top-``depth`` window reads a narrower set than
+the insertion does (the insertion window is the whole draft), which over-serves the deep
+positions at the shallow ones' expense — see :func:`run_redraft` step (d).
 
 **Board depth follows the league.** A fixed top-20 QB list is meaningless in a 10-team 2QB league
 where 20 QBs are *starters*; depth is derived from teams × started slots (see :func:`board_depth`)
 and floored at the historical defaults so a 1QB board never gets shallower than it was.
+
+**A depth request is not a promise.** Those floors can total more than the draft has picks — a
+10-team 16-round league drafts 160 players but the floors ask for 184 — so the tail of the board
+is cut by VORP, across positions, which is the right cut for a pick order but leaves some
+positions shorter than they asked for. :class:`PositionSummary` records that second trim
+(``dropped_past_last_pick``) so the per-position tables and their headers stay one arithmetic.
 """
 
 from __future__ import annotations
@@ -66,11 +74,21 @@ _DRAFT_POS_TO_FANTASY = {"QB": "QB", "RB": "RB", "FB": "RB", "WR": "WR", "TE": "
 
 @dataclass
 class PositionSummary:
+    """What one position's slice of a league board actually contains.
+
+    The three counts close: ``requested_top_n - rookies_subtracted - dropped_past_last_pick ==
+    returned``. A position is trimmed twice — first by the rookies the market places inside the
+    draft (the model can't score them), then by the board itself, because the depth floors in
+    :data:`DEFAULT_TOP_N` can ask for more players than the draft has picks. Both trims must be
+    reported or the per-position table silently disagrees with its own header.
+    """
+
     position: str
     requested_top_n: int
     rookies_subtracted: int
     returned: int
     proj_season: int
+    dropped_past_last_pick: int = 0
 
 
 @dataclass
@@ -96,6 +114,7 @@ class RedraftResult:
     summaries: list[PositionSummary] = field(default_factory=list)
     rookie_note: str = ""
     leagues: list[LeagueBoard] = field(default_factory=list)
+    health: object = None   # feature-season health context (report only; never a model input)
 
     @property
     def ready(self) -> bool:
@@ -294,6 +313,45 @@ def _project_scoring(configs, *, scoring, feature_season, draft_season, top_n):
     return (pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()), seasons
 
 
+def feature_season_health(feature_season: int):
+    """How each player's ``feature_season`` ended — the context a projection can't carry.
+
+    Returns a frame keyed on ``player_id`` (or ``None`` if the raw tables aren't cached). The
+    model ranks on production and volume and has no notion of whether a player is healthy *now*;
+    the market prices that hard, and it is most of why an injured star sits far below his ECR.
+    Tested as a model feature and rejected — it made every position slightly worse — so it is
+    reported beside the projection and never folded into one. See :func:`features.build.season_health`.
+    """
+    import pandas as pd
+
+    from ..features.build import season_health
+    from ..utils.io import DATA_RAW
+
+    try:
+        weekly = pd.read_parquet(DATA_RAW / "weekly.parquet",
+                                 columns=["player_id", "season", "week", "season_type",
+                                          "recent_team"])
+        injuries = (pd.read_parquet(DATA_RAW / "injuries.parquet")
+                    if (DATA_RAW / "injuries.parquet").exists() else None)
+    except Exception:  # noqa: BLE001 — context is optional; a board without it is still a board
+        return None
+    h = season_health(weekly, injuries)
+    if h is None or h.empty:
+        return None
+    return h[h["season"] == int(feature_season)].reset_index(drop=True)
+
+
+def health_note(row, *, season_length=17) -> str:
+    """One phrase for how a player's season ended, for the report's context table."""
+    to_end = int(row.get("weeks_to_season_end", 0) or 0)
+    if to_end == 0:
+        return ("returned, finished the season" if row.get("returned_after_absence")
+                else "played through to the end")
+    if row.get("inj_out_at_end"):
+        return f"ruled out over the last {to_end} week{'s' if to_end > 1 else ''}"
+    return f"last played with {to_end} week{'s' if to_end > 1 else ''} left"
+
+
 def _attach_bestball(proj, league, *, feature_season, lambdas=None):
     """Add ``sigma`` / ``bestball_ppg`` for a best-ball league. See :mod:`eval.bestball` — the
     fitted upside weight is zero, so this is reporting context unless a lambda is passed."""
@@ -357,6 +415,8 @@ def run_redraft(configs, *, draft_season=None, refresh: bool = True, top_n=None,
     else:
         for et in sorted(set(ecr_types.values())):
             contexts[et] = _rookie_market_context(draft_season, ecr_type=et)
+    # Health context for the feature season — report only, never an input to a model number.
+    result.health = feature_season_health(feature_season)
     notes = {et: ctx[2] for et, ctx in contexts.items() if ctx[2]}
     result.rookie_note = "; ".join(f"{et}: {n}" for et, n in sorted(notes.items())) if notes else ""
 
@@ -387,13 +447,18 @@ def run_redraft(configs, *, draft_season=None, refresh: bool = True, top_n=None,
         #
         # Only rookies the market ranks inside the *draft* count: one the market puts beyond the
         # last pick will never take a slot, so charging a position's depth for him would shorten
-        # the board. Restricting the names here makes the subtraction and the insertion below
-        # read the same set, which is what keeps the board exactly `total_picks` long.
+        # the board.
         rookie_rows = market_rookies(ecr_df, rookie_names, limit=lg.total_picks)
         draftable = {pos: {_norm(r["player_name"]) for r in rookie_rows
                            if r["position"] == pos} for pos in MODELED_POS}
-        rookies = {pos: estimate_rookie_count(ecr_df, draftable, pos, depth.get(pos, 0))
-                   for pos, _ in seasons}
+        # Subtract exactly the rookies `insert_market_rookies` splices in below — a rookie costs a
+        # position a slot precisely when he takes one. Counting them in the position's own
+        # top-`depth` window instead (`estimate_rookie_count`) reads a *narrower* set than the
+        # insertion does, because the insertion window is the whole draft: 14 rookie WRs sit
+        # inside a 210-pick board that only carries 80 WRs, so 6 of them used to be added without
+        # ever being subtracted. The position then over-served its allotment and the surplus was
+        # amputated off the tail of the board at another position's expense.
+        rookies = {pos: len(draftable.get(pos, ())) for pos, _ in seasons}
         keep = {pos: max(depth.get(pos, 0) - r, 0) for pos, r in rookies.items()}
         # proj_pos_rank is 1-based within position, so the kept depth is a plain row filter.
         limit = proj["position"].map(keep).fillna(0)
@@ -415,12 +480,17 @@ def run_redraft(configs, *, draft_season=None, refresh: bool = True, top_n=None,
         # occupy their own slots rather than leaving holes the model can't fill.
         board = insert_market_rookies(board, rookie_rows, limit=lg.total_picks)
         board["league"] = lg.name
-        # Summaries describe what each league actually kept, not the pooled projection pass.
-        lg_summaries = [
-            PositionSummary(pos, depth.get(pos, 0), rookies[pos],
-                            int(((board["position"] == pos)
-                                 & (board["source"] == "model")).sum()), proj_season)
-            for pos, proj_season in seasons]
+        # Summaries describe what each league actually kept, not the pooled projection pass — and
+        # not what it *asked* to keep either. `keep` is a request; a position whose depth floor
+        # overshoots the draft (10 teams x 16 rounds is 160 picks, but the DEFAULT_TOP_N floors
+        # ask for 184 players) loses its worst rows to the board cut in `insert_market_rookies`.
+        # Recording that here is what keeps the rendered table and its header in agreement.
+        lg_summaries = []
+        for pos, proj_season in seasons:
+            shown = int(((board["position"] == pos) & (board["source"] == "model")).sum())
+            kept = int((trimmed["position"] == pos).sum())
+            lg_summaries.append(PositionSummary(pos, depth.get(pos, 0), rookies[pos], shown,
+                                                proj_season, dropped_past_last_pick=kept - shown))
         result.leagues.append(LeagueBoard(league=lg, board=board, replacement=replacement,
                                           starters=starters, summaries=lg_summaries,
                                           bestball_lambdas=lambdas, ecr_type=ecr_type))
@@ -508,15 +578,56 @@ def render_markdown(result: RedraftResult, lb: LeagueBoard, *, top: int = 60) ->
         lines.append(row)
     lines.append("")
 
+    health = getattr(result, "health", None)
+    if health is not None and len(health):
+        model_only = board[board.get("source", "model") == "model"]
+        h = model_only.merge(health, on="player_id", how="inner")
+        # against the team's own game count, so a bye never reads as a missed game
+        h["missed"] = h["team_games"] - h["games_played"]
+        h = h[h["missed"] >= 4].sort_values("proj_overall_rank")
+        if len(h):
+            lines.append("## Coming off a partial season")
+            lines.append("")
+            lines.append(
+                f"_The model ranks on production and volume; it has no notion of whether a player "
+                f"is healthy **now**, and that is most of why a returning star can sit far below "
+                f"his ECR. These board players missed 4+ games in {result.feature_season}. "
+                f"Wiring this into the model was tested and **rejected** — it made every position "
+                f"slightly worse and didn't move this cohort — so it is context for your own "
+                f"judgement, not an adjustment to any number below._")
+            lines.append("")
+            lines.append(f"| board | player | pos | proj PPG | {result.feature_season} games "
+                         f"| how the season ended |")
+            lines.append("|---|---|---|---|---|---|")
+            for _, r in h.iterrows():
+                lines.append(f"| {int(r['proj_overall_rank'])} | {r['player_name']} | "
+                             f"{r['position']} | {r['proj_ppg']:.2f} | "
+                             f"{int(r['games_played'])} of {int(r['team_games'])} | "
+                             f"{health_note(r)} |")
+            lines.append("")
+
     lines.append("## By position")
+    lines.append("")
+    lines.append(f"_Returning players only, in board order. A position's depth is spent twice "
+                 f"before it reaches this table: on the rookies the market places inside the "
+                 f"draft (the model can't score them), and then on the board itself — the depth "
+                 f"floors can ask for more players than the draft has picks, and the ones whose "
+                 f"VORP falls past pick {lg.total_picks} aren't draftable in this league. Each "
+                 f"header shows both, so the arithmetic closes._")
     lines.append("")
     model_rows = board[board.get("source", "model") == "model"] if len(board) else board
     for s in lb.summaries:
         sub = model_rows[model_rows["position"] == s.position]
         if sub.empty:
             continue
-        note = (f" (top {s.requested_top_n} − {s.rookies_subtracted} rookies)"
-                if s.rookies_subtracted else f" (top {s.requested_top_n})")
+        # The count is of rows actually rendered, so the note must be too: reporting the
+        # *requested* depth alone made a table of 30 QBs claim to be "top 35 − 1 rookies".
+        spent = []
+        if s.rookies_subtracted:
+            spent.append(f"− {s.rookies_subtracted} rookies")
+        if s.dropped_past_last_pick:
+            spent.append(f"− {s.dropped_past_last_pick} past pick {lg.total_picks}")
+        note = f" (top {s.requested_top_n}{' ' + ' '.join(spent) if spent else ''})"
         lines.append(f"### {s.position} — {len(sub)} returning players{note}")
         lines.append("")
         lines.append("| pos rank | player | proj PPG | VORP | overall |")

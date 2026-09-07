@@ -33,9 +33,9 @@
     2026
   ],
   "min_season": 1980,
-  "pulled_at": "2026-08-29T03:27:56.631489+00:00",
+  "pulled_at": "2026-09-06T03:25:02.161669+00:00",
   "n_rows": 7154,
   "n_cols": 36,
   "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/draft_picks.parquet",
-  "sha256": "a5590539c40e5f543b058239a5e2f23ef6d3daa19372685ab011c0c947f6a5ba"
+  "sha256": "a36d25a2f81e714ab72a5868d8957a986a49fc80f71912ee6005e7e02ed5d3b1"
 }

@@ -99,15 +99,21 @@ def test_run_redraft_full_n_without_rookie_adjustment(stub_pipeline):
     assert (res.board["proj_season"] == DRAFT_SEASON).all()
 
 
-def test_run_redraft_trims_by_rookie_count(stub_pipeline, monkeypatch):
-    monkeypatch.setattr(redraft, "estimate_rookie_count", lambda *a, **k: 3)
+def test_run_redraft_trims_by_rookie_count(stub_pipeline):
+    """Three rookie QBs inside the draft cost the QB board three of its 23 slots."""
+    players = [f"vet {i}" for i in range(60)]
+    for i in (2, 6, 11):
+        players[i] = f"rookie qb {i}"
+    ecr = pd.DataFrame({"player": players, "pos": "QB",
+                        "ecr": [float(i + 1) for i in range(60)]})
     res = redraft.run_redraft(
         [_config("QB")], draft_season=DRAFT_SEASON, refresh=False,
-        rookie_context=(pd.DataFrame(), {"QB": {"x"}}, ""))
-    counts = res.board.groupby("position").size().to_dict()
-    assert counts == {"QB": 20}                       # 23 − 3 rookies
+        rookie_context=(ecr, {"QB": {"rookie qb 2", "rookie qb 6", "rookie qb 11"}}, ""))
+    model = res.board[res.board["source"] == "model"]
+    assert model.groupby("position").size().to_dict() == {"QB": 20}   # 23 − 3 rookies
     assert res.summaries[0].rookies_subtracted == 3
     assert res.summaries[0].returned == 20
+    assert res.summaries[0].dropped_past_last_pick == 0
 
 
 def test_explicit_top_n_overrides_league_depth(stub_pipeline):
@@ -299,49 +305,117 @@ def test_report_names_the_market_board(stub_pipeline):
 
 # -- rookie trim is per league, not per pooled pass ------------------------------------------
 
-def _ecr_board(rookie_at):
-    """A QB market board of 20 names with the single rookie at ECR rank ``rookie_at``."""
-    players = [f"vet {i}" for i in range(20)]
+def _ecr_board(rookie_at, n=60):
+    """A QB market board of ``n`` names with the single rookie at ECR rank ``rookie_at``."""
+    players = [f"vet {i}" for i in range(n)]
     players[rookie_at - 1] = "rookie qb"
     return pd.DataFrame({"player": players, "pos": "QB",
-                         "ecr": [float(i + 1) for i in range(20)]})
+                         "ecr": [float(i + 1) for i in range(n)]})
 
 
-def test_rookie_count_uses_each_leagues_own_depth(stub_pipeline, monkeypatch):
-    """Two leagues share a pass; the rookie sits inside the deep board only.
+def test_rookie_count_uses_each_leagues_own_draft(stub_pipeline, monkeypatch):
+    """Two leagues share a pass; the rookie sits inside the long draft only.
 
-    Regression: the count used to be taken once at the *pooled* depth, so the shallow league was
-    charged for a rookie the market ranks below its own board.
+    A rookie takes a board slot exactly when the market ranks him inside the league's *draft*, so
+    the count is per league — the short draft ends before ECR 8 and is not charged for him.
     """
     monkeypatch.setattr(redraft, "_rookie_market_context",
                         lambda s, *, ecr_type=redraft.REDRAFT_OVERALL:
-                        (_ecr_board(rookie_at=8), {"QB": {"rookie qb"}}, ""))
+                        (_ecr_board(rookie_at=30), {"QB": {"rookie qb"}}, ""))
     res = redraft.run_redraft(
         [_config("QB")], draft_season=DRAFT_SEASON, refresh=False,
-        leagues=[_league(name="shallow", top_n={"QB": 5}),
-                 _league(name="deep", top_n={"QB": 12})])
-    shallow, deep = res.leagues
-    assert shallow.summaries[0].rookies_subtracted == 0   # rookie is ECR QB8, below a top-5 board
-    assert deep.summaries[0].rookies_subtracted == 1
-    # counts are of *model* rows; the rookie also rides the board as a market-placed pick
+        leagues=[_league(name="short", teams=4, roster_size=7, top_n={"QB": 5}),
+                 _league(name="long", teams=12, roster_size=16, top_n={"QB": 12})])
+    short, long = res.leagues
+    assert short.summaries[0].rookies_subtracted == 0    # rookie is ECR 30, past pick 28
+    assert long.summaries[0].rookies_subtracted == 1
+    # counts are of *model* rows; the rookie also rides the long board as a market-placed pick
     model = lambda b: b[b["source"] == "model"]           # noqa: E731
-    assert len(model(shallow.board)) == 5                 # 5 − 0
-    assert len(model(deep.board)) == 11                   # 12 − 1
-    assert shallow.summaries[0].returned == 5 and deep.summaries[0].returned == 11
+    assert len(model(long.board)) == 11                   # 12 − 1
+    assert long.summaries[0].returned == 11
+    # The short league asked for 5 but only drafts 6 players; nothing is silently amputated.
+    assert (short.summaries[0].returned
+            == len(model(short.board)) == 5 - short.summaries[0].dropped_past_last_pick)
 
 
 def test_board_columns_record_the_leagues_own_trim(stub_pipeline, monkeypatch):
     """`requested_top_n` / `rookies_subtracted` ride on the CSV, so they must be per league."""
     monkeypatch.setattr(redraft, "_rookie_market_context",
                         lambda s, *, ecr_type=redraft.REDRAFT_OVERALL:
-                        (_ecr_board(rookie_at=8), {"QB": {"rookie qb"}}, ""))
+                        (_ecr_board(rookie_at=30), {"QB": {"rookie qb"}}, ""))
     res = redraft.run_redraft(
         [_config("QB")], draft_season=DRAFT_SEASON, refresh=False,
-        leagues=[_league(name="shallow", top_n={"QB": 5}),
-                 _league(name="deep", top_n={"QB": 12})])
-    shallow, deep = (lb.board[lb.board["source"] == "model"] for lb in res.leagues)
-    assert set(shallow["requested_top_n"]) == {5} and set(shallow["rookies_subtracted"]) == {0}
-    assert set(deep["requested_top_n"]) == {12} and set(deep["rookies_subtracted"]) == {1}
+        leagues=[_league(name="short", teams=4, roster_size=7, top_n={"QB": 5}),
+                 _league(name="long", teams=12, roster_size=16, top_n={"QB": 12})])
+    short, long = (lb.board[lb.board["source"] == "model"] for lb in res.leagues)
+    assert set(short["requested_top_n"]) == {5} and set(short["rookies_subtracted"]) == {0}
+    assert set(long["requested_top_n"]) == {12} and set(long["rookies_subtracted"]) == {1}
+
+
+def test_position_summary_arithmetic_closes(stub_pipeline, monkeypatch):
+    """requested − rookies − dropped == returned, for every position of every shipped league.
+
+    Regression: the per-position header was rendered from the *requested* depth while the table
+    below it held whatever survived the board cut, so a 2QB board printed "30 returning players
+    (top 35 − 1 rookies)". The two must be one arithmetic.
+    """
+    cycle = ["QB", "RB", "WR", "TE"]
+    ecr = pd.DataFrame({"player": [f"p{i}" for i in range(400)],
+                        "pos": [cycle[i % 4] for i in range(400)],
+                        "ecr": [float(i + 1) for i in range(400)]})
+    monkeypatch.setattr(redraft, "_rookie_market_context",
+                        lambda s, *, ecr_type=redraft.REDRAFT_OVERALL:
+                        (ecr, {"QB": {"p8"}, "RB": {"p13"}, "WR": {"p30", "p210"},
+                               "TE": {"p71"}}, ""))
+    # 10 teams x 16 rounds = 160 picks, but the DEFAULT_TOP_N floors ask for 184 players — the
+    # overshoot the header used to hide.
+    leagues = [_league(name="short", teams=10, roster_size=16,
+                       starters={"QB": 2, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1},
+                       flex_positions=["RB", "WR", "TE"]),
+               _league(name="deep", teams=12, roster_size=18)]
+    res = redraft.run_redraft([_config(p) for p in cycle], draft_season=DRAFT_SEASON,
+                              refresh=False, leagues=leagues)
+    for lb in res.leagues:
+        model = lb.board[lb.board["source"] == "model"]
+        for s in lb.summaries:
+            assert s.dropped_past_last_pick >= 0, (lb.league.name, s)
+            assert (s.requested_top_n - s.rookies_subtracted - s.dropped_past_last_pick
+                    == s.returned == int((model["position"] == s.position).sum())), (
+                        lb.league.name, s)
+        # every rookie the board carries was subtracted from its position's depth
+        rookies = lb.board[lb.board["source"] == "market_rookie"]
+        by_pos = rookies.groupby("position").size().to_dict()
+        for s in lb.summaries:
+            assert s.rookies_subtracted == by_pos.get(s.position, 0), (lb.league.name, s)
+
+
+def test_markdown_header_matches_its_own_table(stub_pipeline, monkeypatch):
+    """The rendered count and the note's arithmetic are the same numbers."""
+    import re
+
+    cycle = ["QB", "RB", "WR", "TE"]
+    ecr = pd.DataFrame({"player": [f"p{i}" for i in range(400)],
+                        "pos": [cycle[i % 4] for i in range(400)],
+                        "ecr": [float(i + 1) for i in range(400)]})
+    monkeypatch.setattr(redraft, "_rookie_market_context",
+                        lambda s, *, ecr_type=redraft.REDRAFT_OVERALL:
+                        (ecr, {"QB": {"p8"}, "RB": {"p13"}, "WR": {"p30"}, "TE": {"p71"}}, ""))
+    lg = _league(name="short", teams=10, roster_size=16,
+                 starters={"QB": 2, "RB": 2, "WR": 2, "TE": 1, "FLEX": 1},
+                 flex_positions=["RB", "WR", "TE"])
+    res = redraft.run_redraft([_config(p) for p in cycle], draft_season=DRAFT_SEASON,
+                              refresh=False, leagues=[lg])
+    md = redraft.render_markdown(res, res.leagues[0])
+    heads = re.findall(r"^### (\w+) — (\d+) returning players \(top (\d+)(.*?)\)$",
+                       md, flags=re.M)
+    assert len(heads) == 4
+    for pos, shown, top, rest in heads:
+        spent = sum(int(n) for n in re.findall(r"− (\d+)", rest))
+        assert int(top) - spent == int(shown), (pos, shown, top, rest)
+        # and the table below really has that many rows
+        block = md.split(f"### {pos} — ")[1].split("###")[0]
+        rows = [ln for ln in block.splitlines() if ln.startswith("| ") and "---" not in ln]
+        assert len(rows) - 1 == int(shown), (pos, len(rows), shown)   # −1 for the header row
 
 
 # -- the board is a pick order --------------------------------------------------------------
@@ -449,3 +523,50 @@ def test_league_boards_are_exactly_their_draft_length(stub_pipeline, monkeypatch
     for lb in res.leagues:
         assert len(lb.board) == lb.league.total_picks, lb.league.name
         assert list(lb.board["proj_overall_rank"]) == list(range(1, lb.league.total_picks + 1))
+
+
+# -- health context (report only; never an input to a model number) --------------------------
+
+def test_health_note_phrases_how_the_season_ended():
+    say = redraft.health_note
+    assert say({"weeks_to_season_end": 0, "returned_after_absence": 1}) == (
+        "returned, finished the season")
+    assert say({"weeks_to_season_end": 0, "returned_after_absence": 0}) == (
+        "played through to the end")
+    assert say({"weeks_to_season_end": 4, "inj_out_at_end": 1}) == (
+        "ruled out over the last 4 weeks")
+    assert say({"weeks_to_season_end": 1, "inj_out_at_end": 1}) == (
+        "ruled out over the last 1 week")            # singular
+    assert say({"weeks_to_season_end": 9, "inj_out_at_end": 0}) == (
+        "last played with 9 weeks left")
+
+
+def test_health_section_reports_context_without_touching_any_projection(stub_pipeline):
+    """The section lists only board players who missed 4+ games, and changes no model number."""
+    res = redraft.run_redraft([_config("QB")], draft_season=DRAFT_SEASON, refresh=False,
+                              rookie_context=(None, {}, ""), leagues=[_league()])
+    board = res.leagues[0].board
+    before = board["proj_ppg"].tolist()
+    res.health = pd.DataFrame({
+        "player_id": ["QB0", "QB1", "QB2"],
+        "team_games": [17, 17, 17],
+        "games_played": [8, 17, 12],          # QB1 played a full season -> excluded
+        "weeks_to_season_end": [0.0, 0.0, 5.0],
+        "returned_after_absence": [1, 0, 0],
+        "inj_out_at_end": [0, 0, 1],
+    })
+    md = redraft.render_markdown(res, res.leagues[0])
+    assert "## Coming off a partial season" in md
+    section = md.split("## Coming off a partial season")[1].split("## By position")[0]
+    assert "QB 0" in section and "returned, finished the season" in section
+    assert "QB 2" in section and "ruled out over the last 5 weeks" in section
+    assert "QB 1" not in section                       # played every game
+    assert "8 of 17" in section
+    assert board["proj_ppg"].tolist() == before        # context only — nothing was adjusted
+
+
+def test_health_section_is_skipped_when_the_context_is_unavailable(stub_pipeline):
+    res = redraft.run_redraft([_config("QB")], draft_season=DRAFT_SEASON, refresh=False,
+                              rookie_context=(None, {}, ""), leagues=[_league()])
+    res.health = None
+    assert "Coming off a partial season" not in redraft.render_markdown(res, res.leagues[0])
