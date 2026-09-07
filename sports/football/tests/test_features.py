@@ -23,6 +23,7 @@ from position_predictor.features.build import (  # noqa: E402
     add_passing_efficiency,
     add_passing_production,
     add_passing_volume,
+    season_health,
     add_player_attrs,
     add_production,
     add_qb_rushing,
@@ -446,3 +447,74 @@ def test_offseason_degenerate_detects_missing_n1_join():
     assert offseason_degenerate(df, bc, 2024) is False   # varies across players → healthy
     assert offseason_degenerate(df, {"offseason": []}, 2025) is False  # no block → not flagged
     assert offseason_degenerate(df, bc, 1999) is False   # season absent → not flagged
+
+
+# -- season_health (report context; deliberately NOT a feature block) -----------------------
+
+def _weekly(rows):
+    """rows: (player_id, week) pairs for team 'AAA' in 2024, plus the team's own game weeks."""
+    return pd.DataFrame([{"player_id": p, "season": 2024, "week": w, "season_type": "REG",
+                          "recent_team": "AAA"} for p, w in rows])
+
+
+def _team_playing(weeks):
+    """A filler player who plays every one of the team's weeks, so the team's schedule is known."""
+    return [("team_filler", w) for w in weeks]
+
+
+TEAM_WEEKS = [1, 2, 3, 4, 5, 6, 7, 9, 10]        # week 8 is the bye
+
+
+def test_season_health_does_not_count_a_bye_as_a_missed_game():
+    """Week 8 is the team's bye — a player present all year must show no absence at all."""
+    w = _weekly(_team_playing(TEAM_WEEKS) + [("ironman", x) for x in TEAM_WEEKS])
+    h = season_health(w).set_index("player_id")
+    r = h.loc["ironman"]
+    assert r.team_games == len(TEAM_WEEKS) == 9
+    assert r.games_played == 9
+    assert r.longest_absence == 0
+    assert r.weeks_to_season_end == 0 and r.finished_season == 1
+
+
+def test_season_health_separates_came_back_from_still_out():
+    """The whole point of the block: two players missing four games, opposite signals."""
+    came_back = [("came_back", x) for x in [1, 2, 3, 4, 5, 9, 10]]      # out 6,7 + bye, returned
+    still_out = [("still_out", x) for x in [1, 2, 3, 4, 5]]             # last played wk 5
+    h = season_health(_weekly(_team_playing(TEAM_WEEKS) + came_back + still_out)
+                      ).set_index("player_id")
+    a, b = h.loc["came_back"], h.loc["still_out"]
+    assert a.games_played == b.games_played + 2
+    assert a.weeks_to_season_end == 0 and a.finished_season == 1 and a.returned_after_absence == 1
+    assert b.weeks_to_season_end == 4 and b.finished_season == 0 and b.returned_after_absence == 0
+
+
+def test_season_health_injury_report_is_optional_and_absence_means_zero():
+    """A player never listed on the report gets zeros — that is the truth, not a missing value."""
+    w = _weekly(_team_playing(TEAM_WEEKS) + [("hurt", x) for x in [1, 2, 3]]
+                + [("healthy", x) for x in TEAM_WEEKS])
+    assert "inj_weeks_out" not in season_health(w).columns        # no injuries table → omitted
+    inj = pd.DataFrame([
+        {"gsis_id": "hurt", "season": 2024, "week": 4, "game_type": "REG",
+         "report_status": "Out", "practice_status": "Did Not Participate In Practice",
+         "report_primary_injury": "Knee"},
+        {"gsis_id": "hurt", "season": 2024, "week": 10, "game_type": "REG",
+         "report_status": "Out", "practice_status": "Did Not Participate In Practice",
+         "report_primary_injury": "Knee"},
+    ])
+    h = season_health(w, inj).set_index("player_id")
+    assert h.loc["hurt"].inj_weeks_out == 2
+    assert h.loc["hurt"].inj_out_at_end == 1          # ruled out in the closing stretch
+    assert h.loc["healthy"].inj_weeks_out == 0 and h.loc["healthy"].inj_report_weeks == 0
+    assert h.loc["healthy"].inj_out_at_end == 0
+
+
+def test_season_health_handles_a_player_who_drops_off_the_report_on_ir():
+    """IR players vanish from the injury report, so weekly appearances must carry the absence."""
+    w = _weekly(_team_playing(TEAM_WEEKS) + [("ir", x) for x in [1, 2]])
+    inj = pd.DataFrame([{"gsis_id": "ir", "season": 2024, "week": 3, "game_type": "REG",
+                         "report_status": "Out", "practice_status": "Did Not Participate In "
+                         "Practice", "report_primary_injury": "Achilles"}])
+    r = season_health(w, inj).set_index("player_id").loc["ir"]
+    assert r.games_played == 2
+    assert r.weeks_to_season_end == 7          # never came back, though the report goes quiet
+    assert r.inj_weeks_out == 1                # only the one week he was listed

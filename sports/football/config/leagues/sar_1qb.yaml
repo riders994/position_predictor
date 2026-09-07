@@ -1,0 +1,24 @@
+# League config — the 14-team 1QB full-PPR redraft league with a conventional lineup.
+# Two settings move the board versus the 12-team ppr_1qb default:
+#   * 14 teams drafts 28 more players than a 12-team league, so every replacement level drops:
+#     the marginal starter is deeper at each position and the scarce top of RB/TE gains VORP.
+#   * 2 dedicated RB slots and a single FLEX. This is the shallow-flex counterpart to suz_1qb,
+#     which shares the 14-team full-PPR shape but starts 1RB + 3FLEX — so the two boards isolate
+#     what the flex structure alone does to RB value at identical league depth.
+
+name: sar_1qb
+label: "14-team 1QB PPR"
+
+scoring: ppr                     # 1 pt / reception
+teams: 14
+
+starters:                        # per team, per week
+  QB: 1
+  RB: 2
+  WR: 2
+  TE: 1
+  FLEX: 1
+flex_positions: [RB, WR, TE]     # TE is flex-eligible (true of every league here)
+
+roster_size: 15                  # drafted players per team; sets the cross-position board depth
+bestball: false
