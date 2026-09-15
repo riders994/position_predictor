@@ -3486,6 +3486,124 @@ that re-forks as real picks come in.
 
 ---
 
+## Entry 104 — replaying past drafts: the model's board loses to ADP, and lookahead doesn't save it
+
+**Date:** 2026-09-15
+
+**Prompt (full text):**
+
+> Let's use market for 1qb as a benchmark. And why not try running multiple simulation drafts on
+> past years (since we have data on past ecr/adp boards pre-season) to build model teams and then
+> use those to get a prior for where players fall. We should focus on 10 team and 12 team, .5 and
+> full ppr.
+
+**Response notes:**
+
+Read as: the market is approved as the model of **what opponents draft** in 1QB leagues (never a
+projection input); learn where players fall from past preseason boards; re-draft past seasons with
+model-driven teams and score them on **actual** results (which retires Entry 102's caveat that
+projections were treated as truth); scope 10/12-team × half/full PPR, 1QB.
+
+**Data: FFC beats ECR for this.** FantasyFootballCalculator publishes, per player, the stdev /
+high / low of his *real* draft slot across 300–8,470 mock drafts a season: full PPR 2012–2026,
+half-PPR 2018–2026. ECR `ro` preseason scrapes exist only 2020–2026 and their `sd` is expert
+disagreement, not draft spread. **FFC serves 12-team boards only** — `teams=10` returns the 12-team
+board byte for byte (2026, the one season that answers both) — so 10-team rooms draft in 12-team
+market order. That is an assumption, stated in the report.
+
+**The fall prior.** Draft-slot spread grows sub-linearly with ADP, `sd ≈ 0.42 · ADP^0.68` (b
+0.65–0.70 in almost every season), `sd/ADP ≈ 0.10` past round 1, identical for PPR and half-PPR;
+TE slightly wider (0.12), WR tighter (0.10). Simulating a draft *from* ECR with assumed noise
+would only return the assumed noise, so the simulated room reads `market rank + k · sd · z` and `k`
+is **calibrated per board** until simulated drafts reproduce the observed spread: k = 1.25–1.5 on
+all 34 boards; 2023 PPR within ~5% at every ADP band through pick 120, mean bias < 0.4 picks (the
+tail is truncated by the end of the draft, as a real draft truncates it).
+
+**The backtest.** `eval/draftsim.py` (engine, policies, calibration) + `eval/draft_backtest.py`
+(boards ↔ nflverse ids, pools, actual scoring, season runner, summary, report) +
+`scripts/draft_backtest.py` + `make draft-backtest`. Each season with a board and a leak-safe
+projection (`project_position(feature_season=Y-1)`, cached; PPR 2012–19 + 2022–25, half 2018–19 +
+2022–25; 2020 excluded, 2021 would need 2020 features) is re-drafted from every slot of a 1QB /
+2RB / 2WR / 1TE / 1FLEX, 14-player league. FFC names → ids in three passes (name+position, name,
+team+surname for nicknames like "Hollywood Brown"): ≥98% of every board's top 150. Room draws are
+shared by all policies, so comparisons are paired; standard errors are across seasons.
+
+**Four defects surfaced by smoke runs, each measured before being fixed:**
+1. *The model drafts players who aren't playing.* 36 of the 2023 model board's top 168 were
+   absent from the market board and averaged 4.4 actual points a week vs 10.1 — Tom Brady
+   (retired) projected 15.5 PPG, Fournette (unsigned), Gage (0 games). → `vorp_board_ranked`:
+   my team may only draft players the market ranks. That uses the market to decide *who is
+   draftable*, not what anyone is worth.
+2. *The ADP baseline finished a draft with no tight end.* → need rule (`open_positions`).
+3. *The board is bench-blind:* once the lineup is full every pick adds zero projected value, so it
+   took a backup QB and two unsigned backs. → `BoardPolicy(bench="insurance")`: mean lineup gain
+   over each rostered player being out.
+4. *Best-ball scoring flattered the market team* (its Mahomes + Fields pair was worth 19.6 QB
+   points a week from one slot). → `managed` lineups are the default (start the active players
+   with the best season PPG); best ball stays a variant. It was not the story: 2023 −11.7 managed
+   vs −14.1 best ball.
+
+**The diagnosis: the optimizer's curse.** The board's round 1–8 picks carried market ranks of
+60–100 (ADP team 37–40): 95% of round-2 picks were QBs in 2024 half-PPR, TEs taken in rounds 1–8
+had market rank 104. Those reaches are where the model is wrong — the board's picks were
+over-projected by +1.8 to +6.8 PPG (2023 QBs: 19.3 projected, 12.5 actual in 8.3 games), the ADP
+team's slightly *under*-projected. Within position the model ranks as well as the market (2023
+Spearman WR .67 vs .68, RB .44 vs .41) and its positional value scale is about right (it compresses
+the elite: 2023 top-3 WR 7.3 over replacement vs 12.0 actual). Acting on model–market
+*disagreement* selects the model's errors: the market sees injuries, depth charts and camp news the
+model cannot.
+
+**Results** — 17,984 drafts, managed lineups, 10 room draws per season (lookahead: slots 1/5/10,
+4 draws, 8 planning draws); actual points per week, ± se across seasons:
+
+| comparison | half 10 | half 12 | PPR 10 | PPR 12 |
+|---|---|---|---|---|
+| `vorp_board` − `adp` | −9.61 ±3.90 (0/5) | −10.52 ±3.48 (0/5) | −12.34 ±3.96 (2/11) | −15.53 ±4.06 (2/11) |
+| `vorp_board_ranked` − `vorp_board` | +0.38 | +2.58 (5/5) | +6.21 (10/11) | +7.81 (11/11) |
+| `…_ranked_depth` − `…_ranked` | +0.33 | +0.46 | +1.46 (9/11) | +1.41 (9/11) |
+| `…_ranked_depth` − `adp` | −8.90 | −7.48 | −4.67 | −6.32 |
+| `lookahead_ranked` − `vorp_board_ranked` | +1.08 ±2.32 | +0.48 ±1.49 | −0.21 ±1.26 | +0.57 ±1.04 |
+| `market_window` − `adp` | −0.85 ±1.05 | −1.17 ±1.41 | +0.33 ±1.08 | −0.01 ±1.19 |
+| `market_window` − `vorp_board_ranked` | +8.38 (5/5) | +6.77 (4/5) | +6.46 (8/11) | +7.72 (9/11) |
+
+**Findings.**
+* **The model's VORP board loses to plain ADP drafting in every format and league size.** The
+  two fixes that are clearly right (ranked-only, insurance bench) recover 3–9 PPG a week of it; the
+  best fixed board still trails ADP by 4.7–8.9.
+* **Lookahead — opportunity cost as Entry 102 built it — is worth nothing on actual outcomes**
+  (±1 of its own board, inside one se everywhere). Its projected gain came from exploiting
+  model–market disagreement, which is exactly where the model errs.
+* **`market_window` ties ADP.** Letting the market pick the position and round and the model pick
+  the player inside that round adds nothing over the market's own pick: the model's within-position
+  judgement matches the market's but doesn't beat it.
+* **The fall prior is the durable deliverable**: measured, format-invariant, calibrated per board.
+* Variance is large: 2018 alone is −23 to −32 for the shipped board (not investigated); 2017 and
+  2019 PPR are the only seasons the board beats ADP.
+
+**Caveats:** 10-team rooms use 12-team order; rookies are unscored, so model teams never draft
+one (9–14% of each board's top picks); managed lineups use season-PPG hindsight shared by every
+team; the room is need-blind (its noise is calibrated, its roster logic is only caps); lookahead
+ran on 3 slots × 4 draws.
+
+**Open decisions put to the user:** (1) the **shipped redraft boards** have defect 1 and 3 —
+adopting the ranked-only filter + insurance bench would change them and the CSV contract read by
+the home-site dashboard; (2) since the model does not beat ADP as a *draft policy*, whether the
+market may take a larger role in drafting (e.g. `market_window`, or shrinking projections toward
+market value — a blend, which the standing rule forbids); (3) lookahead should not ship on raw
+projections.
+
+**Files:** new `eval/draftsim.py`, `eval/draft_backtest.py`, `scripts/draft_backtest.py`,
+`tests/test_draftsim.py` (14), `tests/test_draft_backtest.py` (9), `reports/REPORT_draft_backtest.md`,
+18 committed FFC boards `data/external/ffc_board_<scoring>_<season>.parquet` (288 KB; frozen
+history, the backtest's input — unlike the refetched, git-ignored `adp_*.parquet`); modified
+`data/adp.py` (`fetch_ffc_board` / `load_ffc_board`, stale "no 2025 board" note corrected),
+`tests/test_adp.py` (+2), `Makefile`, `docs/USAGE.md`. Projection caches and per-draft results are
+git-ignored.
+
+**Tests:** 624 pass, ruff clean — 25 of them new (draftsim 14, backtest 9, adp +2).
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
