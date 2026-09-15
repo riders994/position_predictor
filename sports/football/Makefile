@@ -4,7 +4,7 @@
 
 CONFIG ?= config/football_rb.yaml
 
-.PHONY: help setup fetch build features eligibility eda benchmark experiment report progress project redraft bestball-calibrate postseason handcuff clean test lint
+.PHONY: help setup fetch build features eligibility eda benchmark experiment report progress project redraft bestball-calibrate postseason handcuff draft-backtest clean test lint
 
 help:
 	@echo "Targets:"
@@ -23,6 +23,7 @@ help:
 	@echo "  bestball-calibrate  re-fit the best-ball upside weight -> reports/results/bestball_lambda_*.json"
 	@echo "  postseason   grade model/ECR/ADP vs actual finish -> reports/postseason_<season>.{md,csv}"
 	@echo "  handcuff     RB backups to draft by starter risk (or QB injury-risk list w/ CONFIG=...qb) -> reports/handcuff_<pos>_<season>.{md,csv}"
+	@echo "  draft-backtest  replay past drafts: VORP board vs ADP vs lookahead, on actual points -> reports/REPORT_draft_backtest.md"
 	@echo "  test / lint  pytest / ruff"
 
 setup:
@@ -78,6 +79,10 @@ postseason:
 # `make handcuff SEASON=2026` / `make handcuff CONFIG=config/football_qb.yaml`.
 handcuff:
 	uv run python scripts/handcuff.py $(if $(CONFIG),--config $(CONFIG),) $(if $(SEASON),--season $(SEASON),)
+
+# Replay past drafts on actual points; pass flags through, e.g. `make draft-backtest ARGS="--lookahead"`.
+draft-backtest:
+	uv run python scripts/draft_backtest.py $(ARGS)
 
 test:
 	uv run pytest
