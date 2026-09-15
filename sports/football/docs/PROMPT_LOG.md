@@ -3410,6 +3410,82 @@ incumbent is not a benching on the merits; stage 3 must carry a flag for it.
 
 ---
 
+## Entry 102 — opportunity cost: what a pick forfeits, not what it beats
+
+**Date:** 2026-09-15
+
+**Prompt (full text):**
+
+> Let's rethink VORP for the draft board. Right now we're thinking of vorp from the perspective of
+> the replacement player at position, a Raw VORP. But for the purposes of drafting we should be
+> thinking about the opportunity cost of the draft pick. For example, choosing Bijan or Gibbs with
+> the #1 means that I'm taking the RB1 as my RB1. But what if I took a WR there instead? What would
+> that mean for the value of my RB1? What is the opportunity cost forfeited there. This is the
+> dynamic we need to explore when building draft boards for leagues of different sizes and with
+> different roster configurations.
+
+**Response notes:**
+
+Exploration only — **no pipeline code changed, no board regenerated.** Branch
+`draft-board-opportunity-cost` off fresh primary (9cdad50). Prototype scripts lived in the session
+scratchpad (`oppcost.py`, `policy.py`) and were **lost** when the session crashed mid-commit (the
+commit's eight objects were written empty; repaired by re-committing from the intact working
+tree). They read the committed league YAMLs and the `reports/redraft_2026_*.csv` boards. The
+method below is specified fully enough to rebuild them, but the numbers were not re-run after
+the loss.
+
+**What the board does today.** `keeper.build_board` ranks on `proj_ppg − replacement[pos]`, where
+replacement is the league-wide first non-starter. That value is **pick-independent**: it never asks
+what is still on the board at *my* next pick.
+
+**The measurement.** Snake-draft each league's board many times. Opponents take the best player on a
+noisy read (lognormal σ=0.25 on rank) of a reference order, with soft caps (QB ≤ QB slots+1,
+TE ≤ TE slots+1). At a decision pick, fork once per candidate (top 3 available per position), finish
+the draft with a competent base policy (walk the VORP board, take the first player who improves my
+starting lineup), score = **final starting-lineup projected PPG**. Common random numbers across
+candidates; cost is the paired per-sim shortfall to the best fork. Then a whole-draft test: policy A
+follows the VORP board; policy B does that fork-and-roll-out at each of its first (starters+1)
+picks using 15 *planning* opponent draws disjoint from the 30 evaluation draws (so B never peeks).
+
+**The #1 pick the prompt asked about is a coin flip.** 12-team 1QB: Bijan vs Puka = 0.05 PPG apart
+(±0.04). The trade is nearly symmetric — take Puka and my RB1 falls 20.1 → ~13–14 while my WR1 rises
+~13 → 20.3, because RB and WR scarcity at pick 24 are about equal. Every league agrees within noise
+except `suz_1qb` (1RB/3FLEX), where the board already puts Puka first and the fork agrees (+0.73).
+
+**The finding: VORP is optimal only if opponents draft like the model.**
+
+| league | opponents | slots | pick-aware − VORP (lineup PPG, ±SE) |
+|---|---|---|---|
+| ppr_1qb | model board (control) | 1 / 6 / 12 | +0.04±.07 / +0.26±.12 / +0.12±.04 |
+| ppr_1qb | market ECR | 1 / 6 / 12 | +0.86±.14 / +2.45±.22 / +1.96±.29 |
+| sar_1qb | market ECR | 1 / 7 / 14 | +0.83±.13 / +1.88±.18 / +1.57±.34 |
+| suz_1qb | market ECR | 1 / 7 / 14 | +0.91±.11 / +1.22±.24 / +0.90±.17 |
+| my_2qb | market ECR | 1 / 5 / 10 | +1.36±.19 / +1.70±.27 / +1.43±.30 |
+| underdog_bestball | market ECR | 1 / 6 / 12 | +1.79±.26 / +2.29±.34 / +2.01±.10 |
+
+Against a model-drafting room the gain is ~0: replacement *is* what's left at your next pick. Against
+a market-drafting room it is +0.8 to +2.5 lineup PPG in every league and slot, larger at mid/late
+slots than at 1. The mechanism is **sequencing around model–market disagreement**, not picking
+different players: the market ranks Josh Jacobs #145 (board #25), McBride #37 (#9), Fannin #97
+(#38), Lawrence #66 (#28), so VORP spends early picks on players who would still be there, while the
+pick-aware drafter takes market-coveted players first (Pickens, board #11 / market #20) and still
+lands Jacobs five rounds later. Name matching was checked, not assumed: 184/192 ppr_1qb rows match
+ECR, the misses are fringe (Gainwell, Ertz, Ekeler).
+
+**Caveats, recorded:** value is in the model's own currency (projections treated as truth); starters
+only, no bench/injury value; rookies are unscored so the simulated me never drafts one; ECR is a
+proxy for league-mates, and σ=0.25 is assumed, not fit.
+
+**Open decisions put to the user:** (1) whether the market may predict *opponent availability* —
+it would change no model number (the same role it already plays placing rookies), but it is the
+input the whole gain depends on; (2) output shape, since opportunity cost is slot-dependent and a
+single pick-order board can't carry it — a per-slot plan in the reports, or a live draft assistant
+that re-forks as real picks come in.
+
+**Tests:** unchanged (no source edits).
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
