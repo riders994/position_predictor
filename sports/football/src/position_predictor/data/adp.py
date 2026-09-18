@@ -7,8 +7,8 @@ companion to ECR when grading a season after the fact. We pull it from the free
 
     https://fantasyfootballcalculator.com/api/v1/adp/ppr?year=Y&teams=12&position=all
 
-FFC has occasional per-season holes (it has no 2025 board, while 2024 and 2026 are fine), so when
-it returns no data we **fall back to the FantasyPros consensus ADP board** for that year; the
+FFC has occasional per-season holes (2025 once returned nothing; it serves a 249-player board as of
+2026-09-15), so when it returns no data we **fall back to the FantasyPros consensus ADP board** for that year; the
 report notes which source was used. Neither source carries ``gsis_id``; we join to our universe by
 **normalised name + position** (reusing the keeper matcher), so a handful of names may not map —
 the caller reports the match count. The result is cached to ``data/external/adp_<stem>.parquet``
@@ -19,6 +19,67 @@ from __future__ import annotations
 
 FFC_URL = "https://fantasyfootballcalculator.com/api/v1/adp/ppr?year={year}&teams={teams}&position=all"
 FANTASYPROS_URL = "https://www.fantasypros.com/nfl/adp/overall.php?year={year}"
+FFC_BOARD_URL = ("https://fantasyfootballcalculator.com/api/v1/adp/{fmt}?year={year}&teams=12"
+                 "&position=all")
+# FFC's path segment for each of our scoring formats. Half-PPR boards start in 2018.
+FFC_FORMATS = {"ppr": "ppr", "half_ppr": "half-ppr", "standard": "standard"}
+FFC_BOARD_COLS = ["ffc_id", "name", "position", "team", "adp", "stdev", "high", "low",
+                  "times_drafted", "total_drafts", "start_date", "end_date"]
+
+
+def fetch_ffc_board(season: int, *, scoring: str = "ppr"):
+    """The full FFC preseason board for ``season`` in ``scoring``, with each player's draft spread.
+
+    Unlike :func:`fetch_ffc_adp` this keeps every position (K and DST included — they take real
+    picks) and the spread of each player's real draft slot across the site's mock drafts:
+    ``stdev``, ``high``, ``low``, plus the board's ``total_drafts`` and date window. That spread
+    is what calibrates the draft simulator's room (:mod:`eval.draftsim`).
+
+    FFC serves **12-team boards only**: a ``teams=10`` request returns the 12-team board byte for
+    byte (checked on 2026, the one season that answers both), so no ``teams`` argument is offered.
+    Raises on a network/parse failure or an empty board.
+    """
+    import json
+    import urllib.request
+
+    import pandas as pd
+
+    from ..scoring import normalize_scoring
+
+    fmt = FFC_FORMATS[normalize_scoring(scoring)]
+    url = FFC_BOARD_URL.format(fmt=fmt, year=int(season))
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310 — fixed trusted host
+        payload = json.load(resp)
+    players = payload.get("players") or []
+    if not players:
+        raise RuntimeError(f"FFC returned no {fmt} board for {season}")
+    meta = payload.get("meta") or {}
+    df = pd.DataFrame(players).rename(columns={"player_id": "ffc_id"})
+    df["total_drafts"] = meta.get("total_drafts")
+    df["start_date"] = meta.get("start_date")
+    df["end_date"] = meta.get("end_date")
+    return df.reindex(columns=FFC_BOARD_COLS)
+
+
+def load_ffc_board(season: int, *, scoring: str = "ppr", refresh: bool = False):
+    """:func:`fetch_ffc_board`, cached to ``data/external/ffc_board_<scoring>_<season>.parquet``.
+
+    A past season's board never changes, so the cache is read unless ``refresh`` is set.
+    """
+    import pandas as pd
+
+    from ..scoring import normalize_scoring
+    from ..utils.io import DATA_EXTERNAL, ensure_dir
+
+    scoring = normalize_scoring(scoring)
+    path = DATA_EXTERNAL / f"ffc_board_{scoring}_{int(season)}.parquet"
+    if path.exists() and not refresh:
+        return pd.read_parquet(path)
+    df = fetch_ffc_board(season, scoring=scoring)
+    ensure_dir(path.parent)
+    df.to_parquet(path, index=False)
+    return df
 
 
 def fetch_ffc_adp(season: int, *, teams: int = 12):

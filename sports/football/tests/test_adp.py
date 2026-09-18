@@ -60,6 +60,51 @@ def test_falls_back_to_fantasypros_when_ffc_empty(monkeypatch):
     assert match == {"ranked": 3, "matched": 2, "source": "FantasyPros"}
 
 
+def _stub_urlopen(monkeypatch, payload, seen):
+    import json
+    import urllib.request as ur
+
+    class _Resp:
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def read(self): return json.dumps(payload).encode()
+
+    def _open(req, timeout=None):
+        seen["url"] = req.full_url
+        return _Resp()
+    monkeypatch.setattr(ur, "urlopen", _open)
+
+
+def test_fetch_ffc_board_keeps_spread_and_meta(monkeypatch):
+    payload = {"meta": {"type": "Half-PPR", "teams": 12, "total_drafts": 906,
+                        "start_date": "2024-08-31", "end_date": "2024-09-01"},
+               "players": [{"player_id": 1, "name": "Ja'Marr Chase", "position": "WR",
+                            "team": "CIN", "adp": 1.4, "adp_formatted": "1.01",
+                            "times_drafted": 887, "high": 1, "low": 4, "stdev": 0.6, "bye": 6},
+                           {"player_id": 2, "name": "Some Kicker", "position": "PK",
+                            "team": "BAL", "adp": 140.2, "adp_formatted": "12.08",
+                            "times_drafted": 300, "high": 120, "low": 160, "stdev": 9.1,
+                            "bye": 14}]}
+    seen = {}
+    _stub_urlopen(monkeypatch, payload, seen)
+
+    df = adp.fetch_ffc_board(2024, scoring="half")
+
+    assert "/adp/half-ppr?year=2024&teams=12" in seen["url"]
+    assert list(df.columns) == adp.FFC_BOARD_COLS
+    assert len(df) == 2                                   # K/DST kept: they take real picks
+    row = df.iloc[0]
+    assert (row["ffc_id"], row["stdev"], row["high"], row["low"]) == (1, 0.6, 1, 4)
+    assert row["total_drafts"] == 906 and row["end_date"] == "2024-09-01"
+
+
+def test_fetch_ffc_board_raises_on_empty_board(monkeypatch):
+    _stub_urlopen(monkeypatch, {"meta": {}, "players": []}, {})
+    import pytest
+    with pytest.raises(RuntimeError, match="no half-ppr board for 2016"):
+        adp.fetch_ffc_board(2016, scoring="half_ppr")
+
+
 def test_fetch_fantasypros_adp_parses_table(monkeypatch):
     html = (
         "<table id='data'><tbody>"

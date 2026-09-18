@@ -258,6 +258,46 @@ Handcuff takes a *scoring format*, not a league: it compares a starter to his ow
 roster shape and replacement level never enter. PPR keeps the historical filename; other formats
 get a suffix so boards don't clobber each other.
 
+**`draft_backtest.py`** — replay past drafts and score every team on what actually happened. For
+each season with a preseason FantasyFootballCalculator board (full PPR 2012–2025, half-PPR
+2018–2025; 2020–21 excluded) and a leak-safe projection, it re-drafts a 1QB / 2RB / 2WR / 1TE /
+1FLEX, 14-player league from every slot. The room drafts off that season's real board; my team
+drafts by one policy (ADP drafter, VORP board, market-ranked VORP board ± insurance bench, market
+window, lookahead).
+```bash
+make draft-backtest ARGS="--lookahead"                # or:
+uv run python scripts/draft_backtest.py [options]
+  --scoring ppr half_ppr    # formats (default: both)
+  --teams 10 12             # league sizes (default: both)
+  --seasons 2023 2024       # restrict seasons (default: every backtest season)
+  --draws 10                # room draws per season, shared by every policy
+  --lineup managed bestball # lineup rule(s) teams are scored under (default: managed)
+  --policies ...            # default: every non-lookahead policy
+  --lookahead               # also run lookahead_ranked (expensive) ...
+  --lookahead-slots 1 5 10 --lookahead-draws 4 --plan-draws 8
+  --jobs 8                  --no-report
+# → reports/results/draft_backtest_results.parquet (every draft) + reports/REPORT_draft_backtest.md
+```
+Two modelling choices carry the result, so they are measured rather than assumed:
+
+* **The room's noise is calibrated, not guessed.** FFC publishes the spread of each player's real
+  draft slot (`sd ≈ 0.42 · ADP^0.68`, ~10% of ADP past round 1, identical for PPR and half-PPR).
+  Simulated opponents read `market rank + k · sd · z`, and `k` is fit per board until simulated
+  drafts reproduce that spread (2023 PPR: k = 1.25, within ~5% through pick 120). FFC serves
+  12-team boards only — `teams=10` returns the 12-team board byte for byte — so 10-team rooms draft
+  in 12-team order.
+* **Lineups are managed by default.** Each week a team starts its active players with the best
+  season PPG. `bestball` (the best lineup after the fact) pays for bench spike weeks and flatters
+  deep market-built rosters; it is kept as a variant.
+
+Current answer (2026-09-15, ~18k drafts): **drafting off the model's VORP board loses to drafting
+by ADP in every format and league size** — −10 to −16 actual points a week as shipped, −5 to −9
+after the two fixes that clearly help (draft only market-ranked players: +0.4 to +7.8; insurance
+bench: +0.3 to +1.5). Pick-aware lookahead is worth nothing on actual outcomes (within ±1 of its
+board), and letting the model choose the player inside the market's round ties ADP. The board's
+losses come from reaching past the market, which is where the model's projection errors
+concentrate. See `reports/REPORT_draft_backtest.md`.
+
 ---
 
 ## Notes

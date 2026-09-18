@@ -4253,6 +4253,235 @@ New `src/qb_benching/{features,model}/`, `scripts/qb_benching_{features,model}.p
 
 ---
 
+## Entry 102 — opportunity cost: what a pick forfeits, not what it beats
+
+**Date:** 2026-09-15
+
+**Prompt (full text):**
+
+> Let's rethink VORP for the draft board. Right now we're thinking of vorp from the perspective of
+> the replacement player at position, a Raw VORP. But for the purposes of drafting we should be
+> thinking about the opportunity cost of the draft pick. For example, choosing Bijan or Gibbs with
+> the #1 means that I'm taking the RB1 as my RB1. But what if I took a WR there instead? What would
+> that mean for the value of my RB1? What is the opportunity cost forfeited there. This is the
+> dynamic we need to explore when building draft boards for leagues of different sizes and with
+> different roster configurations.
+
+**Response notes:**
+
+Exploration only — **no pipeline code changed, no board regenerated.** Branch
+`draft-board-opportunity-cost` off fresh primary (9cdad50). Prototype scripts lived in the session
+scratchpad (`oppcost.py`, `policy.py`) and were **lost** when the session crashed mid-commit (the
+commit's eight objects were written empty; repaired by re-committing from the intact working
+tree). They read the committed league YAMLs and the `reports/redraft_2026_*.csv` boards. The
+method below is specified fully enough to rebuild them, but the numbers were not re-run after
+the loss.
+
+**What the board does today.** `keeper.build_board` ranks on `proj_ppg − replacement[pos]`, where
+replacement is the league-wide first non-starter. That value is **pick-independent**: it never asks
+what is still on the board at *my* next pick.
+
+**The measurement.** Snake-draft each league's board many times. Opponents take the best player on a
+noisy read (lognormal σ=0.25 on rank) of a reference order, with soft caps (QB ≤ QB slots+1,
+TE ≤ TE slots+1). At a decision pick, fork once per candidate (top 3 available per position), finish
+the draft with a competent base policy (walk the VORP board, take the first player who improves my
+starting lineup), score = **final starting-lineup projected PPG**. Common random numbers across
+candidates; cost is the paired per-sim shortfall to the best fork. Then a whole-draft test: policy A
+follows the VORP board; policy B does that fork-and-roll-out at each of its first (starters+1)
+picks using 15 *planning* opponent draws disjoint from the 30 evaluation draws (so B never peeks).
+
+**The #1 pick the prompt asked about is a coin flip.** 12-team 1QB: Bijan vs Puka = 0.05 PPG apart
+(±0.04). The trade is nearly symmetric — take Puka and my RB1 falls 20.1 → ~13–14 while my WR1 rises
+~13 → 20.3, because RB and WR scarcity at pick 24 are about equal. Every league agrees within noise
+except `suz_1qb` (1RB/3FLEX), where the board already puts Puka first and the fork agrees (+0.73).
+
+**The finding: VORP is optimal only if opponents draft like the model.**
+
+| league | opponents | slots | pick-aware − VORP (lineup PPG, ±SE) |
+|---|---|---|---|
+| ppr_1qb | model board (control) | 1 / 6 / 12 | +0.04±.07 / +0.26±.12 / +0.12±.04 |
+| ppr_1qb | market ECR | 1 / 6 / 12 | +0.86±.14 / +2.45±.22 / +1.96±.29 |
+| sar_1qb | market ECR | 1 / 7 / 14 | +0.83±.13 / +1.88±.18 / +1.57±.34 |
+| suz_1qb | market ECR | 1 / 7 / 14 | +0.91±.11 / +1.22±.24 / +0.90±.17 |
+| my_2qb | market ECR | 1 / 5 / 10 | +1.36±.19 / +1.70±.27 / +1.43±.30 |
+| underdog_bestball | market ECR | 1 / 6 / 12 | +1.79±.26 / +2.29±.34 / +2.01±.10 |
+
+Against a model-drafting room the gain is ~0: replacement *is* what's left at your next pick. Against
+a market-drafting room it is +0.8 to +2.5 lineup PPG in every league and slot, larger at mid/late
+slots than at 1. The mechanism is **sequencing around model–market disagreement**, not picking
+different players: the market ranks Josh Jacobs #145 (board #25), McBride #37 (#9), Fannin #97
+(#38), Lawrence #66 (#28), so VORP spends early picks on players who would still be there, while the
+pick-aware drafter takes market-coveted players first (Pickens, board #11 / market #20) and still
+lands Jacobs five rounds later. Name matching was checked, not assumed: 184/192 ppr_1qb rows match
+ECR, the misses are fringe (Gainwell, Ertz, Ekeler).
+
+**Caveats, recorded:** value is in the model's own currency (projections treated as truth); starters
+only, no bench/injury value; rookies are unscored so the simulated me never drafts one; ECR is a
+proxy for league-mates, and σ=0.25 is assumed, not fit.
+
+**Open decisions put to the user:** (1) whether the market may predict *opponent availability* —
+it would change no model number (the same role it already plays placing rookies), but it is the
+input the whole gain depends on; (2) output shape, since opportunity cost is slot-dependent and a
+single pick-order board can't carry it — a per-slot plan in the reports, or a live draft assistant
+that re-forks as real picks come in.
+
+**Tests:** unchanged (no source edits).
+
+---
+
+## Entry 103 — resuming after a crash mid-commit, and the eight empty git objects
+
+**Date:** 2026-09-15
+
+**Prompt (full text):**
+
+> the last round of work ended unexpectedly, please resume properly
+
+**Response notes:**
+
+Repo-level repair only — no pipeline change.
+
+**What the crash left.** The session died while committing Entry 102. `HEAD` on
+`draft-board-opportunity-cost` pointed at `45b2e24`, whose object file was **empty**; git could not
+read the branch. `find .git/objects -type f -empty` found exactly eight — the count a two-file
+commit writes (1 commit, 2 blobs, 5 trees: root, `docs`, `sports`, `sports/football`,
+`sports/football/docs`). The session scratchpad was also wiped, taking the Entry 102 prototype
+scripts (`oppcost.py`, `policy.py`) with it.
+
+**Proved, not assumed, before touching `.git`.** `git hash-object` on the two working-tree logs
+returned `7db91a40…` and `8e374f94…` — two of the empty ids — and the index referenced those same
+ids, so the empty objects were this commit's and its content was intact on disk. `git fsck --full`
+reported nothing outside the eight (no missing objects, no broken links; `primary` = `origin/primary`
+= `9cdad50`, readable). No NUL bytes in refs/logs/config, no stale locks, memory files intact.
+
+**Repair.** Full `cp -a .git` backup; the eight files *moved* (each asserted empty first) to a
+quarantine dir; branch ref reset to the parent `9cdad50`; `git reset` (mixed) rebuilt the index
+without touching the working tree; `fsck` clean; re-committed as `9be3550` after checking the diff
+was pure additions with Entry 102 last in both logs; `sync` to flush.
+
+**Entry 102 corrected in the same commit:** it had called its numbers "reproducible from those
+inputs", which stopped being true when the scripts were lost. It now says so.
+
+---
+
+## Entry 104 — replaying past drafts: the model's board loses to ADP, and lookahead doesn't save it
+
+**Date:** 2026-09-15
+
+**Prompt (full text):**
+
+> Let's use market for 1qb as a benchmark. And why not try running multiple simulation drafts on
+> past years (since we have data on past ecr/adp boards pre-season) to build model teams and then
+> use those to get a prior for where players fall. We should focus on 10 team and 12 team, .5 and
+> full ppr.
+
+**Response notes:**
+
+Read as: the market is approved as the model of **what opponents draft** in 1QB leagues (never a
+projection input); learn where players fall from past preseason boards; re-draft past seasons with
+model-driven teams and score them on **actual** results (which retires Entry 102's caveat that
+projections were treated as truth); scope 10/12-team × half/full PPR, 1QB.
+
+**Data: FFC beats ECR for this.** FantasyFootballCalculator publishes, per player, the stdev /
+high / low of his *real* draft slot across 300–8,470 mock drafts a season: full PPR 2012–2026,
+half-PPR 2018–2026. ECR `ro` preseason scrapes exist only 2020–2026 and their `sd` is expert
+disagreement, not draft spread. **FFC serves 12-team boards only** — `teams=10` returns the 12-team
+board byte for byte (2026, the one season that answers both) — so 10-team rooms draft in 12-team
+market order. That is an assumption, stated in the report.
+
+**The fall prior.** Draft-slot spread grows sub-linearly with ADP, `sd ≈ 0.42 · ADP^0.68` (b
+0.65–0.70 in almost every season), `sd/ADP ≈ 0.10` past round 1, identical for PPR and half-PPR;
+TE slightly wider (0.12), WR tighter (0.10). Simulating a draft *from* ECR with assumed noise
+would only return the assumed noise, so the simulated room reads `market rank + k · sd · z` and `k`
+is **calibrated per board** until simulated drafts reproduce the observed spread: k = 1.25–1.5 on
+all 34 boards; 2023 PPR within ~5% at every ADP band through pick 120, mean bias < 0.4 picks (the
+tail is truncated by the end of the draft, as a real draft truncates it).
+
+**The backtest.** `eval/draftsim.py` (engine, policies, calibration) + `eval/draft_backtest.py`
+(boards ↔ nflverse ids, pools, actual scoring, season runner, summary, report) +
+`scripts/draft_backtest.py` + `make draft-backtest`. Each season with a board and a leak-safe
+projection (`project_position(feature_season=Y-1)`, cached; PPR 2012–19 + 2022–25, half 2018–19 +
+2022–25; 2020 excluded, 2021 would need 2020 features) is re-drafted from every slot of a 1QB /
+2RB / 2WR / 1TE / 1FLEX, 14-player league. FFC names → ids in three passes (name+position, name,
+team+surname for nicknames like "Hollywood Brown"): ≥98% of every board's top 150. Room draws are
+shared by all policies, so comparisons are paired; standard errors are across seasons.
+
+**Four defects surfaced by smoke runs, each measured before being fixed:**
+1. *The model drafts players who aren't playing.* 36 of the 2023 model board's top 168 were
+   absent from the market board and averaged 4.4 actual points a week vs 10.1 — Tom Brady
+   (retired) projected 15.5 PPG, Fournette (unsigned), Gage (0 games). → `vorp_board_ranked`:
+   my team may only draft players the market ranks. That uses the market to decide *who is
+   draftable*, not what anyone is worth.
+2. *The ADP baseline finished a draft with no tight end.* → need rule (`open_positions`).
+3. *The board is bench-blind:* once the lineup is full every pick adds zero projected value, so it
+   took a backup QB and two unsigned backs. → `BoardPolicy(bench="insurance")`: mean lineup gain
+   over each rostered player being out.
+4. *Best-ball scoring flattered the market team* (its Mahomes + Fields pair was worth 19.6 QB
+   points a week from one slot). → `managed` lineups are the default (start the active players
+   with the best season PPG); best ball stays a variant. It was not the story: 2023 −11.7 managed
+   vs −14.1 best ball.
+
+**The diagnosis: the optimizer's curse.** The board's round 1–8 picks carried market ranks of
+60–100 (ADP team 37–40): 95% of round-2 picks were QBs in 2024 half-PPR, TEs taken in rounds 1–8
+had market rank 104. Those reaches are where the model is wrong — the board's picks were
+over-projected by +1.8 to +6.8 PPG (2023 QBs: 19.3 projected, 12.5 actual in 8.3 games), the ADP
+team's slightly *under*-projected. Within position the model ranks as well as the market (2023
+Spearman WR .67 vs .68, RB .44 vs .41) and its positional value scale is about right (it compresses
+the elite: 2023 top-3 WR 7.3 over replacement vs 12.0 actual). Acting on model–market
+*disagreement* selects the model's errors: the market sees injuries, depth charts and camp news the
+model cannot.
+
+**Results** — 17,984 drafts, managed lineups, 10 room draws per season (lookahead: slots 1/5/10,
+4 draws, 8 planning draws); actual points per week, ± se across seasons:
+
+| comparison | half 10 | half 12 | PPR 10 | PPR 12 |
+|---|---|---|---|---|
+| `vorp_board` − `adp` | −9.61 ±3.90 (0/5) | −10.52 ±3.48 (0/5) | −12.34 ±3.96 (2/11) | −15.53 ±4.06 (2/11) |
+| `vorp_board_ranked` − `vorp_board` | +0.38 | +2.58 (5/5) | +6.21 (10/11) | +7.81 (11/11) |
+| `…_ranked_depth` − `…_ranked` | +0.33 | +0.46 | +1.46 (9/11) | +1.41 (9/11) |
+| `…_ranked_depth` − `adp` | −8.90 | −7.48 | −4.67 | −6.32 |
+| `lookahead_ranked` − `vorp_board_ranked` | +1.08 ±2.32 | +0.48 ±1.49 | −0.21 ±1.26 | +0.57 ±1.04 |
+| `market_window` − `adp` | −0.85 ±1.05 | −1.17 ±1.41 | +0.33 ±1.08 | −0.01 ±1.19 |
+| `market_window` − `vorp_board_ranked` | +8.38 (5/5) | +6.77 (4/5) | +6.46 (8/11) | +7.72 (9/11) |
+
+**Findings.**
+* **The model's VORP board loses to plain ADP drafting in every format and league size.** The
+  two fixes that are clearly right (ranked-only, insurance bench) recover 3–9 PPG a week of it; the
+  best fixed board still trails ADP by 4.7–8.9.
+* **Lookahead — opportunity cost as Entry 102 built it — is worth nothing on actual outcomes**
+  (±1 of its own board, inside one se everywhere). Its projected gain came from exploiting
+  model–market disagreement, which is exactly where the model errs.
+* **`market_window` ties ADP.** Letting the market pick the position and round and the model pick
+  the player inside that round adds nothing over the market's own pick: the model's within-position
+  judgement matches the market's but doesn't beat it.
+* **The fall prior is the durable deliverable**: measured, format-invariant, calibrated per board.
+* Variance is large: 2018 alone is −23 to −32 for the shipped board (not investigated); 2017 and
+  2019 PPR are the only seasons the board beats ADP.
+
+**Caveats:** 10-team rooms use 12-team order; rookies are unscored, so model teams never draft
+one (9–14% of each board's top picks); managed lineups use season-PPG hindsight shared by every
+team; the room is need-blind (its noise is calibrated, its roster logic is only caps); lookahead
+ran on 3 slots × 4 draws.
+
+**Open decisions put to the user:** (1) the **shipped redraft boards** have defect 1 and 3 —
+adopting the ranked-only filter + insurance bench would change them and the CSV contract read by
+the home-site dashboard; (2) since the model does not beat ADP as a *draft policy*, whether the
+market may take a larger role in drafting (e.g. `market_window`, or shrinking projections toward
+market value — a blend, which the standing rule forbids); (3) lookahead should not ship on raw
+projections.
+
+**Files:** new `eval/draftsim.py`, `eval/draft_backtest.py`, `scripts/draft_backtest.py`,
+`tests/test_draftsim.py` (14), `tests/test_draft_backtest.py` (9), `reports/REPORT_draft_backtest.md`,
+18 committed FFC boards `data/external/ffc_board_<scoring>_<season>.parquet` (288 KB; frozen
+history, the backtest's input — unlike the refetched, git-ignored `adp_*.parquet`); modified
+`data/adp.py` (`fetch_ffc_board` / `load_ffc_board`, stale "no 2025 board" note corrected),
+`tests/test_adp.py` (+2), `Makefile`, `docs/USAGE.md`. Projection caches and per-draft results are
+git-ignored.
+
+**Tests:** 624 pass, ruff clean — 25 of them new (draftsim 14, backtest 9, adp +2).
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
