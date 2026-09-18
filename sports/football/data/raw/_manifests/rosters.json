@@ -33,9 +33,9 @@
     2026
   ],
   "min_season": 1999,
-  "pulled_at": "2026-09-06T03:25:02.014463+00:00",
-  "n_rows": 69426,
+  "pulled_at": "2026-09-18T04:38:35.699409+00:00",
+  "n_rows": 69458,
   "n_cols": 36,
   "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/rosters.parquet",
-  "sha256": "3c6fc29f2b208a6f6c7239269cc27d546b300015f663d3115f4a899bfa5e9d5f"
+  "sha256": "205fe9f5e30d43402cf44772218a29e657fd4c7face2585f3c599d0ed8df0d58"
 }

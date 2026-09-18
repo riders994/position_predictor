@@ -110,6 +110,73 @@ def build_board(proj, *, teams, roster=None, fmt=None, flex_positions=FLEX_POS,
     return board, replacement, starters
 
 
+def canonical_lineup(board, league, *, value_col: str = "proj_ppg") -> dict:
+    """The **median team's** projected starting lineup, as ``{position: [values]}``.
+
+    A draft board is one ranking for the whole league, but the value of a *bench* player depends on
+    the starters he would cover for — which differ by team. The median team is the neutral stand-in:
+    its ``j``-th starter at a position with ``k`` slots is the within-position rank
+    ``teams*(j-1) + ceil(teams/2)`` (in a 12-team league starting 2 RBs, RB6 and RB18 — the middle
+    of each tier), and its flex is the median of the ``teams`` best flex-eligible players left once
+    every dedicated slot is filled. Returned in the shape :func:`eval.draftsim.lineup_value` takes,
+    with the flex player listed under his own position.
+    """
+    teams = int(league.teams)
+    mid = -(-teams // 2)          # ceil: the median team, 1-based
+    rows = board[board[value_col].notna()]
+    pools = {p: sorted(rows.loc[rows["position"] == p, value_col], reverse=True)
+             for p in MODELED_POS}
+
+    def at(pool, rank):           # 1-based, clamped to the pool
+        return pool[min(rank, len(pool)) - 1] if pool else 0.0
+
+    lineup = {p: [] for p in MODELED_POS}
+    used = {p: 0 for p in MODELED_POS}
+    for p in MODELED_POS:
+        k = league.starters.get(p, 0)
+        for j in range(1, k + 1):
+            lineup[p].append(at(pools[p], teams * (j - 1) + mid))
+        used[p] = teams * k
+    if league.starters.get("FLEX", 0) and league.flex_positions:
+        tier = sorted(((v, p) for p in league.flex_positions
+                       for v in pools[p][used[p]: used[p] + teams]), reverse=True)
+        if tier:
+            value, pos = tier[min(mid, len(tier)) - 1]
+            lineup[pos].append(value)
+    return lineup
+
+
+def insurance_value(value: float, position: str, lineup: dict, league) -> float:
+    """Mean lineup gain from holding this player when one starter is out for a week.
+
+    Averaged over every starter in ``lineup`` missing in turn — the reason to carry a bench player
+    at all. A starters-only board scores every bench pick at zero, which is how the shipped board
+    came to spend late picks on a backup QB behind an every-week starter.
+    """
+    from .draftsim import lineup_value
+
+    starters = [(p, v) for p, vals in lineup.items() for v in vals]
+    if not starters:
+        return 0.0
+    total = 0.0
+    for p_out, v_out in starters:
+        without = {p: list(vals) for p, vals in lineup.items()}
+        without[p_out].remove(v_out)
+        base = lineup_value(without, league)
+        without[position].append(value)
+        total += lineup_value(without, league) - base
+    return total / len(starters)
+
+
+def bench_insurance(board, league, *, value_col: str = "proj_ppg", lineup=None):
+    """:func:`insurance_value` for every row of ``board`` against the median team's lineup."""
+    lineup = canonical_lineup(board, league, value_col=value_col) if lineup is None else lineup
+    return board.apply(
+        lambda r: (float("nan") if r[value_col] != r[value_col]        # NaN: an unscored rookie
+                   else round(insurance_value(float(r[value_col]), r["position"], lineup, league),
+                              2)), axis=1)
+
+
 # A generational suffix only counts as one in *trailing* position. Unanchored, the `v`
 # alternative eats a standalone "v" anywhere in the name: "V Jones" normalised to "jones", a bare
 # surname that then fuzzy-matches any Jones on the board. Anchoring keeps "Sammy Watkins IV" ->

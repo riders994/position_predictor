@@ -138,9 +138,31 @@ with `market_ecr` in the CSV). Both the count and the depth are per league even 
 leagues share a pipeline pass, and only rookies the market ranks *inside the draft* count — one
 ranked past the final pick takes no slot, so subtracting him would leave the board short.
 
-No model number is market-derived: the market decides how many rookies a position's top-N holds
-and where each falls in the order, nothing else. The per-position tables below the board stay
-returning-players-only, as labelled.
+No model number is market-derived: the market decides how many rookies a position's top-N holds,
+where each falls in the order, and **who is draftable at all**, nothing else. The per-position
+tables below the board stay returning-players-only, as labelled.
+
+**The draftability filter.** A player no preseason board ranks is retired, unsigned, suspended or
+hurt — none of which the model sees, so it keeps projecting him (the 2026 boards carried Austin
+Ekeler and Nick Chubb; a 2023 backtest board had a retired Tom Brady at 15.5 PPG). Those players
+are dropped before the depth trim, so each position refills from the next ranked player and the
+board stays exactly `total_picks` long; each per-position header reports the count. Worth +0.4 to
++7.8 actual points a week over ~18k replayed drafts (`REPORT_draft_backtest.md`). Matching is by
+`fantasypros_id → gsis_id`, names only as a fallback — on names alone "Hollywood" Brown and Audric
+Estimé drop as false positives. If the market board recognises under `MIN_RANKED_COVERAGE` (75%) of
+the board, the two disagree about who *exists* (a stale crosswalk, say), so nothing is filtered and
+the report says so. The filter tracks the live market: Zach Ertz was unranked on the 2026-09-11
+scrape and ranked again on 09-18. On the 2026 boards it drops 5–6 players per 1QB league and **none**
+in superflex, where ECR ranks 540 players.
+
+**`bench_insurance` is reported, not applied.** VORP prices every player past your lineup at zero,
+so the tail of the board falls back to raw projection. The column says what a player gives back
+when a starter misses a week, measured against the *median team's* lineup. Re-ordering the board by
+it was tried and rejected on the evidence: +1.15 / +0.85 points a week in 10- and 12-team full PPR
+but **−1.38 in 10-team half-PPR**, while the same rule against a drafter's *own* roster gains
+everywhere (+0.3 to +1.5). A fixed median lineup overrates a backup at a one-slot position; a real
+drafter already owns one. Read the column against your roster — the ordering needs a draft-time
+tool.
 ```bash
 make redraft SEASON=2026                              # or:
 uv run python scripts/redraft.py [options]

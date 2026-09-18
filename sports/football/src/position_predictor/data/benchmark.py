@@ -75,6 +75,36 @@ def _to_int_id(series):
     return pd.to_numeric(series, errors="coerce").astype("Int64")
 
 
+def ranked_market_ids(ecr_df):
+    """``(player_ids, normalised_names)`` of everyone a market board ranks.
+
+    Absence from a preseason consensus board is the market's clearest signal that a player will not
+    be scoring: retired, unsigned, suspended or hurt — none of which a production model sees. (The
+    2026 boards carried Austin Ekeler and Nick Chubb; the 2023 backtest board had a retired Tom
+    Brady projected at 15.5 PPG.)
+
+    Ids come from the ``fantasypros_id -> gsis_id`` crosswalk; names are returned as a fallback so a
+    missing crosswalk row cannot silently unrank a real player. Returns empty sets when the board is
+    missing — callers must read that as "no filter", never as "nobody is ranked".
+    """
+    from ..eval.keeper import _norm
+    from ..utils.io import DATA_RAW, read_parquet
+
+    if ecr_df is None or len(ecr_df) == 0:
+        return set(), set()
+    names = {_norm(p) for p in ecr_df["player"]} if "player" in ecr_df else set()
+    if "id" not in ecr_df:
+        return set(), names
+    try:
+        ids = read_parquet(DATA_RAW / "ids.parquet")[["fantasypros_id", "gsis_id"]].dropna()
+    except Exception:  # noqa: BLE001 — no crosswalk cached → fall back to names
+        return set(), names
+    ids = ids.assign(fantasypros_id=_to_int_id(ids["fantasypros_id"])).dropna(
+        subset=["fantasypros_id"])
+    xwalk = dict(zip(ids["fantasypros_id"], ids["gsis_id"]))
+    return set(_to_int_id(ecr_df["id"]).map(xwalk).dropna()), names
+
+
 def latest_preseason_by_season(ecr_df, *, start=PRESEASON_START, end=PRESEASON_END,
                                min_players=30):
     """Pick, per season, the single latest preseason scrape (≥ ``min_players`` ranked).

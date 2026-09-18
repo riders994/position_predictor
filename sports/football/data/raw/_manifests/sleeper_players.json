@@ -4,9 +4,9 @@
   "note": "Sleeper fantasy_positions eligibility (current snapshot; gsis_id join).",
   "seasons": [],
   "min_season": null,
-  "pulled_at": "2026-09-06T03:25:03.106553+00:00",
-  "n_rows": 12226,
+  "pulled_at": "2026-09-18T04:38:38.715553+00:00",
+  "n_rows": 12228,
   "n_cols": 6,
   "cache_path": "/home/weezy/activity/position_predictor/sports/football/data/raw/sleeper_players.parquet",
-  "sha256": "e3cff095e9aef3042cab74a0c080f5fc96f2beaf524bb16665dbf8f2610e2c71"
+  "sha256": "0db9589aad8a7185533a4217cddca60d629962d0664153f17a44b448f98a96ab"
 }

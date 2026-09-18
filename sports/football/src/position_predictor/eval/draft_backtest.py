@@ -50,11 +50,13 @@ BACKTEST_ROSTER_SIZE = 14
 MIN_BOARD_COVERAGE = 0.85
 # Model-only players (unranked by the market) enter the pool down to this multiple of the draft.
 MODEL_DEPTH_FACTOR = 1.5
-POLICY_NAMES = ("adp", "vorp_board", "vorp_board_ranked", "vorp_board_ranked_depth",
-                "market_window", "lookahead_ranked")
+POLICY_NAMES = ("adp", "vorp_board", "vorp_board_ranked", "vorp_board_ranked_static",
+                "vorp_board_ranked_depth", "market_window", "lookahead_ranked")
 # Paired comparisons reported by :func:`summarize` (each only when both policies were run).
 COMPARISONS = (("vorp_board", "adp"), ("vorp_board_ranked", "vorp_board"),
-               ("vorp_board_ranked", "adp"), ("vorp_board_ranked_depth", "vorp_board_ranked"),
+               ("vorp_board_ranked", "adp"), ("vorp_board_ranked_static", "vorp_board_ranked"),
+               ("vorp_board_ranked_depth", "vorp_board_ranked_static"),
+               ("vorp_board_ranked_depth", "vorp_board_ranked"),
                ("vorp_board_ranked_depth", "adp"), ("market_window", "adp"),
                ("market_window", "vorp_board_ranked"), ("lookahead_ranked", "vorp_board_ranked"),
                ("lookahead_ranked", "adp"), ("lookahead", "vorp_board"), ("lookahead", "adp"))
@@ -225,6 +227,28 @@ def ranked_only_pool(pool: Pool) -> Pool:
                 player_id=pool.player_id)
 
 
+def static_insurance_order(frame, pool: Pool, league) -> np.ndarray:
+    """``pool.board_order`` with the post-starter tail re-ranked by bench insurance.
+
+    This is exactly what the shipped board does (:func:`eval.redraft.reorder_bench_tail`): a static
+    pick order, so the insurance is measured against the **median team's** lineup rather than the
+    drafter's own. Running it as a policy is what says whether that approximation keeps the gain
+    the roster-aware bench (``BoardPolicy(bench="insurance")``) earns.
+    """
+    from .keeper import canonical_lineup, insurance_value
+
+    order = list(pool.board_order)
+    starting = int(league.teams * sum(league.starters.values()))
+    if starting >= len(order):
+        return np.asarray(order, dtype=int)
+    lineup = canonical_lineup(frame.loc[order], league)
+    tail = order[starting:]
+    ins = {i: insurance_value(float(frame.at[i, "proj_ppg"]), str(frame.at[i, "position"]),
+                              lineup, league) for i in tail}
+    tail = sorted(tail, key=lambda i: -ins[i])
+    return np.asarray(order[:starting] + tail, dtype=int)
+
+
 def make_policy(name: str, spec, draw: int, slot: int):
     """``(policy, pool_variant)`` for a policy name in :data:`POLICY_NAMES`."""
     if name == "adp":
@@ -235,6 +259,8 @@ def make_policy(name: str, spec, draw: int, slot: int):
         return BoardPolicy(), "ranked"
     if name == "vorp_board_ranked_depth":
         return BoardPolicy(bench="insurance"), "ranked"
+    if name == "vorp_board_ranked_static":
+        return BoardPolicy(), "ranked_static"
     if name == "market_window":
         return MarketWindowPolicy(), "all"
     if name in ("lookahead", "lookahead_ranked"):
@@ -354,9 +380,14 @@ def run_season(spec: SeasonSpec, *, board, proj, weekly_pts, slots=None, policie
     k, _ = calibrate_noise(cal, frame["stdev"].to_numpy(dtype=float), n_drafts=30, seed=spec.seed)
     info["noise_scale"] = k
 
-    # Both pools share positions and market ranks, so one room draw serves every policy.
+    # Every pool shares positions and market ranks, so one room draw serves every policy.
+    ranked = ranked_only_pool(pool)
+    static = Pool(position=ranked.position, adp=ranked.adp, value=ranked.value,
+                  board_order=static_insurance_order(frame, ranked, league),
+                  player_id=ranked.player_id)
     sims = {"all": DraftSim(league, pool, noise_scale=k),
-            "ranked": DraftSim(league, ranked_only_pool(pool), noise_scale=k)}
+            "ranked": DraftSim(league, ranked, noise_scale=k),
+            "ranked_static": DraftSim(league, static, noise_scale=k)}
     points, played = weekly_matrix(frame["player_id"].to_numpy(), weekly_pts, spec.season,
                                    with_played=True)
     slots = range(league.teams) if slots is None else [s - 1 for s in slots]
@@ -458,6 +489,7 @@ POLICY_LABELS = {
     "adp": "ADP drafter (market order, fills open slots)",
     "vorp_board": "VORP board, whole projection pool",
     "vorp_board_ranked": "VORP board, market-ranked players only",
+    "vorp_board_ranked_static": "VORP board, market-ranked only, bench tail re-ranked as shipped",
     "vorp_board_ranked_depth": "VORP board, market-ranked only, insurance bench",
     "market_window": "Market picks position + round; model picks the player within one round",
     "lookahead_ranked": "Lookahead (opportunity cost), market-ranked only",

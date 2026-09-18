@@ -298,6 +298,67 @@ def test_pick_round():
     assert pick_round(None, 12) is None
 
 
+def _deep_board():
+    """8 QBs, 12 RBs, 12 WRs with predictable values: QB 100-i, RB 50-i, WR 60-i (1-based)."""
+    rows = []
+    for pos, n, base in [("QB", 8, 100), ("RB", 12, 50), ("WR", 12, 60)]:
+        for i in range(1, n + 1):
+            rows.append(dict(player_id=f"{pos}{i}", player_name=f"{pos} {i}", position=pos,
+                             proj_ppg=float(base - i), proj_pos_rank=i))
+    return pd.DataFrame(rows)
+
+
+def _lg(**over):
+    from position_predictor.eval.league import league_from_dict
+
+    return league_from_dict({"name": "t", "scoring": "ppr", "teams": 4,
+                             "starters": {"QB": 1, "RB": 1, "WR": 1, "TE": 0, "FLEX": 1},
+                             "flex_positions": ["RB", "WR"], "roster_size": 8, **over})
+
+
+def test_canonical_lineup_is_the_median_teams_starters():
+    from position_predictor.eval.keeper import canonical_lineup
+
+    # 4 teams, median = 2nd: QB2 (98), RB2 (48), WR2 (58). The flex tier is the next 4 of each
+    # flex position (RB5-8 = 45..42, WR5-8 = 55..52); its median (2nd best) is WR6 = 54.
+    got = canonical_lineup(_deep_board(), _lg())
+    assert got == {"QB": [98.0], "RB": [48.0], "WR": [58.0, 54.0], "TE": []}
+
+
+def test_canonical_lineup_clamps_to_a_short_pool():
+    from position_predictor.eval.keeper import canonical_lineup
+
+    short = pd.DataFrame([dict(player_id="Q1", player_name="Q 1", position="QB", proj_ppg=20.0,
+                               proj_pos_rank=1)])
+    got = canonical_lineup(short, _lg(starters={"QB": 2, "RB": 0, "WR": 0, "TE": 0, "FLEX": 0}))
+    assert got["QB"] == [20.0, 20.0]      # the only QB stands in for both slots, not an IndexError
+
+
+def test_insurance_value_prices_covering_the_starter_you_lose():
+    from position_predictor.eval.keeper import insurance_value
+
+    lineup = {"QB": [20.0], "RB": [10.0], "WR": [], "TE": []}
+    lg = _lg(starters={"QB": 1, "RB": 1, "WR": 0, "TE": 0, "FLEX": 0})
+    # Backup QB 15: covers the lost QB (+15) or does nothing (0) -> 7.5.
+    assert insurance_value(15.0, "QB", lineup, lg) == pytest.approx(7.5)
+    # Backup RB 9 is the higher-VORP name on a starters-only board but covers less: (0 + 9)/2.
+    assert insurance_value(9.0, "RB", lineup, lg) == pytest.approx(4.5)
+    assert insurance_value(5.0, "QB", {"QB": [], "RB": [], "WR": [], "TE": []}, lg) == 0.0
+
+
+def test_bench_insurance_skips_unscored_rows():
+    import numpy as np
+
+    from position_predictor.eval.keeper import bench_insurance
+
+    board = _deep_board()
+    board.loc[len(board)] = dict(player_id="R1", player_name="Rookie", position="RB",
+                                 proj_ppg=np.nan, proj_pos_rank=99)
+    out = bench_insurance(board, _lg())
+    assert np.isnan(out.iloc[-1])                      # a rookie carries no model number
+    assert (out.iloc[:-1] >= 0).all() and out.iloc[0] > 0
+
+
 def test_slot_summary_from_a_roster_dict():
     from position_predictor.eval.keeper import roster_from_format, slot_summary
 

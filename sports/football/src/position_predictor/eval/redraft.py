@@ -40,6 +40,25 @@ and floored at the historical defaults so a 1QB board never gets shallower than 
 is cut by VORP, across positions, which is the right cut for a pick order but leaves some
 positions shorter than they asked for. :class:`PositionSummary` records that second trim
 (``dropped_past_last_pick``) so the per-position tables and their headers stay one arithmetic.
+
+**The market also decides who is draftable at all.** A player no preseason board ranks is
+overwhelmingly retired, unsigned, suspended or hurt — which the model cannot see, so it keeps
+projecting him (the 2026 boards carried Austin Ekeler and Nick Chubb; a 2023 backtest board had a
+retired Tom Brady at 15.5 PPG). Those players are dropped *before* the depth trim, so each position
+refills from ranked players and the board stays exactly ``total_picks`` long. Measured over ~18k
+replayed past drafts (`reports/REPORT_draft_backtest.md`), this is worth +0.4 to +7.8 actual points
+a week. It uses the market to decide *who is draftable*, never what anyone is worth.
+
+**Bench insurance is reported, not applied to the order.** VORP prices every player beyond the
+lineup at zero, so the tail falls back to raw projection and a backup QB can outrank a startable
+RB3. ``bench_insurance`` says what a player gives back when a starter misses a week
+(:func:`eval.keeper.bench_insurance`), measured against the *median team's* lineup because a board
+is one ranking for a league whose rosters differ. Re-ordering the tail by it was tried and
+**rejected on the evidence**: replayed over past drafts it is worth +1.15 and +0.85 points a week
+in 10- and 12-team full PPR but **−1.38 in 10-team half-PPR**, while the same rule applied to a
+drafter's *own* roster gains everywhere (+0.3 to +1.5). A fixed median lineup overrates a backup at
+a one-slot position; a real drafter already owns one. So the column is context for your own roster,
+and the order stays VORP until a draft-time tool can compute it against your actual team.
 """
 
 from __future__ import annotations
@@ -48,9 +67,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from ..data.availability import AvailabilityReport, check_season_available, datasets_needing_refresh
-from ..data.benchmark import ECR_URL, REDRAFT_OVERALL, ecr_type_for_league, resolve_ecr_type
+from ..data.benchmark import (ECR_TYPE_LABELS, ECR_URL, REDRAFT_OVERALL, ecr_type_for_league,
+                              ranked_market_ids, resolve_ecr_type)
 from ..data.build import build_dataset
-from ..eval.keeper import _norm, build_board
+from ..eval.keeper import _norm, bench_insurance, build_board
 from ..eval.league import MODELED_POS, LeagueConfig, league_from_dict
 from ..eval.projection import project_position
 from ..features.build import build_features
@@ -63,6 +83,15 @@ DEFAULT_TOP_N = {"QB": 20, "RB": 50, "WR": 75, "TE": 24}
 # Draftable players per started slot. 1.75 keeps roughly one backup for every starter plus the
 # waiver-worthy tail, which is the depth a draft board actually needs to cover.
 DEPTH_PER_STARTER = 1.75
+# The draftability filter trusts the market board only when it recognises most of our board. On the
+# 2026 boards it matches ~97% (the misses are the retired and unsigned players the filter is for).
+# Far below that, the two sides disagree about *who exists* — a missing id crosswalk, a scrape of
+# another universe — and filtering would empty the board instead of cleaning it.
+MIN_RANKED_COVERAGE = 0.75
+# The pooled projection pass is cut to each position's depth, so a filtered-out player would leave
+# the position one short rather than refilling from the next ranked name. Project this much deeper
+# than the deepest league asks; the per-league depth trim still cuts to the requested size.
+DEPTH_HEADROOM = 1.2
 # The league assumed when a caller doesn't supply one — the 12-team 1QB PPR shape every redraft
 # board used before league configs existed, so the default output is unchanged.
 DEFAULT_LEAGUE = {"name": "ppr_1qb", "label": "12-team 1QB PPR", "scoring": DEFAULT_SCORING,
@@ -81,6 +110,10 @@ class PositionSummary:
     draft (the model can't score them), then by the board itself, because the depth floors in
     :data:`DEFAULT_TOP_N` can ask for more players than the draft has picks. Both trims must be
     reported or the per-position table silently disagrees with its own header.
+
+    ``unranked_dropped`` counts the market-unranked players this position *would* have shown before
+    the filter (see the module docstring). It is context, not a fourth term in that arithmetic: the
+    filter runs before the depth trim, so the position refills from the next ranked players.
     """
 
     position: str
@@ -89,6 +122,7 @@ class PositionSummary:
     returned: int
     proj_season: int
     dropped_past_last_pick: int = 0
+    unranked_dropped: int = 0
 
 
 @dataclass
@@ -102,6 +136,7 @@ class LeagueBoard:
     summaries: list[PositionSummary] = field(default_factory=list)
     bestball_lambdas: dict = field(default_factory=dict)
     ecr_type: str = REDRAFT_OVERALL       # market board the rookie counts came from
+    filter_note: str = ""                 # set when the draftability filter had to be skipped
 
 
 @dataclass
@@ -200,7 +235,10 @@ def _rookie_market_context(draft_season: int, *, ecr_type: str = REDRAFT_OVERALL
         return None, rookie_names, f"no {draft_season} draft class cached (run with refresh)"
 
     try:
-        ecr = pd.read_parquet(ECR_URL, columns=["player", "pos", "ecr", "ecr_type", "scrape_date"])
+        # `id` (fantasypros_id) rides along so callers can ask *who the market ranks* by id rather
+        # than by name — see :func:`data.benchmark.ranked_market_ids`.
+        ecr = pd.read_parquet(ECR_URL, columns=["player", "id", "pos", "ecr", "ecr_type",
+                                                "scrape_date"])
         ecr = ecr[ecr["ecr_type"] == ecr_type].copy()
         ecr["scrape_date"] = pd.to_datetime(ecr["scrape_date"], errors="coerce")
         ecr = ecr.dropna(subset=["scrape_date", "ecr"])
@@ -429,6 +467,9 @@ def run_redraft(configs, *, draft_season=None, refresh: bool = True, top_n=None,
         scoring, ecr_type = key
         members = [lg for lg in leagues if (lg.scoring, ecr_types[lg.name]) == key]
         pooled = {p: max(depths[lg.name].get(p, 0) for lg in members) for p in MODELED_POS}
+        # Headroom for the draftability filter (see DEPTH_HEADROOM): projecting deeper is free,
+        # and without it dropping an unranked player shortens the position instead of refilling it.
+        pooled = {p: int(round(n * DEPTH_HEADROOM)) + 2 for p, n in pooled.items()}
         projections[key] = _project_scoring(
             configs, scoring=scoring, feature_season=feature_season, draft_season=draft_season,
             top_n=pooled)
@@ -460,9 +501,37 @@ def run_redraft(configs, *, draft_season=None, refresh: bool = True, top_n=None,
         # amputated off the tail of the board at another position's expense.
         rookies = {pos: len(draftable.get(pos, ())) for pos, _ in seasons}
         keep = {pos: max(depth.get(pos, 0) - r, 0) for pos, r in rookies.items()}
+        # Drop players the market ranks nowhere (module docstring). Before the depth trim, so the
+        # position refills from the next ranked player and the board still fills the draft; the
+        # count kept for the report is of players this would have *shown*, not of the whole pool.
+        # Empty sets mean the board is unavailable — then nothing is filtered, rather than
+        # everything being treated as unranked.
+        ranked_ids, ranked_names = ranked_market_ids(ecr_df)
+        pool = proj
+        unranked = dict.fromkeys(MODELED_POS, 0)
+        filter_note = ""
+        if ranked_ids or ranked_names:
+            is_ranked = (pool["player_id"].isin(ranked_ids)
+                         | pool["player_name"].map(_norm).isin(ranked_names))
+            would_show = pool["proj_pos_rank"] <= pool["position"].map(keep).fillna(0)
+            coverage = float(is_ranked[would_show].mean()) if would_show.any() else 1.0
+            if coverage < MIN_RANKED_COVERAGE:
+                # The board and the market disagree about *who exists*, not about who is good —
+                # a missing id crosswalk or a scrape of another universe. Filtering on that would
+                # empty the board, so don't; say so instead of shipping a silent stub.
+                filter_note = (f"the {ECR_TYPE_LABELS.get(ecr_type, ecr_type)} board matched only "
+                               f"{coverage:.0%} of this board's players (expected ≥"
+                               f"{MIN_RANKED_COVERAGE:.0%}), so the draftability filter was "
+                               f"skipped — retired or unsigned players may appear below")
+            else:
+                unranked = {pos: int(((pool["position"] == pos) & would_show & ~is_ranked).sum())
+                            for pos in MODELED_POS}
+                pool = pool[is_ranked].copy()
+                pool["proj_pos_rank"] = (pool.groupby("position")["proj_ppg"]
+                                         .rank(ascending=False, method="min").astype(int))
         # proj_pos_rank is 1-based within position, so the kept depth is a plain row filter.
-        limit = proj["position"].map(keep).fillna(0)
-        trimmed = proj[proj["proj_pos_rank"] <= limit].copy()
+        limit = pool["position"].map(keep).fillna(0)
+        trimmed = pool[pool["proj_pos_rank"] <= limit].copy()
         trimmed["requested_top_n"] = trimmed["position"].map(depth)
         trimmed["rookies_subtracted"] = trimmed["position"].map(rookies)
         trimmed = trimmed.reset_index(drop=True)
@@ -476,6 +545,10 @@ def run_redraft(configs, *, draft_season=None, refresh: bool = True, top_n=None,
         board, replacement, starters = build_board(
             trimmed, teams=lg.teams, roster=lg.starters, flex_positions=lg.flex_positions,
             value_col=value_col)
+        # What a bench player gives back when a starter misses a week — the value VORP prices at
+        # zero once the lineup is full. Measured against the median team's lineup, since a board is
+        # one ranking for a league whose rosters differ.
+        board["bench_insurance"] = bench_insurance(board, lg, value_col=value_col)
         # The board is titled a draft board, so it must be a pick order: the market's rookies
         # occupy their own slots rather than leaving holes the model can't fill.
         board = insert_market_rookies(board, rookie_rows, limit=lg.total_picks)
@@ -490,10 +563,12 @@ def run_redraft(configs, *, draft_season=None, refresh: bool = True, top_n=None,
             shown = int(((board["position"] == pos) & (board["source"] == "model")).sum())
             kept = int((trimmed["position"] == pos).sum())
             lg_summaries.append(PositionSummary(pos, depth.get(pos, 0), rookies[pos], shown,
-                                                proj_season, dropped_past_last_pick=kept - shown))
+                                                proj_season, dropped_past_last_pick=kept - shown,
+                                                unranked_dropped=unranked.get(pos, 0)))
         result.leagues.append(LeagueBoard(league=lg, board=board, replacement=replacement,
                                           starters=starters, summaries=lg_summaries,
-                                          bestball_lambdas=lambdas, ecr_type=ecr_type))
+                                          bestball_lambdas=lambdas, ecr_type=ecr_type,
+                                          filter_note=filter_note))
 
     first = result.leagues[0] if result.leagues else None
     if first is not None:
@@ -510,15 +585,19 @@ def render_markdown(result: RedraftResult, lb: LeagueBoard, *, top: int = 60) ->
                  f"{lg.roster_size} rounds ({lg.total_picks} picks). Features from "
                  f"{result.feature_season}._")
     lines.append("")
-    from ..data.benchmark import ECR_TYPE_LABELS
     lines.append(f"_**The overall board is a pick order — draft down it.** Every projection is "
                  f"model-only; ECR/ADP are benchmarks and never inputs to a model number. The "
                  f"model can't score rookies, so the market ("
-                 f"**{ECR_TYPE_LABELS.get(lb.ecr_type, lb.ecr_type)}** ECR) is used for two "
+                 f"**{ECR_TYPE_LABELS.get(lb.ecr_type, lb.ecr_type)}** ECR) is used for three "
                  f"things and nothing else: how many rookies belong in each position's top-N, "
-                 f"and which slot each takes in the order below. Rookie rows are *italic* and "
-                 f"carry no projection. The per-position tables are returning players only._")
+                 f"which slot each takes in the order below, and **who is draftable at all** — a "
+                 f"player no preseason board ranks is retired, unsigned, suspended or hurt, which "
+                 f"the model can't see. Rookie rows are *italic* and carry no projection. The "
+                 f"per-position tables are returning players only._")
     lines.append("")
+    if getattr(lb, "filter_note", ""):
+        lines.append(f"_⚠️ {lb.filter_note}._")
+        lines.append("")
 
     if lb.board is None or lb.board.empty:
         lines.append("_No projections produced (missing features?)._")
@@ -557,10 +636,23 @@ def render_markdown(result: RedraftResult, lb: LeagueBoard, *, top: int = 60) ->
     lines.append(f"## Overall board (top {min(top, len(board))} of {len(board)})")
     lines.append("")
     has_sigma = "sigma" in board.columns
+    has_ins = "bench_insurance" in board.columns
+    if has_ins:
+        starting_picks = min(int(lg.teams * sum(lg.starters.values())), len(board))
+        lines.append(f"_The order is VORP throughout. **bench ins.** is what a player gives back "
+                     f"when a starter misses a week — the only thing a bench pick is for, and "
+                     f"something VORP prices at zero once your lineup is full (about pick "
+                     f"{starting_picks} league-wide). Read it against **your** roster: re-ordering "
+                     f"the board by it, measured against a median team, helped in full PPR and "
+                     f"hurt in 10-team half-PPR, so it is reported, not applied._")
+        lines.append("")
     header = "| # | player | pos | pos rank | proj PPG | VORP |"
     divider = "|---|---|---|---|---|---|"
     if has_sigma:
         header += " sigma |"
+        divider += "---|"
+    if has_ins:
+        header += " bench ins. |"
         divider += "---|"
     lines.extend([header, divider])
     for _, r in board.head(top).iterrows():
@@ -575,6 +667,9 @@ def render_markdown(result: RedraftResult, lb: LeagueBoard, *, top: int = 60) ->
                    f"{r['vorp']:.2f} |")
         if has_sigma:
             row += (" — |" if r.get("source") == "market_rookie" else f" {r['sigma']:.2f} |")
+        if has_ins:
+            ins = r.get("bench_insurance")
+            row += " — |" if ins is None or ins != ins else f" {ins:.2f} |"
         lines.append(row)
     lines.append("")
 
@@ -625,6 +720,8 @@ def render_markdown(result: RedraftResult, lb: LeagueBoard, *, top: int = 60) ->
         spent = []
         if s.rookies_subtracted:
             spent.append(f"− {s.rookies_subtracted} rookies")
+        if s.unranked_dropped:
+            spent.append(f"− {s.unranked_dropped} unranked by the market")
         if s.dropped_past_last_pick:
             spent.append(f"− {s.dropped_past_last_pick} past pick {lg.total_picks}")
         note = f" (top {s.requested_top_n}{' ' + ' '.join(spent) if spent else ''})"
