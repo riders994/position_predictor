@@ -4482,6 +4482,76 @@ git-ignored.
 
 ---
 
+## Entry 105 — the shipped boards get the draftability filter; the bench ordering doesn't survive its own test
+
+**Date:** 2026-09-18
+
+**Prompt (full text):**
+
+> fix the shipped boards with the ranked filter and insurance bench
+
+**Response notes:**
+
+Decision 1 from Entry 104. The filter shipped; the bench change shipped only as a **column**,
+because measuring the static form of it said so.
+
+**The draftability filter (`run_redraft`).** Model players the league's own ECR board doesn't rank
+are dropped **before** the depth trim, so each position refills from the next ranked player and the
+board still fills the draft exactly. Matching is `fantasypros_id → gsis_id`
+(:func:`data.benchmark.ranked_market_ids`), names only as a fallback — a name-only pass drops
+"Hollywood" Brown, Kenneth Gainwell and Audric Estimé as false positives, which is what the first
+preview did before `_rookie_market_context` was taught to load ECR's `id` column.
+`PositionSummary.unranked_dropped` carries the count into each per-position header, and the report
+header now says the market decides three things, not two.
+
+**Live effect on the 2026 boards:** 5–6 players per 1QB league (Ekeler, Chubb, Pearsall, Higgins,
+Dissly, Taysom Hill), **0 in superflex** — `rsf` ranks 540 players, `ro` 359. The filter tracks the
+live market rather than a fixed list: Zach Ertz was absent from the 2026-09-11 scrape and ranked
+again on 09-18, so he stays on the regenerated boards.
+
+**Two failure modes found by tests, both fixed:**
+1. *A market board that recognises nobody would have emptied the board.* The redraft fixtures rank
+   "vet 0…" against projections named "QB 0…" — zero overlap, and the filter removed all 23 rows.
+   That is exactly what a stale id crosswalk would do in production. `MIN_RANKED_COVERAGE = 0.75`
+   now skips the filter (real coverage is ~97%) and `LeagueBoard.filter_note` puts a ⚠️ in the
+   report instead of shipping a silent stub.
+2. *The refill didn't work.* `_project_scoring` cuts each position to its board depth **before** the
+   filter runs, so a dropped player shortened the position rather than refilling it (a QB board of
+   8 came back with 7). `DEPTH_HEADROOM = 1.2` projects deeper than the deepest league asks; the
+   per-league depth trim still cuts to the requested size. Projecting deeper is free.
+
+**The insurance bench: measured, then declined.** `keeper.canonical_lineup` (the median team's
+starters: the ``j``-th starter at a position is within-position rank ``teams*(j-1) + ceil(teams/2)``)
++ `keeper.insurance_value` (mean lineup gain over each starter missing in turn) give every board row
+a `bench_insurance` number. Re-ordering the post-starter tail by it was implemented, then run
+through the backtest as a new policy (`vorp_board_ranked_static`, which drafts down exactly that
+static board) against the roster-aware `vorp_board_ranked_depth`:
+
+| vs plain ranked board | half 10 | half 12 | PPR 10 | PPR 12 |
+|---|---|---|---|---|
+| static tail (a shipped board can do this) | **−1.38 ±0.42** (1/5) | +0.08 ±0.81 | +1.15 ±0.56 (10/11) | +0.85 ±0.56 (9/11) |
+| roster-aware bench (a draft-time tool can) | +0.33 | +0.46 | +1.46 | +1.41 |
+| roster-aware − static | +1.71 | +0.38 | +0.30 | +0.56 |
+
+Averaged over the four league shapes the static form is ~0 and it is clearly negative in one of
+them, so **the reordering was removed** and the column ships as context. Mechanism: a fixed median
+lineup overrates a backup at a one-slot position (QB/TE), which a real drafter already owns; the
+roster-aware rule adapts. The +0.3 to +1.5 is real but needs the drafter's own roster — i.e. the
+draft-time assistant, not a static pick order.
+
+**Not changed:** keeper boards (they only score the keepers you type, so a retired player can't
+surface unasked) and the model itself. `reports/redraft_2026_*.{md,csv}` regenerated (git-ignored);
+`REPORT_draft_backtest.md` regenerated to include the new policy.
+
+**Files:** `eval/redraft.py` (filter, guard, headroom, `bench_insurance` column, report wording),
+`eval/keeper.py` (`canonical_lineup`, `insurance_value`, `bench_insurance`), `data/benchmark.py`
+(`ranked_market_ids`), `eval/draft_backtest.py` (`static_insurance_order` + the policy),
+`tests/test_redraft.py` (+3), `tests/test_keeper.py` (+4), `docs/USAGE.md`.
+
+**Tests:** 650 pass, ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>
