@@ -313,6 +313,55 @@ def _ecr_board(rookie_at, n=60):
                          "ecr": [float(i + 1) for i in range(n)]})
 
 
+def _matched_ecr(n=20, drop=None):
+    """A market board that ranks the stub projections themselves, minus ``drop``."""
+    names = [f"QB {i}" for i in range(n) if f"QB {i}" != drop]
+    return pd.DataFrame({"player": names, "pos": "QB",
+                         "ecr": [float(i + 1) for i in range(len(names))]})
+
+
+def test_market_unranked_players_are_dropped_before_the_depth_trim(stub_pipeline):
+    """A player no market board ranks is retired/unsigned/hurt — off the board, and the position
+    refills from the next ranked player rather than showing a hole."""
+    res = redraft.run_redraft(
+        [_config("QB")], draft_season=DRAFT_SEASON, refresh=False,
+        rookie_context=(_matched_ecr(drop="QB 3"), {}, ""),
+        leagues=[_league(name="l", teams=4, roster_size=8, top_n={"QB": 8})])
+    lb = res.leagues[0]
+    shown = lb.board[lb.board["source"] == "model"]["player_name"].tolist()
+    assert "QB 3" not in shown
+    assert "QB 8" in shown and len(shown) == 8      # the depth refilled; the board didn't shrink
+    assert lb.summaries[0].unranked_dropped == 1
+    assert lb.filter_note == ""
+
+
+def test_a_market_board_that_recognises_nobody_skips_the_filter_and_says_so(stub_pipeline):
+    """The guard: 0% overlap means the boards disagree about who *exists* (a missing crosswalk),
+    so filtering would empty the board. Keep every player and flag it instead."""
+    res = redraft.run_redraft(
+        [_config("QB")], draft_season=DRAFT_SEASON, refresh=False,
+        rookie_context=(_ecr_board(rookie_at=30), {}, ""),
+        leagues=[_league(name="l", teams=4, roster_size=8, top_n={"QB": 8})])
+    lb = res.leagues[0]
+    assert len(lb.board[lb.board["source"] == "model"]) == 8
+    assert lb.summaries[0].unranked_dropped == 0
+    assert "draftability filter was skipped" in lb.filter_note
+    assert "⚠️" in redraft.render_markdown(res, lb)
+
+
+def test_bench_insurance_is_reported_without_reordering_the_board(stub_pipeline):
+    """Re-ordering the tail by insurance measured *worse* in 10-team half-PPR (see the module
+    docstring), so the column ships as context and the pick order stays VORP."""
+    res = redraft.run_redraft(
+        [_config("QB"), _config("RB"), _config("WR")], draft_season=DRAFT_SEASON, refresh=False,
+        rookie_context=(None, {}, ""), leagues=[_league(name="l", teams=4, roster_size=8)])
+    board = res.leagues[0].board
+    assert board["bench_insurance"].notna().any()
+    assert board["vorp"].is_monotonic_decreasing               # order untouched by insurance
+    assert board["proj_overall_rank"].tolist() == list(range(1, len(board) + 1))
+    assert (board["bench_insurance"].dropna() >= 0).all()
+
+
 def test_rookie_count_uses_each_leagues_own_draft(stub_pipeline, monkeypatch):
     """Two leagues share a pass; the rookie sits inside the long draft only.
 
