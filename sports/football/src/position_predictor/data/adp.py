@@ -23,11 +23,13 @@ FFC_BOARD_URL = ("https://fantasyfootballcalculator.com/api/v1/adp/{fmt}?year={y
                  "&position=all")
 # FFC's path segment for each of our scoring formats. Half-PPR boards start in 2018.
 FFC_FORMATS = {"ppr": "ppr", "half_ppr": "half-ppr", "standard": "standard"}
-FFC_BOARD_COLS = ["ffc_id", "name", "position", "team", "adp", "stdev", "high", "low",
+# FFC's board for leagues that start two QBs (true 2QB and superflex share it). It is PPR-scored.
+FFC_2QB_FORMAT = "2qb"
+FFC_BOARD_COLS = ["ffc_id", "name", "position", "team", "bye", "adp", "stdev", "high", "low",
                   "times_drafted", "total_drafts", "start_date", "end_date"]
 
 
-def fetch_ffc_board(season: int, *, scoring: str = "ppr"):
+def fetch_ffc_board(season: int, *, scoring: str = "ppr", fmt: str | None = None):
     """The full FFC preseason board for ``season`` in ``scoring``, with each player's draft spread.
 
     Unlike :func:`fetch_ffc_adp` this keeps every position (K and DST included — they take real
@@ -36,8 +38,11 @@ def fetch_ffc_board(season: int, *, scoring: str = "ppr"):
     is what calibrates the draft simulator's room (:mod:`eval.draftsim`).
 
     FFC serves **12-team boards only**: a ``teams=10`` request returns the 12-team board byte for
-    byte (checked on 2026, the one season that answers both), so no ``teams`` argument is offered.
-    Raises on a network/parse failure or an empty board.
+    byte (checked on 2026, the one season that answers both; ``teams=14`` returns the same ADPs
+    too), so no ``teams`` argument is offered. ``fmt`` overrides the scoring-derived path segment,
+    e.g. :data:`FFC_2QB_FORMAT`. The live board is a rolling window of recent mock drafts, so once
+    the season starts it shrinks to a few dozen players. Raises on a network/parse failure or an
+    empty board.
     """
     import json
     import urllib.request
@@ -46,7 +51,7 @@ def fetch_ffc_board(season: int, *, scoring: str = "ppr"):
 
     from ..scoring import normalize_scoring
 
-    fmt = FFC_FORMATS[normalize_scoring(scoring)]
+    fmt = fmt or FFC_FORMATS[normalize_scoring(scoring)]
     url = FFC_BOARD_URL.format(fmt=fmt, year=int(season))
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310 — fixed trusted host

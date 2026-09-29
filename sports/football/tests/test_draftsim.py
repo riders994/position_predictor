@@ -193,3 +193,23 @@ def test_market_window_falls_back_to_the_market_when_the_model_scores_no_one_in_
     lg = _league(starters={"QB": 0, "RB": 1, "WR": 0, "TE": 0, "FLEX": 0}, roster_size=1)
     sim = DraftSim(lg, _pool(rows), noise_scale=0.0)
     assert MarketWindowPolicy().pick(sim, sim.new_state(), 0, 0) == 0
+
+
+def test_market_window_insurance_bench_only_changes_the_bench_rounds():
+    from position_predictor.eval.draftsim import MarketWindowPolicy
+
+    rows = [("RB", 1.0, 10.0),     # my starter
+            ("RB", 2.0, np.nan),   # the market's next pick: an unscored rookie
+            ("WR", 3.0, 4.0),      # another position: covers no absence at RB
+            ("RB", 9.0, 8.0)]      # the backup who covers my RB's absence, past the window
+    lg = _league(starters={"QB": 0, "RB": 1, "WR": 0, "TE": 0, "FLEX": 0}, roster_size=3)
+    sim = DraftSim(lg, _pool(rows), noise_scale=0.0)
+    empty = sim.new_state()
+    assert MarketWindowPolicy(bench="insurance").pick(sim, empty, 0, 0) == 0   # starters: as before
+    state = sim.new_state()
+    sim.take(state, 0, 0)
+    assert MarketWindowPolicy().pick(sim, state, 0, 1) == 1                    # market bench
+    assert MarketWindowPolicy(bench="insurance").pick(sim, state, 0, 1) == 3   # insurance bench
+    assert MarketWindowPolicy(bench="insurance").name == "market_window_depth"
+    with pytest.raises(ValueError, match="bench"):
+        MarketWindowPolicy(bench="board")

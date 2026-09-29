@@ -1,0 +1,1204 @@
+{
+ "schema_version": 1,
+ "league": {
+  "name": "golden",
+  "label": "4-team 1QB PPR",
+  "scoring": "ppr",
+  "teams": 4,
+  "starters": {
+   "QB": 1,
+   "RB": 2,
+   "WR": 2,
+   "TE": 1,
+   "FLEX": 1
+  },
+  "flex_positions": [
+   "RB",
+   "WR",
+   "TE"
+  ],
+  "roster_size": 9
+ },
+ "players": [
+  {
+   "id": "rb1",
+   "pos": "RB",
+   "value": 20.0,
+   "adp": 1.5,
+   "source": "model",
+   "board_rank": 1
+  },
+  {
+   "id": "wr1",
+   "pos": "WR",
+   "value": 19.0,
+   "adp": 2.4,
+   "source": "model",
+   "board_rank": 2
+  },
+  {
+   "id": "rk_rb",
+   "pos": "RB",
+   "value": null,
+   "adp": 6.0,
+   "source": "market_rookie",
+   "board_rank": 3
+  },
+  {
+   "id": "qb1",
+   "pos": "QB",
+   "value": 24.0,
+   "adp": 9.0,
+   "source": "model",
+   "board_rank": 4
+  },
+  {
+   "id": "wr2",
+   "pos": "WR",
+   "value": 17.5,
+   "adp": 5.0,
+   "source": "model",
+   "board_rank": 5
+  },
+  {
+   "id": "rb2",
+   "pos": "RB",
+   "value": 16.0,
+   "adp": 4.2,
+   "source": "model",
+   "board_rank": 6
+  },
+  {
+   "id": "te1",
+   "pos": "TE",
+   "value": 14.0,
+   "adp": 7.5,
+   "source": "model",
+   "board_rank": 7
+  },
+  {
+   "id": "wr3",
+   "pos": "WR",
+   "value": 15.5,
+   "adp": 3.3,
+   "source": "model",
+   "board_rank": 8
+  },
+  {
+   "id": "qb2",
+   "pos": "QB",
+   "value": 22.0,
+   "adp": 12.3,
+   "source": "model",
+   "board_rank": 9
+  },
+  {
+   "id": "rb3",
+   "pos": "RB",
+   "value": 14.5,
+   "adp": 8.2,
+   "source": "model",
+   "board_rank": 10
+  },
+  {
+   "id": "wr4",
+   "pos": "WR",
+   "value": 14.0,
+   "adp": 10.1,
+   "source": "model",
+   "board_rank": 11
+  },
+  {
+   "id": "rk_wr",
+   "pos": "WR",
+   "value": null,
+   "adp": 11.0,
+   "source": "market_rookie",
+   "board_rank": 12
+  },
+  {
+   "id": "rb4",
+   "pos": "RB",
+   "value": 16.5,
+   "adp": 13.4,
+   "source": "model",
+   "board_rank": 13
+  },
+  {
+   "id": "te2",
+   "pos": "TE",
+   "value": 11.0,
+   "adp": 15.0,
+   "source": "model",
+   "board_rank": 14
+  },
+  {
+   "id": "wr5",
+   "pos": "WR",
+   "value": 12.5,
+   "adp": 14.2,
+   "source": "model",
+   "board_rank": 15
+  },
+  {
+   "id": "qb3",
+   "pos": "QB",
+   "value": 20.5,
+   "adp": 18.0,
+   "source": "model",
+   "board_rank": 16
+  },
+  {
+   "id": "rb5",
+   "pos": "RB",
+   "value": 11.5,
+   "adp": 16.6,
+   "source": "model",
+   "board_rank": 17
+  },
+  {
+   "id": "wr6",
+   "pos": "WR",
+   "value": 11.0,
+   "adp": 17.1,
+   "source": "model",
+   "board_rank": 18
+  },
+  {
+   "id": "rb6",
+   "pos": "RB",
+   "value": 10.0,
+   "adp": 19.5,
+   "source": "model",
+   "board_rank": 19
+  },
+  {
+   "id": "wr7",
+   "pos": "WR",
+   "value": 9.5,
+   "adp": 21.0,
+   "source": "model",
+   "board_rank": 20
+  },
+  {
+   "id": "te3",
+   "pos": "TE",
+   "value": 9.0,
+   "adp": 20.2,
+   "source": "model",
+   "board_rank": 21
+  },
+  {
+   "id": "qb4",
+   "pos": "QB",
+   "value": 19.0,
+   "adp": 25.0,
+   "source": "model",
+   "board_rank": 22
+  },
+  {
+   "id": "rb7",
+   "pos": "RB",
+   "value": 8.5,
+   "adp": 22.8,
+   "source": "model",
+   "board_rank": 23
+  },
+  {
+   "id": "wr8",
+   "pos": "WR",
+   "value": 8.0,
+   "adp": 24.0,
+   "source": "model",
+   "board_rank": 24
+  },
+  {
+   "id": "rb8",
+   "pos": "RB",
+   "value": 7.0,
+   "adp": 27.5,
+   "source": "model",
+   "board_rank": 25
+  },
+  {
+   "id": "wr9",
+   "pos": "WR",
+   "value": 6.5,
+   "adp": 26.1,
+   "source": "model",
+   "board_rank": 26
+  },
+  {
+   "id": "te4",
+   "pos": "TE",
+   "value": 7.5,
+   "adp": 29.0,
+   "source": "model",
+   "board_rank": 27
+  },
+  {
+   "id": "qb5",
+   "pos": "QB",
+   "value": 17.0,
+   "adp": 31.0,
+   "source": "model",
+   "board_rank": 28
+  },
+  {
+   "id": "vet_rb",
+   "pos": "RB",
+   "value": null,
+   "adp": 23.5,
+   "source": "market_only",
+   "board_rank": null
+  },
+  {
+   "id": "unr_wr",
+   "pos": "WR",
+   "value": null,
+   "adp": null,
+   "source": "market_only",
+   "board_rank": null
+  }
+ ],
+ "cases": [
+  {
+   "name": "board_empty",
+   "note": "nothing drafted: the first scored board row",
+   "policy": "board",
+   "params": {},
+   "taken_by_others": [],
+   "my_roster": [],
+   "open_positions": [
+    "QB",
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_pick": "rb1",
+   "expected_ranked": [
+    {
+     "id": "rb1",
+     "phase": "starter",
+     "gain": 20.0
+    },
+    {
+     "id": "wr1",
+     "phase": "starter",
+     "gain": 19.0
+    },
+    {
+     "id": "qb1",
+     "phase": "starter",
+     "gain": 24.0
+    },
+    {
+     "id": "wr2",
+     "phase": "starter",
+     "gain": 17.5
+    },
+    {
+     "id": "rb2",
+     "phase": "starter",
+     "gain": 16.0
+    },
+    {
+     "id": "te1",
+     "phase": "starter",
+     "gain": 14.0
+    },
+    {
+     "id": "wr3",
+     "phase": "starter",
+     "gain": 15.5
+    },
+    {
+     "id": "qb2",
+     "phase": "starter",
+     "gain": 22.0
+    },
+    {
+     "id": "rb3",
+     "phase": "starter",
+     "gain": 14.5
+    },
+    {
+     "id": "wr4",
+     "phase": "starter",
+     "gain": 14.0
+    },
+    {
+     "id": "rb4",
+     "phase": "starter",
+     "gain": 16.5
+    },
+    {
+     "id": "te2",
+     "phase": "starter",
+     "gain": 11.0
+    },
+    {
+     "id": "wr5",
+     "phase": "starter",
+     "gain": 12.5
+    },
+    {
+     "id": "qb3",
+     "phase": "starter",
+     "gain": 20.5
+    },
+    {
+     "id": "rb5",
+     "phase": "starter",
+     "gain": 11.5
+    },
+    {
+     "id": "wr6",
+     "phase": "starter",
+     "gain": 11.0
+    },
+    {
+     "id": "rb6",
+     "phase": "starter",
+     "gain": 10.0
+    },
+    {
+     "id": "wr7",
+     "phase": "starter",
+     "gain": 9.5
+    },
+    {
+     "id": "te3",
+     "phase": "starter",
+     "gain": 9.0
+    },
+    {
+     "id": "qb4",
+     "phase": "starter",
+     "gain": 19.0
+    },
+    {
+     "id": "rb7",
+     "phase": "starter",
+     "gain": 8.5
+    },
+    {
+     "id": "wr8",
+     "phase": "starter",
+     "gain": 8.0
+    },
+    {
+     "id": "rb8",
+     "phase": "starter",
+     "gain": 7.0
+    },
+    {
+     "id": "wr9",
+     "phase": "starter",
+     "gain": 6.5
+    },
+    {
+     "id": "te4",
+     "phase": "starter",
+     "gain": 7.5
+    },
+    {
+     "id": "qb5",
+     "phase": "starter",
+     "gain": 17.0
+    }
+   ]
+  },
+  {
+   "name": "board_rookie_skipped",
+   "note": "rk_rb is next on the board but unscored, so skipped",
+   "policy": "board",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1"
+   ],
+   "my_roster": [],
+   "open_positions": [
+    "QB",
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_pick": "qb1",
+   "expected_ranked": [
+    {
+     "id": "qb1",
+     "phase": "starter",
+     "gain": 24.0
+    },
+    {
+     "id": "wr2",
+     "phase": "starter",
+     "gain": 17.5
+    },
+    {
+     "id": "rb2",
+     "phase": "starter",
+     "gain": 16.0
+    },
+    {
+     "id": "te1",
+     "phase": "starter",
+     "gain": 14.0
+    },
+    {
+     "id": "wr3",
+     "phase": "starter",
+     "gain": 15.5
+    },
+    {
+     "id": "qb2",
+     "phase": "starter",
+     "gain": 22.0
+    },
+    {
+     "id": "rb3",
+     "phase": "starter",
+     "gain": 14.5
+    },
+    {
+     "id": "wr4",
+     "phase": "starter",
+     "gain": 14.0
+    },
+    {
+     "id": "rb4",
+     "phase": "starter",
+     "gain": 16.5
+    },
+    {
+     "id": "te2",
+     "phase": "starter",
+     "gain": 11.0
+    },
+    {
+     "id": "wr5",
+     "phase": "starter",
+     "gain": 12.5
+    },
+    {
+     "id": "qb3",
+     "phase": "starter",
+     "gain": 20.5
+    },
+    {
+     "id": "rb5",
+     "phase": "starter",
+     "gain": 11.5
+    },
+    {
+     "id": "wr6",
+     "phase": "starter",
+     "gain": 11.0
+    },
+    {
+     "id": "rb6",
+     "phase": "starter",
+     "gain": 10.0
+    },
+    {
+     "id": "wr7",
+     "phase": "starter",
+     "gain": 9.5
+    },
+    {
+     "id": "te3",
+     "phase": "starter",
+     "gain": 9.0
+    },
+    {
+     "id": "qb4",
+     "phase": "starter",
+     "gain": 19.0
+    },
+    {
+     "id": "rb7",
+     "phase": "starter",
+     "gain": 8.5
+    },
+    {
+     "id": "wr8",
+     "phase": "starter",
+     "gain": 8.0
+    },
+    {
+     "id": "rb8",
+     "phase": "starter",
+     "gain": 7.0
+    },
+    {
+     "id": "wr9",
+     "phase": "starter",
+     "gain": 6.5
+    },
+    {
+     "id": "te4",
+     "phase": "starter",
+     "gain": 7.5
+    },
+    {
+     "id": "qb5",
+     "phase": "starter",
+     "gain": 17.0
+    }
+   ]
+  },
+  {
+   "name": "board_qb_cap",
+   "note": "I hold 2 QBs (cap = qb_starters + 1): no QB allowed",
+   "policy": "board",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1"
+   ],
+   "my_roster": [
+    "qb1",
+    "qb2"
+   ],
+   "open_positions": [
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_pick": "wr2",
+   "expected_ranked": [
+    {
+     "id": "wr2",
+     "phase": "starter",
+     "gain": 17.5
+    },
+    {
+     "id": "rb2",
+     "phase": "starter",
+     "gain": 16.0
+    },
+    {
+     "id": "te1",
+     "phase": "starter",
+     "gain": 14.0
+    },
+    {
+     "id": "wr3",
+     "phase": "starter",
+     "gain": 15.5
+    },
+    {
+     "id": "rb3",
+     "phase": "starter",
+     "gain": 14.5
+    },
+    {
+     "id": "wr4",
+     "phase": "starter",
+     "gain": 14.0
+    },
+    {
+     "id": "rb4",
+     "phase": "starter",
+     "gain": 16.5
+    },
+    {
+     "id": "te2",
+     "phase": "starter",
+     "gain": 11.0
+    },
+    {
+     "id": "wr5",
+     "phase": "starter",
+     "gain": 12.5
+    },
+    {
+     "id": "rb5",
+     "phase": "starter",
+     "gain": 11.5
+    },
+    {
+     "id": "wr6",
+     "phase": "starter",
+     "gain": 11.0
+    },
+    {
+     "id": "rb6",
+     "phase": "starter",
+     "gain": 10.0
+    },
+    {
+     "id": "wr7",
+     "phase": "starter",
+     "gain": 9.5
+    },
+    {
+     "id": "te3",
+     "phase": "starter",
+     "gain": 9.0
+    },
+    {
+     "id": "rb7",
+     "phase": "starter",
+     "gain": 8.5
+    },
+    {
+     "id": "wr8",
+     "phase": "starter",
+     "gain": 8.0
+    },
+    {
+     "id": "rb8",
+     "phase": "starter",
+     "gain": 7.0
+    },
+    {
+     "id": "wr9",
+     "phase": "starter",
+     "gain": 6.5
+    },
+    {
+     "id": "te4",
+     "phase": "starter",
+     "gain": 7.5
+    }
+   ]
+  },
+  {
+   "name": "board_upgrade_counts",
+   "note": "RB slots and FLEX hold weak RBs; a better RB still gains",
+   "policy": "board",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "wr2",
+    "rb2"
+   ],
+   "my_roster": [
+    "rb5",
+    "rb6",
+    "rb7",
+    "qb1",
+    "wr3",
+    "wr4",
+    "te1"
+   ],
+   "open_positions": [],
+   "expected_pick": "rb3",
+   "expected_ranked": [
+    {
+     "id": "rb3",
+     "phase": "starter",
+     "gain": 6.0
+    },
+    {
+     "id": "rb4",
+     "phase": "starter",
+     "gain": 8.0
+    },
+    {
+     "id": "te2",
+     "phase": "starter",
+     "gain": 2.5
+    },
+    {
+     "id": "wr5",
+     "phase": "starter",
+     "gain": 4.0
+    },
+    {
+     "id": "wr6",
+     "phase": "starter",
+     "gain": 2.5
+    },
+    {
+     "id": "wr7",
+     "phase": "starter",
+     "gain": 1.0
+    },
+    {
+     "id": "te3",
+     "phase": "starter",
+     "gain": 0.5
+    }
+   ]
+  },
+  {
+   "name": "board_bench_insurance",
+   "note": "lineup full: the insurance scan decides",
+   "policy": "board",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "qb2",
+    "rb4",
+    "wr5",
+    "te2"
+   ],
+   "my_roster": [
+    "qb1",
+    "rb2",
+    "rb3",
+    "wr2",
+    "wr3",
+    "te1",
+    "wr4"
+   ],
+   "open_positions": [],
+   "expected_pick": "rb5",
+   "expected_ranked": [
+    {
+     "id": "rb5",
+     "phase": "bench",
+     "insurance_sum": 57.5
+    },
+    {
+     "id": "rb6",
+     "phase": "bench",
+     "insurance_sum": 50.0
+    },
+    {
+     "id": "rb7",
+     "phase": "bench",
+     "insurance_sum": 42.5
+    },
+    {
+     "id": "te3",
+     "phase": "bench",
+     "insurance_sum": 36.0
+    },
+    {
+     "id": "rb8",
+     "phase": "bench",
+     "insurance_sum": 35.0
+    },
+    {
+     "id": "wr6",
+     "phase": "bench",
+     "insurance_sum": 33.0
+    },
+    {
+     "id": "te4",
+     "phase": "bench",
+     "insurance_sum": 30.0
+    },
+    {
+     "id": "wr7",
+     "phase": "bench",
+     "insurance_sum": 28.5
+    },
+    {
+     "id": "wr8",
+     "phase": "bench",
+     "insurance_sum": 24.0
+    },
+    {
+     "id": "qb3",
+     "phase": "bench",
+     "insurance_sum": 20.5
+    },
+    {
+     "id": "wr9",
+     "phase": "bench",
+     "insurance_sum": 19.5
+    },
+    {
+     "id": "qb4",
+     "phase": "bench",
+     "insurance_sum": 19.0
+    },
+    {
+     "id": "qb5",
+     "phase": "bench",
+     "insurance_sum": 17.0
+    }
+   ]
+  },
+  {
+   "name": "board_bench_small_scan",
+   "note": "same state, scan=3: only 3 allowed board rows scored",
+   "policy": "board",
+   "params": {
+    "scan": 3
+   },
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "qb2",
+    "rb4",
+    "wr5",
+    "te2"
+   ],
+   "my_roster": [
+    "qb1",
+    "rb2",
+    "rb3",
+    "wr2",
+    "wr3",
+    "te1",
+    "wr4"
+   ],
+   "open_positions": [],
+   "expected_pick": "rb5",
+   "expected_ranked": [
+    {
+     "id": "rb5",
+     "phase": "bench",
+     "insurance_sum": 57.5
+    },
+    {
+     "id": "wr6",
+     "phase": "bench",
+     "insurance_sum": 33.0
+    },
+    {
+     "id": "qb3",
+     "phase": "bench",
+     "insurance_sum": 20.5
+    }
+   ]
+  },
+  {
+   "name": "adp_empty",
+   "note": "best ADP overall",
+   "policy": "adp",
+   "params": {},
+   "taken_by_others": [],
+   "my_roster": [],
+   "open_positions": [
+    "QB",
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_pick": "rb1"
+  },
+  {
+   "name": "adp_takes_rookie",
+   "note": "the market takes unscored players",
+   "policy": "adp",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "wr3",
+    "rb2",
+    "wr2",
+    "rb3"
+   ],
+   "my_roster": [],
+   "open_positions": [
+    "QB",
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_pick": "rk_rb"
+  },
+  {
+   "name": "adp_need_forces_te",
+   "note": "only TE is open: TE beats better-ADP players",
+   "policy": "adp",
+   "params": {},
+   "taken_by_others": [
+    "rb1"
+   ],
+   "my_roster": [
+    "qb1",
+    "rb2",
+    "rb3",
+    "wr1",
+    "wr2",
+    "rb4"
+   ],
+   "open_positions": [
+    "TE"
+   ],
+   "expected_pick": "te1"
+  },
+  {
+   "name": "adp_qb_cap",
+   "note": "best ADP left is a QB but I hold 2 QBs (cap)",
+   "policy": "adp",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "wr2",
+    "rb2",
+    "wr3",
+    "rk_rb",
+    "te1",
+    "rb3",
+    "wr4",
+    "rk_wr",
+    "rb4",
+    "wr5",
+    "te2",
+    "rb5",
+    "wr6"
+   ],
+   "my_roster": [
+    "qb1",
+    "qb2"
+   ],
+   "open_positions": [
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_pick": "rb6"
+  },
+  {
+   "name": "adp_lineup_full",
+   "note": "no open slot: best ADP within caps",
+   "policy": "adp",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "qb2",
+    "rb4",
+    "wr5",
+    "te2"
+   ],
+   "my_roster": [
+    "qb1",
+    "rb2",
+    "rb3",
+    "wr2",
+    "wr3",
+    "te1",
+    "wr4"
+   ],
+   "open_positions": [],
+   "expected_pick": "rk_rb"
+  },
+  {
+   "name": "window_model_overrides",
+   "note": "market says wr3 (3.3); wr2 (5.0) is inside the window and the model projects him higher",
+   "policy": "market_window",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1"
+   ],
+   "my_roster": [],
+   "open_positions": [
+    "QB",
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_market_pick": "wr3",
+   "expected_window_pick": "wr2",
+   "expected_pick": "wr2"
+  },
+  {
+   "name": "window_rookie_run",
+   "note": "market pick is rk_rb and no scored RB is in the window: fall back to the market's pick",
+   "policy": "market_window",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "wr3",
+    "rb2",
+    "wr2",
+    "rb3"
+   ],
+   "my_roster": [],
+   "open_positions": [
+    "QB",
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_market_pick": "rk_rb",
+   "expected_window_pick": "rk_rb",
+   "expected_pick": "rk_rb"
+  },
+  {
+   "name": "window_need_forces_te",
+   "note": "need rule picks the position (TE)",
+   "policy": "market_window",
+   "params": {},
+   "taken_by_others": [
+    "rb1"
+   ],
+   "my_roster": [
+    "qb1",
+    "rb2",
+    "rb3",
+    "wr1",
+    "wr2",
+    "rb4"
+   ],
+   "open_positions": [
+    "TE"
+   ],
+   "expected_market_pick": "te1",
+   "expected_window_pick": "te1",
+   "expected_pick": "te1"
+  },
+  {
+   "name": "window_qb_cap",
+   "note": "QB capped; the RB window holds unscored vet_rb, which the model can't take",
+   "policy": "market_window",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "wr2",
+    "rb2",
+    "wr3",
+    "rk_rb",
+    "te1",
+    "rb3",
+    "wr4",
+    "rk_wr",
+    "rb4",
+    "wr5",
+    "te2",
+    "rb5",
+    "wr6"
+   ],
+   "my_roster": [
+    "qb1",
+    "qb2"
+   ],
+   "open_positions": [
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_market_pick": "rb6",
+   "expected_window_pick": "rb6",
+   "expected_pick": "rb6"
+  },
+  {
+   "name": "window_default_width",
+   "note": "market says rb2 (4.2); rb4 (13.4) is outside a 4-pick window",
+   "policy": "market_window",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "wr3",
+    "wr2"
+   ],
+   "my_roster": [],
+   "open_positions": [
+    "QB",
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_market_pick": "rb2",
+   "expected_window_pick": "rb2",
+   "expected_pick": "rb2"
+  },
+  {
+   "name": "window_wide",
+   "note": "same state, window=12: rb4 is inside and the model projects him highest",
+   "policy": "market_window",
+   "params": {
+    "window": 12
+   },
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "wr3",
+    "wr2"
+   ],
+   "my_roster": [],
+   "open_positions": [
+    "QB",
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_market_pick": "rb2",
+   "expected_window_pick": "rb4",
+   "expected_pick": "rb4"
+  },
+  {
+   "name": "window_bench_market",
+   "note": "lineup full, bench='market': keeps drafting by the window",
+   "policy": "market_window",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "qb2",
+    "rb4",
+    "wr5",
+    "te2"
+   ],
+   "my_roster": [
+    "qb1",
+    "rb2",
+    "rb3",
+    "wr2",
+    "wr3",
+    "te1",
+    "wr4"
+   ],
+   "open_positions": [],
+   "expected_market_pick": "rk_rb",
+   "expected_window_pick": "rk_rb",
+   "expected_pick": "rk_rb"
+  },
+  {
+   "name": "window_bench_insurance",
+   "note": "lineup full, bench='insurance': roster-aware insurance",
+   "policy": "market_window_depth",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1",
+    "qb2",
+    "rb4",
+    "wr5",
+    "te2"
+   ],
+   "my_roster": [
+    "qb1",
+    "rb2",
+    "rb3",
+    "wr2",
+    "wr3",
+    "te1",
+    "wr4"
+   ],
+   "open_positions": [],
+   "expected_market_pick": "rk_rb",
+   "expected_window_pick": "rk_rb",
+   "expected_pick": "rb5"
+  },
+  {
+   "name": "window_depth_starters",
+   "note": "lineup not full: market_window_depth = market_window",
+   "policy": "market_window_depth",
+   "params": {},
+   "taken_by_others": [
+    "rb1",
+    "wr1"
+   ],
+   "my_roster": [],
+   "open_positions": [
+    "QB",
+    "RB",
+    "WR",
+    "TE"
+   ],
+   "expected_market_pick": "wr3",
+   "expected_window_pick": "wr2",
+   "expected_pick": "wr2"
+  }
+ ]
+}

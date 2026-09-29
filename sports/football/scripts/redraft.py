@@ -22,12 +22,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from position_predictor.data.benchmark import ecr_type_for_league  # noqa: E402
+from position_predictor.eval.draft_export import export_league  # noqa: E402
 from position_predictor.eval.league import load_leagues  # noqa: E402
 from position_predictor.eval.redraft import render_markdown, run_redraft  # noqa: E402
 from position_predictor.utils.config import Config  # noqa: E402
@@ -55,6 +57,17 @@ def _parse_lambdas(values, parser):
     return out
 
 
+def _export_inputs() -> dict:
+    """Rosters, schedules and the id crosswalk the live-draft export joins against."""
+    import pandas as pd
+
+    from position_predictor.utils.io import DATA_RAW
+
+    return {"rosters": pd.read_parquet(DATA_RAW / "rosters.parquet"),
+            "schedules": pd.read_parquet(DATA_RAW / "schedules.parquet"),
+            "ids": pd.read_parquet(DATA_RAW / "ids.parquet")}
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description="Redraft draft-board projection for a new season.")
     p.add_argument("--season", type=int, default=None,
@@ -73,6 +86,8 @@ def main() -> int:
                         "eval/bestball.py — the fitted value is zero at every position).")
     p.add_argument("--top", type=int, default=60,
                    help="Rows shown in each report's overall board section (default 60).")
+    p.add_argument("--no-draft-json", action="store_true",
+                   help="Skip the live-draft export (draft_<season>_<league>.json; fetches FFC ADP).")
     p.add_argument("--out-dir", default=None,
                    help="Directory for the per-league CSV/MD (default: reports/).")
     args = p.parse_args()
@@ -114,6 +129,7 @@ def main() -> int:
           f"(features {res.feature_season}; rookie adjustment: {note})")
 
     out_dir = ensure_dir(Path(args.out_dir) if args.out_dir else REPORTS_DIR)
+    export_inputs = None if args.no_draft_json else _export_inputs()
     for lb in res.leagues:
         lg = lb.league
         if lb.board is None or lb.board.empty:
@@ -129,6 +145,15 @@ def main() -> int:
         lb.board.to_csv(csv_path, index=False)
         md_path.write_text(render_markdown(res, lb, top=args.top))
         print(f"[redraft] wrote {csv_path.name} + {md_path.name}")
+        if export_inputs is not None:
+            export = export_league(lb, draft_season=res.draft_season,
+                                   feature_season=res.feature_season, **export_inputs)
+            json_path = out_dir / f"draft_{res.draft_season}_{lg.name}.json"
+            json_path.write_text(json.dumps(export, indent=1) + "\n")
+            print(f"[redraft] wrote {json_path.name} (ADP: {export['market']['adp_source']}, "
+                  f"{len(export['players'])} players)")
+            for w in export["warnings"]:
+                print(f"[redraft]   ⚠️ {w}")
     return 0
 
 
