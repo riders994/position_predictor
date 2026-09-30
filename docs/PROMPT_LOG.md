@@ -4652,6 +4652,11 @@ in-season (2026-09-25), so re-running today changes the ppr_1qb board. Run expor
   comparisons + label), `eval/redraft.py` (LeagueBoard fields), `data/adp.py` (2QB format, `bye`
   column), `scripts/redraft.py`, `tests/test_draftsim.py` (+1), `docs/USAGE.md`.
 
+**Follow-up (same day, peer request):** the ReboundWebApp port passes all the goldens (41 QuickJS
+tests; the market_window_depth cases are skipped by design) and reads schema v1 as-is. `suz_1qb` and
+`sar_1qb` shared the label "14-team 1QB PPR", so they are now labelled by roster shape: "(1RB +
+3FLEX)" and "(2RB + 1FLEX)". Only report headers change.
+
 **Tests:** 659 pass, ruff clean.
 
 ---

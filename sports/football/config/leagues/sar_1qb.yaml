@@ -7,7 +7,7 @@
 #     what the flex structure alone does to RB value at identical league depth.
 
 name: sar_1qb
-label: "14-team 1QB PPR"
+label: "14-team 1QB PPR (2RB + 1FLEX)"
 
 scoring: ppr                     # 1 pt / reception
 teams: 14
