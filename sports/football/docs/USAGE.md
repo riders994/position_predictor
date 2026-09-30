@@ -173,9 +173,25 @@ uv run python scripts/redraft.py [options]
   --bestball-lambda WR=0.3                   # override the fitted upside weight (default 0)
   --top 60                 # rows in each report's overall-board section
   --configs ...            --out-dir reports/
-# → reports/redraft_<season>_<league>.{md,csv} for each league
+  --no-draft-json          # skip the live-draft export (it fetches FFC ADP)
+# → reports/redraft_<season>_<league>.{md,csv} + draft_<season>_<league>.json for each league
 ```
 Hard-stops (exit 1) if the feature season isn't published yet.
+
+**`draft_<season>_<league>.json` — the live draft tool's input** (`eval/draft_export.py`). One
+self-contained file per league: the league shape, per-position replacement levels, and every
+player the board *or the market* knows about, with the model's `value` (null for rookies and
+market-only veterans) and the market's `market_adp` / `market_adp_sd` / `market_ecr`, plus team and
+bye. It names the policy the tool runs: `market_window` (the market picks the position and round,
+the model the player within `teams` picks), which ties ADP in the backtest where the model's own
+board loses. ADP comes from FFC's live board for the league's format (the **2QB** board for any
+league that can start two QBs); when FFC ranks under 85% of the draft (it is a rolling window of
+recent mocks, so it thins to a few dozen players once the season starts) it falls back to the
+league's ECR rank with the fall prior's spread, and says so in `warnings`. `policy.backtested` is
+false outside the backtest's 1QB, 10/12-team, PPR/half-PPR shape. The JS port of the policies is
+pinned by `tests/fixtures/draft_golden.json` (`eval/draft_golden.py` regenerates it). **Run it in
+preseason:** the ECR scrape it reads is the latest of the draft season, so a mid-season run builds a
+board from in-season rankings.
 
 **Which market board.** FantasyPros publishes a separate consensus per roster shape, and the one a
 league is read against follows its QB slots: a league that can start two QBs (true 2QB *or* a
@@ -319,6 +335,12 @@ bench: +0.3 to +1.5). Pick-aware lookahead is worth nothing on actual outcomes (
 board), and letting the model choose the player inside the market's round ties ADP. The board's
 losses come from reaching past the market, which is where the model's projection errors
 concentrate. See `reports/REPORT_draft_backtest.md`.
+
+2026-09-29 addendum (Entry 106, not yet in the committed report): `market_window_depth` —
+`market_window` until the lineup is full, then the roster-aware insurance bench — **loses** to
+plain `market_window`: −2.25 / −2.10 a week in 10/12-team half-PPR (1 and 0 of 5 seasons won),
+−0.82 / −0.79 in PPR. The more the model decides, the higher its projected lineup and the lower
+its actual points; it also stops drafting rookies (0.04 a draft vs 1.3 for ADP).
 
 ---
 

@@ -137,6 +137,8 @@ class LeagueBoard:
     bestball_lambdas: dict = field(default_factory=dict)
     ecr_type: str = REDRAFT_OVERALL       # market board the rookie counts came from
     filter_note: str = ""                 # set when the draftability filter had to be skipped
+    market_board: object = None           # that ECR scrape (DataFrame), kept for the draft export
+    value_col: str = "proj_ppg"           # the currency VORP was computed in
 
 
 @dataclass
@@ -568,7 +570,8 @@ def run_redraft(configs, *, draft_season=None, refresh: bool = True, top_n=None,
         result.leagues.append(LeagueBoard(league=lg, board=board, replacement=replacement,
                                           starters=starters, summaries=lg_summaries,
                                           bestball_lambdas=lambdas, ecr_type=ecr_type,
-                                          filter_note=filter_note))
+                                          filter_note=filter_note, market_board=ecr_df,
+                                          value_col=value_col))
 
     first = result.leagues[0] if result.leagues else None
     if first is not None:

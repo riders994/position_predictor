@@ -51,14 +51,16 @@ MIN_BOARD_COVERAGE = 0.85
 # Model-only players (unranked by the market) enter the pool down to this multiple of the draft.
 MODEL_DEPTH_FACTOR = 1.5
 POLICY_NAMES = ("adp", "vorp_board", "vorp_board_ranked", "vorp_board_ranked_static",
-                "vorp_board_ranked_depth", "market_window", "lookahead_ranked")
+                "vorp_board_ranked_depth", "market_window", "market_window_depth",
+                "lookahead_ranked")
 # Paired comparisons reported by :func:`summarize` (each only when both policies were run).
 COMPARISONS = (("vorp_board", "adp"), ("vorp_board_ranked", "vorp_board"),
                ("vorp_board_ranked", "adp"), ("vorp_board_ranked_static", "vorp_board_ranked"),
                ("vorp_board_ranked_depth", "vorp_board_ranked_static"),
                ("vorp_board_ranked_depth", "vorp_board_ranked"),
                ("vorp_board_ranked_depth", "adp"), ("market_window", "adp"),
-               ("market_window", "vorp_board_ranked"), ("lookahead_ranked", "vorp_board_ranked"),
+               ("market_window", "vorp_board_ranked"), ("market_window_depth", "market_window"),
+               ("market_window_depth", "adp"), ("lookahead_ranked", "vorp_board_ranked"),
                ("lookahead_ranked", "adp"), ("lookahead", "vorp_board"), ("lookahead", "adp"))
 # FFC team codes that differ from nflverse's.
 _TEAM_ALIASES = {"JAC": "JAX", "LAR": "LA", "WSH": "WAS"}
@@ -263,6 +265,9 @@ def make_policy(name: str, spec, draw: int, slot: int):
         return BoardPolicy(), "ranked_static"
     if name == "market_window":
         return MarketWindowPolicy(), "all"
+    if name == "market_window_depth":
+        # Ranked pool: the insurance bench walks the board, which must not offer unranked players.
+        return MarketWindowPolicy(bench="insurance"), "ranked"
     if name in ("lookahead", "lookahead_ranked"):
         rng = np.random.default_rng([spec.seed, spec.season, spec.teams, draw, slot, 1])
         policy = LookaheadPolicy(n_plan_draws=spec.plan_draws, per_pos=spec.per_pos, rng=rng)
@@ -492,6 +497,8 @@ POLICY_LABELS = {
     "vorp_board_ranked_static": "VORP board, market-ranked only, bench tail re-ranked as shipped",
     "vorp_board_ranked_depth": "VORP board, market-ranked only, insurance bench",
     "market_window": "Market picks position + round; model picks the player within one round",
+    "market_window_depth": ("market_window until the lineup is full, then the roster-aware "
+                            "insurance bench over market-ranked players"),
     "lookahead_ranked": "Lookahead (opportunity cost), market-ranked only",
     "lookahead": "Lookahead (opportunity cost), whole pool",
 }

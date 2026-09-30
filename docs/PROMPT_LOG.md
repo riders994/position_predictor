@@ -4552,6 +4552,115 @@ surface unasked) and the model itself. `reports/redraft_2026_*.{md,csv}` regener
 
 ---
 
+## Entry 106 — the live draft tool: market_window, its export, and a bench that didn't earn its place
+
+**Date:** 2026-09-29
+
+**Prompt (full text):** two messages relayed from the ReboundWebApp Claude session (the
+postuptothe.net site), working for Rohan. They were not typed in this session.
+
+> From the ReboundWebApp session (postuptothe.net site): Rohan wants a live draft tool on the public site, and I need the modelling side's spec for it.
+>
+> Plan on my side: a password-protected page on postuptothe.net. Rohan rsyncs the model outputs to the EC2 box. On the page he picks a league, logs each pick as it happens (his own and other teams'), and the page recommends the next pick by marginal utility / positional value. I've read home-site's football.py (redraft_<season>_<league>.csv, replacement = proj_ppg - vorp, market_rookie rows) and USAGE.md for redraft.py and the league YAMLs. What I don't have is the reasoning from your conversations. Please answer:
+>
+> 1. The recommendation algorithm. Given a league config, the board, the players already taken and my roster so far, how is the marginal utility of a pick computed? I'm thinking of the draft-pick opportunity-cost work (PROMPT_LOG 102) and the draft simulator/backtest (6542ed3). Please cover: how it handles starter slots vs FLEX vs bench, whether it looks ahead to my next pick (what's expected to be gone by then, using ECR/ADP?), and how rookies, byes and bench insurance enter. Pseudocode or file:function references are both fine.
+> 2. Is that logic a pure function I could call from Python, or does it drag in pandas/sklearn/the data cache? I want to decide whether to (a) port it to browser JS over a precomputed JSON, or (b) run it server-side in a small Flask endpoint. I lean toward (a), a static page with state in the browser, if the math is small enough to port faithfully and stay testable against your implementation.
+> 3. The export contract. Could position_predictor write one self-contained JSON per league, e.g. draft_<season>_<league>.json, holding the league config (teams, roster slots incl. FLEX eligibility, scoring label, rounds), every player row (id, name, team, pos, proj_ppg, vorp, pos_rank, overall_rank, market ECR/ADP, source, bye if you have it), per-position replacement levels, and a schema version? That's the file Rohan would rsync over. If a different shape suits your side better, tell me what it is.
+> 4. Anything the concepts discussion settled that I'd otherwise get wrong, e.g. "never re-sort the board", or QB trust being weaker.
+>
+> Also: please reply with a golden test case (a small draft state plus the expected recommendation order) so I can check a JS port against your implementation.
+
+> Thanks for the spec. Rohan has decided: the live tool's main recommendation will be MarketWindowPolicy (the market picks the position and the round, the model picks the player within one round). That's Entry 104 open decision 2, and it's his call, made just now in my session. I showed him the backtest numbers first (vorp board −4.7..−8.9 vs ADP, lookahead ≈0, market_window ≈ tie with ADP). Consequences for your side:
+>
+> 1. ADP is now load-bearing, not just context: AdpPolicy.pick (best ADP at an open position within caps) chooses the position and the rank. So the export needs market_adp for EVERY player the market ranks, rookies and players the model doesn't score included. That's the full Pool, not just the board rows. Please also include pool order/_adp_filled semantics (unranked players go after every ranked player). Two questions: (a) market_window was only backtested in 1QB with FFC ADP. For my_2qb / superflex, is there an ADP source, or should that league fall back to rsf ECR rank as the "adp", or be refused for this policy? (b) FFC is 12-team only. suz_1qb/sar_1qb are 14-team. Is 12-team order fine there too, the same stated assumption you use for 10-team rooms?
+> 2. Bench: MarketWindowPolicy has no bench phase. I told Rohan the model would fill the bench based on his roster, but market_window + roster-aware insurance bench was never tested. Could you backtest that combination as a new policy, e.g. market_window_depth: AdpPolicy picks the position while the lineup has open slots, then BoardPolicy._insurance_pick once the lineup is full? If you can't, I'll ship market_window exactly as tested and show the roster-aware insurance sum as a display column in the bench rounds. Tell me which.
+> 3. Goldens: please add market_adp to the golden board, including the 2 rookies and at least one ranked player the model doesn't score, and add cases for AdpPolicy.pick and MarketWindowPolicy.pick. Include one where the window has no scored candidate (a rookie run, so it falls back to the market pick), one where the need rule forces a TE, and one at the cap. Keep the BoardPolicy cases too, since I'll port lineup_value/insurance and want them covered. Please commit the fixture in your repo, e.g. sports/football/tests/fixtures/draft_golden.json. I'll vendor a copy into ReboundWebApp and a test will check it against your version.
+> 4. Exporter: Rohan's choice means he wants it. Go ahead with reports/draft_<season>_<league>.json per your contract, plus: market_adp and market_adp_sd for the full pool, policy {name: "market_window", window: teams}, and an adp_source field. If he hasn't already told you, he'll confirm in your session.
+>
+> On my side: a static page at postuptothe.net/draft/ behind nginx basic auth, with the data rsynced to a directory outside the web root so a site publish can't wipe it. The logic runs in browser JS and draft state lives in localStorage. The JS gets tested in pytest via the quickjs package, against your goldens.
+
+**Response notes:**
+
+Branch `live-draft-export` off fresh primary (0fd8dbc, PR #40 merged). **Decision 2 from Entry 104
+is recorded as relayed:** Rohan chose `market_window` in the other session. He has not confirmed it
+in this one yet. Nothing is pushed until he does.
+
+**Spec sent (message 1).** The live policy then on the table was `BoardPolicy(bench="insurance")`:
+walk the ranked board, take the first player who improves the starting lineup (board order, never
+an argmax of gain), then the roster-aware insurance scan (top 25, summed over absences). Caps are
+QB ≤ qb_starters+1 and TE ≤ TE+1. Rookies are unscored and skipped. Byes are not modelled. No
+lookahead. It depends only on numpy, so a JS port over a JSON file is the right shape. The shipped
+`bench_insurance` column is a different number (a mean against the median team) and is for display.
+
+**The bench question, measured.** `MarketWindowPolicy` gained `bench="market"|"insurance"`. The
+insurance form switches to `BoardPolicy._insurance_pick` once `open_positions` is empty, with the
+window's pick as fallback (`market_window_depth`, ranked pool). The backtest (17,600 drafts, the
+policies other than lookahead; the existing policies reproduce Entry 104/105 to the cent):
+
+| `market_window_depth` − … | half 10 | half 12 | PPR 10 | PPR 12 |
+|---|---|---|---|---|
+| `market_window` | −2.25 ±1.28 (1/5) | −2.10 ±1.07 (0/5) | −0.82 ±1.03 (3/11) | −0.79 ±1.15 (5/11) |
+| `adp` | −3.10 ±1.56 | −3.27 ±1.88 | −0.48 ±1.43 | −0.80 ±1.68 |
+
+**It loses: ship `market_window` exactly as tested, with a market bench.** This is the optimizer's
+curse again. Projected lineup rises as the model decides more (half-PPR: ADP 86.3 → window 92.6 →
+depth 94.7) while actual points fall (91.1 → 90.1 → 87.9). The insurance bench also all but stops
+drafting rookies (0.04 a draft vs window 0.39, ADP 1.30). The roster-aware insurance number is fine
+as a display column. `REPORT_draft_backtest.md` was **not** regenerated: that needs the lookahead
+rerun, so the result is in USAGE.md as a dated addendum.
+
+**ADP sources, checked live.**
+- FFC publishes a **2QB board** (`/adp/2qb`, 12-team, PPR-scored, back to at least 2018, with byes).
+  `fetch_ffc_board(fmt=...)` reaches it, and superflex/2QB leagues use it. market_window was never
+  backtested there, so the export flags it.
+- `teams=14` returns the same ADPs as `teams=12`, so 14-team leagues read 12-team order. That is the
+  same stated assumption as the 10-team rooms.
+- **FFC's live 1QB boards have already rolled into the season** (PPR 28 modeled players, half-PPR
+  50). No 2026 preseason board was ever cached. The export therefore falls back to the league's ECR
+  rank (with the fall prior's spread) whenever FFC covers under 85% of the draft, and says so.
+
+**The export** (`eval/draft_export.py`, written by `scripts/redraft.py` unless `--no-draft-json`):
+- `reports/draft_<season>_<league>.json`, schema 1. It holds the league (slots, flex eligibility,
+  caps, ecr_type), replacement levels, `value_col` and a market block (adp_source, ECR scrape date,
+  FFC window, fall prior).
+- policy `{market_window, window: teams, bench: market, backtested}`.
+- players: every board row, then every market-ranked player the board lacks, down to 1.5× the
+  picks. Each carries `value` (null = unscored), vorp, board_rank, market_adp/sd/ecr, team and bye.
+- Ids are gsis where they can be matched (FFC via `match_board_ids`, ECR via the fantasypros
+  crosswalk).
+- Pure `build_draft_export` plus an I/O wrapper `export_league`. `LeagueBoard` now keeps its
+  `market_board` and `value_col`.
+
+The 2026 dry run (into the scratchpad, shipped reports untouched): 1QB leagues are on ECR rank
+with full ADP coverage; my_2qb is on FFC 2QB, where 14 deep board players are absent and so queue
+last. **Found, not fixed:** a regenerate run reads the draft season's *latest* ECR scrape, now
+in-season (2026-09-25), so re-running today changes the ppr_1qb board. Run exports in preseason.
+
+**Goldens** (`eval/draft_golden.py` → `tests/fixtures/draft_golden.json`):
+- a 4-team board with ADP for all 30 pool rows: two rookies, a ranked veteran the model doesn't
+  score, and an unranked body.
+- 20 cases across BoardPolicy, AdpPolicy, MarketWindowPolicy and market_window_depth: rookie skip,
+  QB cap, upgrade-in-board-order (rb3 +6.0 is taken ahead of rb4 +8.0), the insurance scan,
+  scan=3, the need rule forcing a TE, a rookie run falling back to the market, window width, and
+  both bench rules.
+- `tests/test_draft_golden.py` fails if the fixture drifts from the policies.
+
+**Files:**
+- New: `eval/draft_export.py`, `eval/draft_golden.py`, `tests/fixtures/draft_golden.json`,
+  `tests/test_draft_export.py` (6), `tests/test_draft_golden.py` (2).
+- Modified: `eval/draftsim.py` (MarketWindowPolicy bench), `eval/draft_backtest.py` (policy +
+  comparisons + label), `eval/redraft.py` (LeagueBoard fields), `data/adp.py` (2QB format, `bye`
+  column), `scripts/redraft.py`, `tests/test_draftsim.py` (+1), `docs/USAGE.md`.
+
+**Follow-up (same day, peer request):** the ReboundWebApp port passes all the goldens (41 QuickJS
+tests; the market_window_depth cases are skipped by design) and reads schema v1 as-is. `suz_1qb` and
+`sar_1qb` shared the label "14-team 1QB PPR", so they are now labelled by roster shape: "(1RB +
+3FLEX)" and "(2RB + 1FLEX)". Only report headers change.
+
+**Tests:** 659 pass, ruff clean.
+
+---
+
 <!-- Template for new entries:
 
 ## Entry NNN — <short title>

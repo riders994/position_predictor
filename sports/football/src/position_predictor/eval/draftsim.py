@@ -318,14 +318,28 @@ class MarketWindowPolicy:
     run), take the market's pick. This separates the model's *within-position* judgement from its
     cross-position VORP allocation, and bounds how far past the market it may reach — the reaches
     are where the backtest found the model's errors concentrated.
+
+    Once every starting slot is filled (:func:`open_positions` is empty), ``bench`` decides the
+    pick. ``"market"`` keeps drafting the same way, which is the policy as first backtested.
+    ``"insurance"`` switches to :class:`BoardPolicy`'s roster-aware insurance pick, with the market
+    pick as the fallback. The live draft tool uses this combination.
     """
 
-    name = "market_window"
-
-    def __init__(self, *, window=None):
-        self.window = window
+    def __init__(self, *, window=None, bench: str = "market", scan: int = 25):
+        if bench not in ("market", "insurance"):
+            raise ValueError(f"bench must be 'market' or 'insurance'; got {bench!r}")
+        self.window, self.bench, self.scan = window, bench, int(scan)
+        self.name = "market_window" if bench == "market" else "market_window_depth"
 
     def pick(self, sim: DraftSim, state: DraftState, team: int, k: int) -> int:
+        choice = self._window_pick(sim, state, team, k)
+        if self.bench == "insurance" and not open_positions(sim, state, team).any():
+            ok = sim.allowed(state, team)
+            return BoardPolicy(bench="insurance", scan=self.scan)._insurance_pick(
+                sim, state.values[team], ok, choice)
+        return choice
+
+    def _window_pick(self, sim: DraftSim, state: DraftState, team: int, k: int) -> int:
         base = AdpPolicy().pick(sim, state, team, k)
         pool = sim.pool
         window = sim.teams if self.window is None else self.window

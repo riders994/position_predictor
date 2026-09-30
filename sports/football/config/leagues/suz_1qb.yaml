@@ -6,7 +6,7 @@
 #     back-end lineup spots, so raw PPG matters more than positional label after the top tier.
 
 name: suz_1qb
-label: "14-team 1QB PPR"
+label: "14-team 1QB PPR (1RB + 3FLEX)"
 
 scoring: ppr                     # 1 pt / reception
 teams: 14
